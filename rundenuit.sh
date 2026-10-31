@@ -188,7 +188,7 @@ sante() {
 }
 
 # Paquet à transmettre : résultats et journaux, chemins personnels retirés
-echapper() { printf '%s' "$1" | sed 's/[][\\.*^$#]/\\&/g'; }      # chaîne littérale dans une expression sed
+echapper() { printf '%s' "$1" | sed -E 's/[][\\.*^$#()+?{}|]/\\&/g'; }      # chaîne littérale dans une expression étendue
 paquet() {
     local d nom f
     d=$(mktemp -d)
@@ -200,14 +200,24 @@ paquet() {
        resultats/nuit/run_all.log resultats/nuit/fuzz_*.err resultats/nuit/etat_* "$d/$nom/" 2>/dev/null
     cat resultats/nuit/fuzz_*.jsonl > "$d/$nom/fuzz.jsonl" 2>/dev/null
     cp -p resultats/logs/* "$d/$nom/logs/" 2>/dev/null
-    # chemins, nom d'utilisateur et nom de machine retirés, puis vérifiés : pas de paquet si le nettoyage échoue
-    local hote reel sec=0
-    hote=$(hostname 2>/dev/null || cat /proc/sys/kernel/hostname 2>/dev/null)
+    # chemins, nom d'utilisateur et nom de machine retirés, puis vérifiés : pas de paquet si le nettoyage échoue.
+    # Noms cherchés sans tenir compte de la casse, en mots entiers où « _ » sépare : sinon « ami » bloquerait « dynamique ».
+    local reel utilisateur complet court sec=0 exprs=() n c
     reel=$(readlink -f "$HOME")
-    local utilisateur="${USER:-$(id -un)}"
-    if ! find "$d/$nom" -type f -print0 | xargs -0 -r sed -i -e "s#$(echapper "$PWD")#.#g" -e "s#$(echapper "$reel")#~#g" -e "s#$(echapper "$HOME")#~#g" \
-             -e "s#\b$(echapper "$utilisateur")\b#utilisateur#g" ${hote:+-e "s#\b$(echapper "$hote")\b#machine#g"}; then sec=1; fi
-    for f in "$HOME" "$reel" "$PWD"; do grep -rqF -- "$f" "$d/$nom" && sec=1; done
+    utilisateur="${USER:-$(id -un)}"
+    complet=$(timeout 3 hostname -f 2>/dev/null)
+    court=$(hostname 2>/dev/null || cat /proc/sys/kernel/hostname 2>/dev/null)
+    exprs=(-e "s#$(echapper "$PWD")#.#g" -e "s#$(echapper "$reel")#~#g" -e "s#$(echapper "$HOME")#~#g")
+    for n in "machine|$complet" "machine|$court" "machine|${court%%.*}" "utilisateur|$utilisateur"; do
+        c=${n#*|}
+        [ "${#c}" -ge 3 ] || continue                           # moins de 3 lettres : impossible à retirer sans tout abîmer
+        exprs+=(-e "s#(^|[^[:alnum:]])$(echapper "$c")([^[:alnum:]]|\$)#\\1${n%%|*}\\2#Ig")
+    done
+    find "$d/$nom" -type f -print0 | xargs -0 -r sed -i -E "${exprs[@]}" || sec=1
+    for n in "$HOME" "$reel" "$PWD"; do grep -rqF -- "$n" "$d/$nom" && sec=1; done
+    for n in "$complet" "$court" "${court%%.*}" "$utilisateur"; do
+        [ "${#n}" -ge 3 ] && grep -rqiE -- "(^|[^[:alnum:]])$(echapper "$n")([^[:alnum:]]|\$)" "$d/$nom" && sec=1
+    done
     if [ "$sec" = 0 ]; then
         tar --owner=0 --group=0 --numeric-owner -czf "resultats/$nom.tar.gz" -C "$d" "$nom" \
             && journal "à transmettre : resultats/$nom.tar.gz ($(du -h "resultats/$nom.tar.gz" | cut -f1))"
