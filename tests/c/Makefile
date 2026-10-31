@@ -29,7 +29,7 @@ compression: build/compression_kem build/compression_sig build/vole_params build
 build/rsd_attaques: rsd_attaques.c resultat.h $(LIB)/isd.c
 	@mkdir -p build
 	$(CC) $(CFLAGS) -I $(LIB) -o $@ $< $(LIB)/isd.c $(LIB)/commun.c $(LIB)/brume512.c $(LIB)/brume512_avx2.c -lquadmath -lm
-build/vole_proto: vole_proto.c resultat.h $(LIB)/commun.c
+build/vole_proto: vole_proto.c vole_kat.h resultat.h $(LIB)/commun.c
 	@mkdir -p build
 	$(CC) $(CFLAGS) -I $(LIB) -o $@ $< $(LIB)/commun.c $(LIB)/brume512.c $(LIB)/brume512_avx2.c -lm
 build/vole_params: vole_params.c resultat.h $(LIB)/isd.c

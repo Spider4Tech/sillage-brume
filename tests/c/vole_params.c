@@ -3,7 +3,9 @@
  * Réduction (SDitH v2.0, Théorème 5.1) : résoudre (n, k_rsd, w)-RSD en 2^λ' donne (n, k_sd, w)-SD en
  *     λ' + log2(C(n, w) / (n/w)^w) + 1/(θ ln 2),   k_sd = n − log2 C(n, w),   n − k_rsd ≥ w·log2(n/w) + log2 θ.
  * 1. Contrôles : retrouve les tailles SDitH2 (formule § 4.2) et confronte ses instances à notre estimateur.
- * 2. Pour un niveau visé λ', cherche (n, w) minimisant la signature.
+ * 2. Pour un niveau visé λ', meilleur (n, w) d'une GRILLE : d = 4, w pair puis affiné d'une unité autour du minimum, n ≤ 40 000.
+ *    Ce n'est pas un optimum global, et la dichotomie sur n suppose une monotonie que le contrôle echantillonne seulement.
+ *    Le coût « RSD » est celui de la réduction, pas celui d'une attaque directe (rsd_attaques.c).
  *     build/vole_params   (depuis la racine) → resultats/vole_params.json
  */
 #include <math.h>
@@ -71,13 +73,15 @@ int main(void)
     lj += (size_t)snprintf(json + lj, sizeof json - lj, "],\"grille\":[");
     res_controle(&r, "formule_de_taille_retrouve_sdith2", ok);
     static const struct { int lam, cible, tau, topen; } V[4] = {{128, 143, 11, 107}, {128, 160, 11, 107}, {256, 272, 21, 216}, {256, 316, 21, 216}};
-    int prem = 1;
+    int prem = 1, mono = 1;
     for (int v = 0; v < 4; v++) {
         long meilleur = 1L << 60;
         int bn = 0, bw = 0, bs = 0, bk = 0;
         double bc = 0;
+        for (int passe = 0; passe < 2; passe++) {
+        int w0 = passe ? bw - 3 : 36, w1 = passe ? bw + 3 : 240, pas = passe ? 1 : 4;
 #pragma omp parallel for schedule(dynamic)
-        for (int w = 36; w <= 240; w += 4) {
+        for (int w = w0; w <= w1; w += pas) {
             int lo = w * 16, hi = 40000;
             hi -= hi % w;
             /* plus petit n multiple de w tel que SD ≥ λ' + perte */
@@ -98,12 +102,23 @@ int main(void)
                 bc = sd_cout(hi, k_sd(hi, w), w) - perte(hi, w);
             }
         }
+        }
+        /* monotonie en n, échantillonnée au w retenu */
+        double prec = -1e9;
+        for (int i = 0; i < 6; i++) {
+            int m = bn / 2 + i * bn / 5;
+            m -= m % bw;
+            double x_ = sd_cout(m, k_sd(m, bw), bw) - perte(m, bw);
+            mono &= x_ >= prec;
+            prec = x_;
+        }
         double x = (double)bn / bw;
         printf("λ=%d, λ'=%d : n=%d k_rsd=%d (codim %d) w=%d bloc %.0f témoin %d bits : %ld o, RSD ≥ %.1f b\n", V[v].lam, V[v].cible, bn, bk, bn - bk, bw, x, bw * bs, meilleur, bc);
         lj += (size_t)snprintf(json + lj, sizeof json - lj, "%s{\"lam\":%d,\"cible\":%d,\"n\":%d,\"k_rsd\":%d,\"w\":%d,\"temoin\":%d,\"taille\":%ld,\"rsd\":%.1f}", prem ? "" : ",", V[v].lam, V[v].cible, bn, bk, bw, bw * bs, meilleur, bc);
         prem = 0;
         fflush(stdout);
     }
+    res_controle(&r, "cout_de_reduction_monotone_en_n_sur_les_echantillons", mono);
     snprintf(json + lj, sizeof json - lj, "]}");
     res_mesure(&r, "resultats", "%s", json);
     return res_ecrire(&r);

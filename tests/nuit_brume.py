@@ -32,7 +32,7 @@ def _c(nom, *args, temps=None):
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
     except subprocess.TimeoutExpired:
         return None
-    if r.returncode != 0 or not os.path.exists(chemin):
+    if r.returncode not in (0, 1) or not os.path.exists(chemin):   # 1 : contrôle en échec, résultats écrits et lus
         return None
     return json.load(open(chemin, encoding="utf-8"))
 

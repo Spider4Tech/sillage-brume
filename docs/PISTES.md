@@ -188,12 +188,12 @@ Le gain est faible pour ce temps, et chaque variante casse le format : non adopt
 |---|---|---|---|---|
 | Signature | 8 522 o | **4 112 o (−52 %)** | 34 867 o | **15 906 o (−54 %)** |
 | Clé publique | 109 o | 93 o | 186 o | 185 o |
-| Signe, un cœur | 34,4 ms | 17,3 ms | 121 ms | 117,5 ms |
-| Vérifie, un cœur | 34,3 ms | 13,8 ms | 121 ms | 86,1 ms |
-| Signe, 12 threads | 5,5 ms | 4,4 ms | 18,4 ms | 41,5 ms |
-| Vérifie, 12 threads | 6,5 ms | 2,5 ms | 17,8 ms | 21,8 ms |
+| Signe, un cœur | 34,4 ms | 16,4 ms | 121 ms | 117,8 ms |
+| Vérifie, un cœur | 34,3 ms | 13,2 ms | 121 ms | 93,5 ms |
+| Signe, 12 threads | 5,5 ms | 6,4 ms | 18,4 ms | 43,9 ms |
+| Vérifie, 12 threads | 6,5 ms | 4,6 ms | 17,8 ms | 23,8 ms |
 
-H est mise en cache par clé ; sinon, ajouter 2,4 et 9,7 ms sur un cœur. Le temps de signature varie à cause du grinding, sur des valeurs publiques (moyenne de 30).
+Moyennes sur 5 clés × 8 messages ; médianes, p90, keygen et message de 1 Mio dans `resultats/vole_proto.json`. Mesures exploratoires, pas une caractérisation statistique. Clé publique : graine de λ bits ‖ y. H est en cache par clé ; sinon, ajouter 2,1 et 10,1 ms sur un cœur. Le temps de signature varie à cause du grinding, sur des valeurs publiques.
 
 *Paramètres.* La réduction (SDitH, Théorème 5.1) ramène RSD `(n, k_rsd, w)` à SD `(n, k_sd, w)`, avec une perte de `log2(C(n, w)/(n/w)^w)`. Avec notre estimateur ISD (mémoire gratuite), la réduction ne garantit aux instances SDitH2 que
 108,7 / 155,6 / 198,1 bits, contre 143 / 207 / 272 visés (`tests/c/vole_params.c`). Ce sont des garanties par réduction, pas des coûts d'attaque (voir plus bas). Pour que la réduction tienne chez nous, il faut des codes plus longs : `(18620, 18004, 76)` et `(38456, 37232, 152)`, qui gardent les marges de la SIG actuelle (160 et 316 bits), blocs de 245 et 253, d = 4, μ = (4, 4, 4, 4). τ, κ, T_open et le grinding viennent de SDitH (τκ = 121 et 252).
@@ -206,8 +206,12 @@ La spécification range les feuilles en `e·N + i` : avec cette disposition, les
 - **Coût de falsification.** Le terme γ vaut q/2^λ, et ne se règle pas par le grinding. Avec le grinding actuel, le coût est de 2^127 ; un bit de plus donne 2^127,4. Passer 2^128 demande un corps plus grand ou deux tirages de γ, à chiffrer.
 - **SD régulier.** § 3 de PREUVES exclut aujourd'hui les erreurs restreintes, et la réduction contient un pas heuristique (solution unique). Attaques directes : voir le tableau ci-dessous. Elles ne menacent pas ces paramètres dans nos modèles, mais ces modèles restent à confronter aux articles complets.
 - **Règles de la SIG actuelle** : graines de λ + 8 bits, sel de 32 octets. Le prototype suit SDitH (λ bits). S'y aligner donne environ 4 235 et 16 122 o.
-- **Temps constant** : non traité. `bits_temoin` divise par une valeur secrète, et `keygen` branche dessus.
-- **Référence Python, KAT, fuzzing, dudect, Valgrind** : à faire avant tout format. **QROM** : non analysé.
+- **Temps constant** : `keygen` et le témoin parcourent désormais tous les blocs sous masque. ctgrind ne détecte rien sur le modèle réduit, seulement (μ = 2, donc sans contrainte de paires) ; son témoin à branchement est détecté. Ni le profil complet, ni dudect, ni le code machine des autres compilateurs ne sont vérifiés.
+- **Implémentation de production** : erreurs propagées au lieu de `abort` (mémoire, aléa), injection de ces échecs, dudect, référence indépendante. **QROM** : non analysé.
+- **Paramètres** : c'est le meilleur point d'une grille (d = 4, n ≤ 40 000), pas un optimum global ; la monotonie n'est qu'échantillonnée. L'affinage autour du minimum ne gagne que 0,3 % (4 101 o, w = 75) : paramètres inchangés.
+
+*Revue de code (`docs/REVUE_CODE_VOLE.md`).* Traité : V-01 (clé publique de 93 o désormais exacte : graine de λ bits et encodage canonique), V-02 et V-06 (grammaire unique, entiers en petit-boutiste, H4 égale à quatre appels scalaires), V-03 (`siglen`), V-05 (chemins secrets ci-dessus), V-07 (H en cache liée à sa graine), V-08 (effacements), V-09 (code de retour : 1 si un contrôle échoue, 2 si les résultats ne sont pas écrits), V-10 (voir ci-dessous), V-11, V-12, V-14. Partiel : V-04 et V-13, allocations vérifiées et arrêt franc, sans propagation d'erreur ni injection d'échec. Le fichier reste d'un seul tenant.
+Contrôles ajoutés : `fmul` contre une référence bit à bit, arbres réduits exhaustifs, contraintes signataire et vérifieur égales sur témoins valides et invalides, chaque frontière de champ, longueurs invalides, KAT identiques sur x86-64 et ARM64 (qemu), fuzzing sous ASan et UBSan (`--fuzz`).
 
 **Attaques directes sur SD régulier** (`tests/c/rsd_attaques.c`, log₂ des opérations, mémoire gratuite) :
 
@@ -231,6 +235,7 @@ au plus au-delà de 2^−(λ+8)), le gain va de 0 à 0,6 % selon l'exécution, c
 
 ## Essayé et écarté
 
+- **BLAKE3 à la place de SHAKE256 dans le KEM et la SIG :** mesuré sur une copie (BLAKE3 1.5.5, AVX2). En appel isolé il est 3 fois plus rapide sur 64 o, mais la SIG hache par lots de quatre (SHAKE : 97 ns par haché, BLAKE3 : 83 ns), et elle ralentit : signature 42,3 contre 34,4 ms à 128 bits (8 voies internes non testées, l'API publique ne les expose pas). KEM : gain d'environ 8 à 10 % à 128 bits, décapsulation 0,28 contre 0,32 ms. Son gain de ×7 ne vaut que sur les gros messages, que le KEM et la SIG ne hachent pas. Sécurité : niveau de 128 bits au plus, donc incompatible avec les hachés de 2λ bits du profil 256 ; 7 tours et moins de recul que SHAKE ; casse tous les KAT. Non adopté.
 - **Lots de 64 états (deux registres par nibble) :** 268 ns par état
   contre 196 pour les lots de 32. La pression sur les registres annule le
   gain sur les chargements de tables.

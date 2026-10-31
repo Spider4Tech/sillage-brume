@@ -99,7 +99,8 @@ lancer() {
     [ "$nom" = nuit_brume ] || rm -f "resultats/$nom.json" "resultats/$nom.md"
     etat "$nom" ECHEC
     "$@" 2>>"$LOG"; rc=$?
-    if [ "$rc" -eq 0 ]; then etat "$nom" OK; else journal "$lib : code de retour $rc"; fi
+    # 1 : contrôle en échec, résultats écrits (le verdict les lit) ; la campagne, elle, a tourné
+    if [ "$rc" -eq 0 ] || { [ "$rc" -eq 1 ] && [ -s "resultats/$nom.json" ]; }; then etat "$nom" OK; else journal "$lib : code de retour $rc"; fi
 }
 part() { awk -v t="$TOTAL" -v p="$1" 'BEGIN { printf "%d", t * p }'; }
 reste() { echo $((FIN - $(date +%s))); }

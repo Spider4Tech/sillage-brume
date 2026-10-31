@@ -44,7 +44,7 @@ static int res_ecrire(const resultat_t *r)
     FILE *f = fopen(chemin, "w");
     if (!f) {
         perror(chemin);
-        return 1;
+        return 2;
     }
     fprintf(f, "{\n \"controles\": {");
     for (int i = 0; i < r->nc; i++)
@@ -53,7 +53,10 @@ static int res_ecrire(const resultat_t *r)
     for (int i = 0; i < r->nm; i++)
         fprintf(f, "%s\n  \"%s\": %s", i ? "," : "", r->mn[i], r->mv[i]);
     fprintf(f, "\n }\n}\n");
-    fclose(f);
+    if (ferror(f) | fclose(f)) {
+        perror(chemin);
+        return 2;
+    }
     if (r->titre) {                                  /* synthèse lisible (campagnes de nuit) */
         snprintf(chemin, sizeof chemin, "resultats/%s.md", r->nom);
         if ((f = fopen(chemin, "w"))) {
@@ -75,7 +78,7 @@ static int res_ecrire(const resultat_t *r)
     for (int i = 0; i < r->nc; i++)
         ok &= r->cv[i];
     fprintf(stderr, "%s : %d contrôles, %s\n", r->nom, r->nc, ok ? "tous réussis" : "ÉCHECS");
-    return 0;
+    return ok ? 0 : 1;                               /* 1 : contrôle en échec, JSON écrit ; 2 : résultats non écrits */
 }
 
 /* xoshiro256** : aléa reproductible des tests */
