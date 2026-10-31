@@ -50,12 +50,11 @@ if [ -z "${SILLAGE_NUIT_INHIBE:-}" ] && command -v systemd-inhibit >/dev/null 2>
 fi
 
 [ -x .venv/bin/python3 ] && export PATH="$PWD/.venv/bin:$PATH"
-if [ -z "${SILLAGE_FORCE:-}" ] && ! ./preparer_campagne.sh >/tmp/sillage_preparation.$$ 2>&1; then
-    cat /tmp/sillage_preparation.$$ >&2; rm -f /tmp/sillage_preparation.$$
+if [ -z "${SILLAGE_FORCE:-}" ] && ! PREPARATION=$(./preparer_campagne.sh 2>&1); then
+    printf '%s\n' "$PREPARATION" >&2
     echo "Machine pas prête (SILLAGE_FORCE=1 pour passer outre)." >&2
     exit 1
 fi
-rm -f /tmp/sillage_preparation.$$
 
 # Une seule campagne à la fois sur ce dossier : deux campagnes se fausseraient et écriraient les mêmes résultats
 mkdir -p resultats/nuit tests/c/build
@@ -189,6 +188,7 @@ sante() {
 }
 
 # Paquet à transmettre : résultats et journaux, chemins personnels retirés
+echapper() { printf '%s' "$1" | sed 's/[][\\.*^$#]/\\&/g'; }      # chaîne littérale dans une expression sed
 paquet() {
     local d nom f
     d=$(mktemp -d)
@@ -200,8 +200,20 @@ paquet() {
        resultats/nuit/run_all.log resultats/nuit/fuzz_*.err resultats/nuit/etat_* "$d/$nom/" 2>/dev/null
     cat resultats/nuit/fuzz_*.jsonl > "$d/$nom/fuzz.jsonl" 2>/dev/null
     cp -p resultats/logs/* "$d/$nom/logs/" 2>/dev/null
-    find "$d/$nom" -type f -print0 | xargs -0 sed -i -e "s#$PWD#.#g" -e "s#$HOME#~#g" 2>/dev/null
-    tar -czf "resultats/$nom.tar.gz" -C "$d" "$nom" && journal "à transmettre : resultats/$nom.tar.gz ($(du -h "resultats/$nom.tar.gz" | cut -f1))"
+    # chemins, nom d'utilisateur et nom de machine retirés, puis vérifiés : pas de paquet si le nettoyage échoue
+    local hote reel sec=0
+    hote=$(hostname 2>/dev/null || cat /proc/sys/kernel/hostname 2>/dev/null)
+    reel=$(readlink -f "$HOME")
+    local utilisateur="${USER:-$(id -un)}"
+    if ! find "$d/$nom" -type f -print0 | xargs -0 -r sed -i -e "s#$(echapper "$PWD")#.#g" -e "s#$(echapper "$reel")#~#g" -e "s#$(echapper "$HOME")#~#g" \
+             -e "s#\b$(echapper "$utilisateur")\b#utilisateur#g" ${hote:+-e "s#\b$(echapper "$hote")\b#machine#g"}; then sec=1; fi
+    for f in "$HOME" "$reel" "$PWD"; do grep -rqF -- "$f" "$d/$nom" && sec=1; done
+    if [ "$sec" = 0 ]; then
+        tar --owner=0 --group=0 --numeric-owner -czf "resultats/$nom.tar.gz" -C "$d" "$nom" \
+            && journal "à transmettre : resultats/$nom.tar.gz ($(du -h "resultats/$nom.tar.gz" | cut -f1))"
+    else
+        journal "ATTENTION : nettoyage du paquet incomplet, paquet non créé (résultats dans resultats/)"
+    fi
     rm -rf "$d"
 }
 
@@ -304,8 +316,10 @@ elif [ "$TOTAL" -ge 21600 ]; then
 else journal "0/6 batterie complète : non lancée (campagne de moins de 6 h)"; fi
 
 # --- 1. fuzzing mémoire -----------------------------------------------------
-if ! fait 1; then
 B=$(part 0.08); [ "$B" -gt "$(( $(reste) - MARGE ))" ] && B=$(( $(reste) - MARGE )); FINF=$(( $(date +%s) + B ))
+if fait 1; then :
+elif [ "$B" -lt 30 ]; then journal "1/6 fuzzing mémoire : non lancé (temps restant insuffisant)"
+else
 journal "1/6 fuzzing mémoire : $B s, $NPROC processus"
 etat nuit_fuzz ECHEC
 echeance "le fuzzing" $((B + 1800))

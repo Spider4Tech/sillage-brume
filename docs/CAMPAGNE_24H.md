@@ -50,4 +50,4 @@ Si la température reste au-dessus de 100 °C pendant 5 minutes, le programme s'
 
 À la fin, ou à chaque arrêt, le programme écrit `resultats/campagne_<date>.tar.gz` et affiche son nom. Renvoyez le plus récent.
 
-Il contient les résultats, les journaux et une fiche de la machine (processeur, mémoire, versions de logiciels). Il ne contient ni le nom de la machine ni votre nom d'utilisateur, et les chemins de votre dossier personnel sont retirés des fichiers.
+Il contient les résultats, les journaux et une fiche de la machine (processeur, mémoire, versions de logiciels). Le nom de la machine, votre nom d'utilisateur et les chemins de votre dossier personnel sont retirés des fichiers, et le propriétaire est effacé de l'archive. Le programme refuse de créer l'archive si un de ces chemins y reste. Vous pouvez la regarder avant de l'envoyer : `tar tvzf resultats/campagne_*.tar.gz`.

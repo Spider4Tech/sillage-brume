@@ -93,7 +93,7 @@ static void ctx_init(ctx_t *c, const vp_t *p)
 }
 
 /* ---------------------------------------------------------------- GF(2^λ) */
-static inline void fmul(int W, const u64 *a, const u64 *b, u64 *o)
+static inline void gf_mul(int W, const u64 *a, const u64 *b, u64 *o)
 {
     u64 t[2 * WMAX] = {0}, l, h;
     for (int i = 0; i < W; i++)
@@ -441,13 +441,13 @@ static void contraintes_poly(const ctx_t *c, const uint8_t *wit, const u64 *V, c
                 for (int v = 0; v < mu - 1; v++)
                     for (int x = v + 1; x < mu - 1; x++) {
                         u64 tmp[WMAX], pr[3][WMAX];
-                        fmul(W, Vd[v], Vd[x], pr[0]);
+                        gf_mul(W, Vd[v], Vd[x], pr[0]);
                         for (int z = 0; z < W; z++)
                             pr[1][z] = (Vd[v][z] & (0 - bd[x])) ^ (Vd[x][z] & (0 - bd[v]));
                         memset(pr[2], 0, (size_t)W * 8);
                         pr[2][0] = bd[v] & bd[x];
                         for (int l = 0; l < 3; l++) {
-                            fmul(W, pr[l], gam + pz * (size_t)W, tmp);
+                            gf_mul(W, pr[l], gam + pz * (size_t)W, tmp);
                             fxor(W, acc + (size_t)(l + d - 2) * (size_t)W, tmp);
                         }
                         pz++;
@@ -461,7 +461,7 @@ static void contraintes_poly(const ctx_t *c, const uint8_t *wit, const u64 *V, c
                         const u64 *src = A + a * (size_t)(t + 1) * (size_t)W;
                         u64 tmp[WMAX];
                         for (int l = 0; l <= t; l++) {
-                            fmul(W, src + (size_t)l * (size_t)W, Vd[v], tmp);
+                            gf_mul(W, src + (size_t)l * (size_t)W, Vd[v], tmp);
                             fxor(W, dst + (size_t)l * (size_t)W, tmp);
                             for (int z = 0; z < W; z++)
                                 dst[(size_t)(l + 1) * (size_t)W + (size_t)z] ^= src[(size_t)l * (size_t)W + (size_t)z] & (0 - bd[v]);
@@ -477,7 +477,7 @@ static void contraintes_poly(const ctx_t *c, const uint8_t *wit, const u64 *V, c
                 const u64 *xq = A + (size_t)q * (size_t)(d + 1) * (size_t)W;
                 u64 tmp[WMAX];
                 for (int l = 0; l <= d; l++) {
-                    fmul(W, xq + (size_t)l * (size_t)W, gi, tmp);
+                    gf_mul(W, xq + (size_t)l * (size_t)W, gi, tmp);
                     fxor(W, acc + (size_t)l * (size_t)W, tmp);
                 }
             }
@@ -521,23 +521,23 @@ static void contraintes_val(const ctx_t *c, const u64 *q, const u64 *Dl, const u
                 for (int v = 0; v < mu - 1; v++)
                     for (int x = v + 1; x < mu - 1; x++) {
                         u64 z1[WMAX], z2[WMAX];
-                        fmul(W, qd[v], qd[x], z1);
-                        fmul(W, z1, pwD + (size_t)(d - 2) * (size_t)W, z2);
-                        fmul(W, z2, gam + pz * (size_t)W, tmp);
+                        gf_mul(W, qd[v], qd[x], z1);
+                        gf_mul(W, z1, pwD + (size_t)(d - 2) * (size_t)W, z2);
+                        gf_mul(W, z2, gam + pz * (size_t)W, tmp);
                         fxor(W, acc, tmp);
                         pz++;
                     }
                 size_t nv = taille * (size_t)mu;
                 for (size_t a = 0; a < taille; a++)
                     for (int v = 0; v < mu; v++)
-                        fmul(W, A + a * (size_t)W, qd[v], Bb + (a * (size_t)mu + (size_t)v) * (size_t)W);
+                        gf_mul(W, A + a * (size_t)W, qd[v], Bb + (a * (size_t)mu + (size_t)v) * (size_t)W);
                 u64 *sw = A; A = Bb; Bb = sw;
                 taille = nv;
                 o += (size_t)mu - 1;
             }
             size_t decal = (size_t)i * (size_t)p->bloc;
             for (int q2 = 0; q2 < p->bloc; q2++) {
-                fmul(W, A + (size_t)q2 * (size_t)W, g + (decal + (size_t)q2) * (size_t)W, tmp);
+                gf_mul(W, A + (size_t)q2 * (size_t)W, g + (decal + (size_t)q2) * (size_t)W, tmp);
                 fxor(W, acc, tmp);
             }
         }
@@ -546,7 +546,7 @@ static void contraintes_val(const ctx_t *c, const u64 *q, const u64 *Dl, const u
         free(A); free(Bb);
     }
     u64 tmp[WMAX];
-    fmul(W, gy, pwD + (size_t)d * (size_t)W, tmp);
+    gf_mul(W, gy, pwD + (size_t)d * (size_t)W, tmp);
     fxor(W, r, tmp);
     memcpy(val, r, (size_t)W * 8);
 }
@@ -565,7 +565,7 @@ static void sect_V(const ctx_t *c, const u64 *V, size_t o, u64 *b)
     for (int l = 0; l < lam; l++) {
         u64 xi[WMAX] = {0}, t[WMAX];
         xi[l / 64] = 1ULL << (l % 64);
-        fmul(W, xi, V + (o + (size_t)l) * (size_t)W, t);
+        gf_mul(W, xi, V + (o + (size_t)l) * (size_t)W, t);
         fxor(W, b, t);
     }
 }
@@ -679,7 +679,7 @@ static long signer(const ctx_t *c, const vpk_t *pk, const hcache_t *hc, const ui
             }
             for (int l = t + 1; l >= 0; l--) {
                 u64 x[WMAX];
-                fmul((int)W, R[l], racines[t], x);
+                gf_mul((int)W, R[l], racines[t], x);
                 if (l) { for (size_t z = 0; z < W; z++) R[l][z] = x[z] ^ R[l - 1][z]; } else memcpy(R[0], x, W * 8);
             }
         }
@@ -802,7 +802,7 @@ static int verifier(const ctx_t *c, const vpk_t *pk, const hcache_t *hc, const u
                 D[pz / 64] |= (u64)((ch[e] >> b) & 1) << (pz % 64);
             }
         pw[0][0] = 1;
-        for (int l = 1; l <= d; l++) fmul((int)W, pw[l - 1], D, pw[l]);
+        for (int l = 1; l <= d; l++) gf_mul((int)W, pw[l - 1], D, pw[l]);
         melanges(c, h2, cols, pk->y, gam, g, gy);
         transposer(c, qv, q);
 #pragma omp parallel for schedule(static)
@@ -819,13 +819,13 @@ static int verifier(const ctx_t *c, const vpk_t *pk, const hcache_t *hc, const u
         for (int t = 1; t < d; t++) {
             u64 m[WMAX], x[WMAX];
             sect_V(c, q, om + (size_t)(t - 1) * (size_t)p->lam, m);
-            fmul((int)W, m, pw[t - 1], x);
+            gf_mul((int)W, m, pw[t - 1], x);
             fxor((int)W, s, x);
         }
         for (int l = 0; l < d; l++) {
             u64 a[WMAX] = {0}, x[WMAX];
             memcpy(a, ab + (size_t)l * Bl, Bl);
-            fmul((int)W, a, pw[l], x);
+            gf_mul((int)W, a, pw[l], x);
             fxor((int)W, s, x);
         }
         u64 z = 0;
@@ -851,8 +851,8 @@ static int cmpd(const void *a, const void *b)
 }
 
 /* ---------------------------------------------------------------- contrôles indépendants du flux signer/vérifier */
-/* référence bit à bit de fmul, sans produit sans retenue */
-static void fmul_ref(int W, const u64 *a, const u64 *b, u64 *o)
+/* référence bit à bit de gf_mul, sans produit sans retenue */
+static void gf_mul_ref(int W, const u64 *a, const u64 *b, u64 *o)
 {
     const u64 r = W == 2 ? 0x87 : 0x425;
     u64 x[WMAX], acc[WMAX] = {0};
@@ -875,8 +875,8 @@ static int ctl_corps(void)
             u64 a[WMAX], b[WMAX], x[WMAX], y[WMAX];
             alea(a, sizeof a); alea(b, sizeof b);
             if (i < 8) memset(a, i & 1 ? 0xFF : 0, sizeof a);       /* valeurs extrêmes : retenue maximale de la réduction */
-            fmul(W, a, b, x);
-            fmul_ref(W, a, b, y);
+            gf_mul(W, a, b, x);
+            gf_mul_ref(W, a, b, y);
             ok &= !memcmp(x, y, (size_t)W * 8);
         }
     return ok;
@@ -969,14 +969,14 @@ static int ctl_contraintes(const ctx_t *c, const hcache_t *hc, const vpk_t *pk, 
         u64 D[WMAX], pw[(DMAX + 1) * WMAX] = {0}, val[WMAX], s[WMAX] = {0}, t[WMAX];
         alea(D, sizeof D);
         pw[0] = 1;
-        for (int l = 1; l <= d; l++) fmul((int)W, pw + (size_t)(l - 1) * W, D, pw + (size_t)l * W);
+        for (int l = 1; l <= d; l++) gf_mul((int)W, pw + (size_t)(l - 1) * W, D, pw + (size_t)l * W);
         for (int j = 0; j < c->witb; j++) {
             memcpy(q + (size_t)j * W, V + (size_t)j * W, W * 8);
             if (bit(wit, (size_t)j)) fxor((int)W, q + (size_t)j * W, D);
         }
         contraintes_val(c, q, D, pw, gam, g, gy, val);
         for (int l = 0; l <= d; l++) {
-            fmul((int)W, C + (size_t)l * W, pw + (size_t)l * W, t);
+            gf_mul((int)W, C + (size_t)l * W, pw + (size_t)l * W, t);
             fxor((int)W, s, t);
         }
         ok &= !memcmp(s, val, W * 8);
