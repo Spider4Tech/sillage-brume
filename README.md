@@ -649,7 +649,7 @@ sillage-brume/
 
 Generated binaries, per-test JSON files and raw campaign logs are not all committed. They are produced locally when the corresponding commands are run. The `.gitignore` file documents which result files are retained in the repository.
 
-This project is released under the [MIT License](LICENSE). The licence does not change the warning above: this is a research prototype, not for production use.
+Copyright (C) 2026 Spider4Tech. This project is free software, released under the [GNU Affero General Public License, version 3](LICENSE) (AGPL-3.0-only). It comes with no warranty. The licence does not change the warning above: this is a research prototype, not for production use.
 
 ---
 
