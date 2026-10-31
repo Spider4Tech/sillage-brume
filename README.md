@@ -604,6 +604,7 @@ Do not use this code to protect real data, production services, credentials, com
 ```text
 sillage-brume/
 ├── README.md
+├── LICENSE
 ├── docs/
 │   ├── guide.md             Original design note
 │   ├── RAPPORT_AUDIT.md     Development audit history and corrected issues
@@ -648,7 +649,7 @@ sillage-brume/
 
 Generated binaries, per-test JSON files and raw campaign logs are not all committed. They are produced locally when the corresponding commands are run. The `.gitignore` file documents which result files are retained in the repository.
 
-The repository currently has no `LICENSE` file. No open-source licence should be inferred from the fact that the source is publicly readable.
+This project is released under the [MIT License](LICENSE). The licence does not change the warning above: this is a research prototype, not for production use.
 
 ---
 
