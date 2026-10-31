@@ -180,12 +180,34 @@ ne gagne que les bits de bourrage, 16 o au plus sur SIG-128.
 | 2¹⁵ | 7 422 o (−13 %) | ×6,5 | 30 238 o (−13 %) | ×6,3 |
 | 2¹⁶ | 7 032 o (−17 %) | ×11,6 | 27 808 o (−20 %) | ×11 |
 
-Le gain paraît faible pour ce temps, et chaque variante casse le format : non adopté.
+Le gain est faible pour ce temps, et chaque variante casse le format : non adopté.
 
-**Signature, changement de protocole.** SDitH v2.0 annonce 3 705 / 7 964 / 14 121 o sur SD binaire (catégories I, III, V), avec VOLE-in-the-Head : environ −57 et −60 %. C'est le seul levier de cette ampleur.
+**Signature, changement de protocole : VOLE-in-the-Head sur SD régulier**, à la SDitH v2.0. C'est le seul levier de cette ampleur. Prototype mesuré (`tests/c/vole_proto.c`, Ryzen 5 5600G) :
 
-**Conditions avant adoption.** Un nouveau système de preuve (complétude, solidité, Fiat–Shamir, temps constant), et le SD régulier, que § 3 de PREUVES exclut aujourd'hui :
-il faudrait vérifier et instancier la réduction depuis SD de SDitH (son Théorème 5.1).
+| | SIG-128 actuelle | VOLE-128 | SIG-256 actuelle | VOLE-256 |
+|---|---|---|---|---|
+| Signature | 8 522 o | **4 112 o (−52 %)** | 34 867 o | **15 906 o (−54 %)** |
+| Clé publique | 109 o | 93 o | 186 o | 185 o |
+| Signe, un cœur | 34,4 ms | 17,3 ms | 121 ms | 117,5 ms |
+| Vérifie, un cœur | 34,3 ms | 13,8 ms | 121 ms | 86,1 ms |
+| Signe, 12 threads | 5,5 ms | 4,4 ms | 18,4 ms | 41,5 ms |
+| Vérifie, 12 threads | 6,5 ms | 2,5 ms | 17,8 ms | 21,8 ms |
+
+H est mise en cache par clé ; sinon, ajouter 2,4 et 9,7 ms sur un cœur. Le temps de signature varie à cause du grinding, sur des valeurs publiques (moyenne de 30).
+
+*Paramètres.* La réduction (SDitH, Théorème 5.1) ramène RSD `(n, k_rsd, w)` à SD `(n, k_sd, w)`, avec une perte de `log2(C(n, w)/(n/w)^w)`. Avec notre estimateur ISD (mémoire gratuite), les instances SDitH2 ne garantissent que
+108,7 / 155,6 / 198,1 bits, contre 143 / 207 / 272 visés (`tests/c/vole_params.c`). D'où des codes plus longs : `(18620, 18004, 76)` et `(38456, 37232, 152)`, qui gardent les marges de la SIG actuelle (160 et 316 bits), blocs de 245 et 253, d = 4, μ = (4, 4, 4, 4). τ, κ, T_open et le grinding viennent de SDitH (τκ = 121 et 252).
+
+*Vérifié.* Tailles exactes contre la formule de SDitH, altérations rejetées, faux témoin rejeté, et attaque exécutée sur modèle réduit : sans témoin, α annule le résidu en d points de E, Δ est cherché parmi eux, le vérifieur accepte, pour un coût mesuré de 1 235 essais contre N^τ/d = 1 024.
+La spécification range les feuilles en `e·N + i` : avec cette disposition, les chemins ne fusionnent jamais et T_open n'est jamais atteint. Le prototype entrelace (`i·τ + e`), ce qui redonne la probabilité annoncée (0,19 pour 0,2).
+
+**Conditions avant adoption** (aucune n'est remplie) :
+- **Théorème EUF-CMA** à écrire pour ce protocole, avec ses propres termes ; rien de § 3 de PREUVES ne s'y transporte. Relecture humaine indispensable.
+- **Coût de falsification.** Le terme γ vaut q/2^λ, et ne se règle pas par le grinding. Avec le grinding actuel, le coût est de 2^127 ; un bit de plus donne 2^127,4. Passer 2^128 demande un corps plus grand ou deux tirages de γ, à chiffrer.
+- **SD régulier.** § 3 de PREUVES exclut aujourd'hui les erreurs restreintes. La réduction contient un pas heuristique (solution unique). Les attaques directes sur RSD (ISD régulier d'Esser–Santini, attaques algébriques de type Briaud–Øygarden et leurs variantes hybrides de 2025–2026) ne sont pas estimées sur ces paramètres : seul le Prange régulier l'est, à la main (≈ 374 et 755 bits).
+- **Règles de la SIG actuelle** : graines de λ + 8 bits, sel de 32 octets. Le prototype suit SDitH (λ bits). S'y aligner donne environ 4 235 et 16 122 o.
+- **Temps constant** : non traité. `bits_temoin` divise par une valeur secrète, et `keygen` branche dessus.
+- **Référence Python, KAT, fuzzing, dudect, Valgrind** : à faire avant tout format. **QROM** : non analysé.
 
 **KEM** (`tests/c/compression_kem.c`, vraie borne δ sur de vraies clés, D, w et θ variables, aucun coût d'attaque sous la v0.3). Avec le critère de choix actuel (5 % de clés
 au plus au-delà de 2^−(λ+8)), le gain va de 0 à 0,6 % selon l'exécution, car les clés sont tirées au hasard. En acceptant jusqu'à 10 % de rejets au seuil 2^−λ : environ 9 710 o (−1,3 %, D = 12, θ = 0,8) et 34 800 o (−2 %, D = 22 à 24), mais n et donc pk augmentent

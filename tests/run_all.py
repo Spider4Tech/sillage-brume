@@ -73,6 +73,8 @@ TESTS = [
     ("c:sig_flux", "sig_flux", "Intensif (C)"),
     ("c:brume_attaques", "brume_attaques", "Intensif (C)"),
     ("c:mini_brume", "mini_brume", "Intensif (C)"),
+    ("c:vole_proto", "vole_proto", "Intensif (C)"),
+    ("c:compression_sig", "compression_sig", "Intensif (C)"),
     ("test_brume_algebre", "brume_algebre", "Intensif (C)"),
 ]
 INTENSIF = "Intensif (C)"
