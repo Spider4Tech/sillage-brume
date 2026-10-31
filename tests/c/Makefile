@@ -24,4 +24,14 @@ build/sig_flux: sig_flux.c trace_pc.c resultat.h $(SRC)
 	$(CC) $(CFLAGS) -Dsl_alea=sl_alea_systeme -I $(LIB) -c -o build/commun_rejeu.o $(LIB)/commun.c
 	$(CC) $(CFLAGS) -fsanitize-coverage=trace-pc -I $(LIB) -o $@ $< build/trace_pc.o build/commun_rejeu.o \
 		$(LIB)/brume512.c $(LIB)/brume512_avx2.c -lm
-.PHONY: all nuit
+# Études de taille (docs/PISTES.md, piste 9). kem_var.c : kem.c avec sa table de paramètres modifiable, pour ce seul outil
+compression: build/compression_kem build/compression_sig
+build/kem_var.c: $(LIB)/kem.c
+	@mkdir -p build
+	sed 's/^static const params_t P\[2\]/static params_t P[2]/' $< > $@
+build/compression_kem: compression_kem.c build/kem_var.c resultat.h $(SRC) $(LIB)/isd.c
+	$(CC) $(CFLAGS) -I $(LIB) -I build -o $@ $< $(filter-out $(LIB)/kem.c,$(SRC)) $(LIB)/isd.c -lm
+build/compression_sig: compression_sig.c resultat.h
+	@mkdir -p build
+	$(CC) $(CFLAGS) -o $@ $< -lm
+.PHONY: all nuit compression

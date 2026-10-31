@@ -154,8 +154,8 @@ verification (OpenMP): a child calling these functions again may hang.
 
 | Profile | n | w | D | pk | ct | classical security | quantum (Prange-Grover) | proven δ (median key) |
 |---|---|---|---|---|---|---|---|---|
-| Sillage-128 | 50,021 | 75 | 14 | 6,285 B | **9,837 B** | **138.2 b** | 91.7 b | ≈ 2⁻¹⁴⁸ (threshold 2⁻¹²⁸) |
-| Sillage-256 | 170,003 | 140 | 28 | 21,283 B | **35,587 B** | **265.1 b** | 158.4 b | ≈ 2⁻²⁹⁴ (threshold 2⁻²⁵⁶) |
+| Sillage-128 | 50,021 | 75 | 14 | 6,285 B | **9,837 B** | **138.2 b** | 91.7 b | ≈ 2⁻¹⁴⁶ (threshold 2⁻¹²⁸) |
+| Sillage-256 | 170,003 | 140 | 28 | 21,283 B | **35,587 B** | **265.1 b** | 158.4 b | ≈ 2⁻²⁸⁹ (threshold 2⁻²⁵⁶) |
 
 v0.3, with the repetition code: ct of 17,004 and 61,002 B, pk of 8,540 and 30,538 B, 137.3 and 264.9 b, 91.1 and 158.0 b.
 HQC-128 reaches 4.4 KB, but its failure rate relies on an independence assumption that the v0.3
@@ -526,9 +526,9 @@ different keys). The Python code is not. These are verifications, not a certific
 
 ## 7. Roadmap
 
-1. **Signatures**: MPCitH done in v0.4 (×15.7); SUF-CMA, multi-user, reduced model and quantified QROM done. Third-party review of the protocol, of Theorem 8 and of the QROM sketch remains.
+1. **Signatures**: MPCitH done in v0.4 (×15.7); SUF-CMA, multi-user, reduced model and quantified QROM done. Third-party review of the protocol, of Theorem 8 and of the QROM sketch remains. VOLE-in-the-Head is the main lead on size (`docs/PISTES.md`, lead 9): not adopted, it requires a new proof system and regular SD.
 2. **KEM**: RM(1,7) code done in v0.4 (×1.7). A bound proven under XOR cancellations remains
-   (`docs/PISTES.md`, lead 8); study of a noise cascade with a real effect.
+   (`docs/PISTES.md`, lead 8; a parameter search at equal guarantees gains about 1 and 2 %, lead 9); study of a noise cascade with a real effect.
 3. **BRUME**: aggregation bounds beyond 2 rounds; real integral reach; search for attacks (boomerang, integrals, algebraic, impossible, graph structure), started, § 4.2 bis; third-party analysis of
    the design. (Exact division property for all cubes: done, 10 rounds per direction.)
 4. **C implementation**: done and conformant. BRUME-512 (AVX2, batches), the

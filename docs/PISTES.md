@@ -167,6 +167,30 @@ somme simple que pour de petits S (−50 contre −41 bits à n = 40 000, D = 8 
 un code externe, une borne jointe sur plusieurs blocs (le calcul clé par clé ne couvre pas les unions de supports).
 Adopter HQC tel quel réintroduirait l'hypothèse retirée en v0.3.
 
+## Piste 9 — Réduire les tailles
+
+**Signature, découpage.** `aux` 63 et 66 %, graines 26 %, α et β 6 et 3 %, engagements 4 %. Ces champs sont uniformes (Proposition 7) : la compression
+ne gagne que les bits de bourrage, 16 o au plus sur SIG-128.
+
+**Signature, paramètres** (`tests/c/compression_sig.c`, deux termes dominants du Théorème 8 ; retrouve les coûts et les tailles du dossier). Temps estimé proportionnel à N·τ :
+
+| N | SIG-128 | Temps | SIG-256 | Temps |
+|---|---|---|---|---|
+| 2¹³ | 7 896 o (−7 %) | ×1,8 | 32 260 o (−7 %) | ×1,7 |
+| 2¹⁵ | 7 422 o (−13 %) | ×6,5 | 30 238 o (−13 %) | ×6,3 |
+| 2¹⁶ | 7 032 o (−17 %) | ×11,6 | 27 808 o (−20 %) | ×11 |
+
+Le gain paraît faible pour ce temps, et chaque variante casse le format : non adopté.
+
+**Signature, changement de protocole.** SDitH v2.0 annonce 3 705 / 7 964 / 14 121 o sur SD binaire (catégories I, III, V), avec VOLE-in-the-Head : environ −57 et −60 %. C'est le seul levier de cette ampleur.
+
+**Conditions avant adoption.** Un nouveau système de preuve (complétude, solidité, Fiat–Shamir, temps constant), et le SD régulier, que § 3 de PREUVES exclut aujourd'hui :
+il faudrait vérifier et instancier la réduction depuis SD de SDitH (son Théorème 5.1).
+
+**KEM** (`tests/c/compression_kem.c`, vraie borne δ sur de vraies clés, D, w et θ variables, aucun coût d'attaque sous la v0.3). Avec le critère de choix actuel (5 % de clés
+au plus au-delà de 2^−(λ+8)), le gain va de 0 à 0,6 % selon l'exécution, car les clés sont tirées au hasard. En acceptant jusqu'à 10 % de rejets au seuil 2^−λ : environ 9 710 o (−1,3 %, D = 12, θ = 0,8) et 34 800 o (−2 %, D = 22 à 24), mais n et donc pk augmentent
+(environ 6 670 et 23 500 o). Baisser D oblige à monter n : les paramètres actuels sont déjà au bon endroit. Non adopté ; seule la piste 8 peut changer l'ordre de grandeur.
+
 ## Essayé et écarté
 
 - **Lots de 64 états (deux registres par nibble) :** 268 ns par état

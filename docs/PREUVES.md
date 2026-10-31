@@ -187,7 +187,7 @@ pour les 254 ensembles, en remplaçant `e^{θc}` par `⌈2^{12}·e^{θc}⌉/2^{1
 toute clé ayant un `c > 15`. Le C calcule les `c` par transformée de Walsh sur des registres, sans
 branchement ni accès mémoire dépendant de la clé (Valgrind) ; seul le pire produit `M_x·M_y` est rendu
 public. `keygen` rejette toute clé dont la borne dépasse `2^{−λ}`. On a donc **δ ≤ 2^{−λ} prouvé** pour la
-distribution des clés produite. Médianes mesurées : `2^{−148}` et `2^{−294}`, rejets 5 % et 8 %.
+distribution des clés produite. Médianes mesurées sur clés brutes (`resultats/kem.json`) : `2^{−146}` et `2^{−289}`, rejets 5 % et 8 %.
 
 *Correctif v0.3.* La v0.2 justifiait la correction par un z-score gaussien
 (bits supposés indépendants). La borne prouvée ci-dessus montre que les
@@ -1211,8 +1211,8 @@ sur les messages courts : deux appels de fourche par feuille et un coût de raci
 
 | | n | w | D | n₂ | sécurité ISD | δ prouvé (médiane / seuil) | pk | ct |
 |---|---|---|---|---|---|---|---|---|
-| Sillage-128 | 50 021 | 75 | 14 | 28 672 | 138,2 b | ≈ 2^−148 / 2^−128 | 6 285 o | 9 837 o |
-| Sillage-256 | 170 003 | 140 | 28 | 114 688 | 265,1 b | ≈ 2^−294 / 2^−256 | 21 283 o | 35 587 o |
+| Sillage-128 | 50 021 | 75 | 14 | 28 672 | 138,2 b | ≈ 2^−146 / 2^−128 | 6 285 o | 9 837 o |
+| Sillage-256 | 170 003 | 140 | 28 | 114 688 | 265,1 b | ≈ 2^−289 / 2^−256 | 21 283 o | 35 587 o |
 
 Les niveaux sont **classiques**. Estimation quantique Prange–Grover : 91,7
 et 158,4 bits, sous 128 et 256 : aucun niveau quantique n'est revendiqué.
