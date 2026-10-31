@@ -129,7 +129,7 @@ void sl_hash(const uint8_t *m, size_t len, uint8_t *out, size_t outlen)
 static const struct { int debit, tag, lam; } PROFIL[2] = {{32, 16, 128}, {16, 32, 256}};
 enum { DOM_AAD = 1, DOM_TEXTE = 2, DOM_FINAL = 4 };
 
-size_t sl_aead_tag_len(int profil) { return (size_t)PROFIL[profil].tag; }
+size_t sl_aead_tag_len(int profil) { return profil < 0 || profil > 1 ? 0 : (size_t)PROFIL[profil].tag; }
 
 /* _absorb : blocs de débit, bourrage 10* (au moins un bloc), domaine, P ;
  * reprise possible au bloc b0 (les blocs < b0 déjà absorbés). */
@@ -254,6 +254,8 @@ static void duplex(const sl_aead_cle_t *c, const uint8_t nonce[SL_NONCE],
 int sl_aead_encrypt_ctx(const sl_aead_cle_t *c, const uint8_t nonce[SL_NONCE], const uint8_t *aad,
                         size_t aadlen, const uint8_t *pt, size_t len, uint8_t *ct, uint8_t *tag)
 {
+    if (c->profil < 0 || c->profil > 1)
+        return -3;
     duplex(c, nonce, aad, aadlen, pt, len, 0, ct, tag);
     return 0;
 }
@@ -281,6 +283,8 @@ static int egal_ct(const uint8_t *a, const uint8_t *b, size_t n)
 int sl_aead_decrypt_ctx(const sl_aead_cle_t *c, const uint8_t nonce[SL_NONCE], const uint8_t *aad,
                         size_t aadlen, const uint8_t *ct, size_t len, const uint8_t *tag, uint8_t *pt)
 {
+    if (c->profil < 0 || c->profil > 1)
+        return -3;
     uint8_t t[32];
     duplex(c, nonce, aad, aadlen, ct, len, 1, pt, t);
     if (!egal_ct(t, tag, (size_t)PROFIL[c->profil].tag)) {

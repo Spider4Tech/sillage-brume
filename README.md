@@ -466,6 +466,8 @@ To resume a campaign using the repository's resume script:
 ./reprendre_nuit.sh 10
 ```
 
+For a long run on any machine, `./runlong [hours]` checks it, starts the campaign in the background, monitors temperature and stuck campaigns, resumes after an interruption, and writes a results archive; see [`docs/CAMPAGNE_24H.md`](docs/CAMPAGNE_24H.md).
+
 The extended campaign is compute-intensive and uses all available cores during some C tests. Its outputs are generated locally; not all raw campaign files are committed.
 
 ### Coverage by area
@@ -490,10 +492,12 @@ The reduced-model tests are useful for checking proof steps and attack code. The
 
 The committed [`resultats/SYNTHESE.md`](resultats/SYNTHESE.md) reports the following run:
 
-- **502 / 502 controls passed**;
-- **51 tests**;
-- **3,604 seconds** total runtime;
-- run timestamp recorded as **31 October 2026, 12:38**.
+- **533 / 534 controls passed**;
+- **53 tests**;
+- **3,530 seconds** total runtime;
+- run timestamp recorded as **31 October 2026, 18:57**.
+
+The one failed control, `Sillage-256_D_minimal`, was a sampling artifact of the test: it drew only 3 random keys, for a true rate of about 43 %, so it failed by chance about once in 5.5 runs. The test now draws 30 keys and passes when run alone; the full suite has not been rerun since.
 
 This is a snapshot of one test run on the machine used to produce the report. It is not a statement that every possible input, compiler, architecture or adversarial strategy has been tested. In particular, the full suite does not prove the hardness assumptions, the security of the full BRUME permutation or the completeness of the QROM arguments.
 

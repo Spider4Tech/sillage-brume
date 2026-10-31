@@ -1,6 +1,6 @@
 # Empreintes SHA-256 — SILLAGE v0.4
 
-Batterie : 502/502 contrôles, 51 tests.
+Batterie : 533/534 contrôles, 53 tests.
 Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 
 ## KAT
@@ -33,15 +33,15 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 |---|---|
 | `sillage/c/Makefile` | `895fa40561ef4c0c7069644a819ef5daf789d08d5030b4cf809e9291f02a1c1e` |
 | `sillage/c/bench.c` | `1239353fa3bb6e3b2b43eb1eca85381ab68a0ff34233db6576c7f134ba17a12e` |
-| `sillage/c/brume512.c` | `5a86ac93075ffd34da5d76aadc1c2e95badb19fa9b052494095d807a287524d1` |
+| `sillage/c/brume512.c` | `ba67b6484cb50a4de7f0337b7147041eccca5aa23ac928123601d02012101d6e` |
 | `sillage/c/brume512_avx2.c` | `b6f9e2fd2b640658a1442e4b4f9642c5884715504400fc6b12777869f7a5e09d` |
 | `sillage/c/brume512_simd.h` | `a4f5e25a633485e6569587326eee727eceaa5e49f440a80c0e3f5ab1ffb34afe` |
 | `sillage/c/brume512_tables.h` | `007d80ff07b85d9c8f909c09c965375f8fcd92c81df09c3c54007bf09d856792` |
-| `sillage/c/commun.c` | `80d6acafbe95a8201b9fa25545eba5c4e5da7e57ef70cafa20cc64b162bb37f1` |
+| `sillage/c/commun.c` | `4905ccf725dff3009fa4618a886da57aa3cc92550a199ca4f7751a14429a659e` |
 | `sillage/c/isd.c` | `b2885305a022218073c77181275d1d9cae3c327abe3025c4f0da0452d59eed50` |
-| `sillage/c/kem.c` | `5d8f14c1e88d70d2e47335f6ad916b9d489d293c709515b7d44d7ba3c4fe933e` |
-| `sillage/c/sig.c` | `04f26380b5340c3e99905994225f096299bd226f84cc61ab0031d2408a7d80ad` |
-| `sillage/c/sillage.h` | `3b904b42c21b19089836aaa2ea2064b75c068458c6538cb91b5dfcea27e559aa` |
+| `sillage/c/kem.c` | `c21e8ecb750fc8481a1e73f835a80a25c529dc00d601c5226f6af5d3e45e90ca` |
+| `sillage/c/sig.c` | `c4b1f3f11a1fea196e93873f0a13d8c0edc06cb62089cb7f4dd2f0d0e198058b` |
+| `sillage/c/sillage.h` | `dd3cfa243096b3665c4454c4e959007239d4f2e70e399127ff380708f4139f97` |
 
 ## Tests
 
@@ -54,12 +54,14 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 | `tests/bench_c.py` | `908e0eadafa6b89650d3c75406a1b39d8677cceb95014abb74485d457c7f6995` |
 | `tests/bench_perf.py` | `6cd03cbe715503e47756818136b1459964600ed091a7b592c40e4af64e708ba3` |
 | `tests/bench_tailles.py` | `2ed7703c77770fb778de05b6b089cecbeccbdedc43acbcf7aac5e22ad1e2dc94` |
-| `tests/c/Makefile` | `dff07bb6fecec118ee2870669064fdeffcc98c8c7d2986653d279efd1f190db3` |
+| `tests/c/Makefile` | `d6000c82915f651fc62ad51411a71941c5cd5532bcab618c2b452686941fb61e` |
 | `tests/c/brume_attaques.c` | `f2d3976342e4f9c7feeab4448f53afa4dfd7912acce7713b0011ad5853b1dec7` |
 | `tests/c/brume_ref.h` | `9b26ab8feb9c109c0ca47d0d030e0693c2226413b52872acffd815f99f3f701b` |
+| `tests/c/compression_kem.c` | `ccc134e69567899694737029acc3e6c0bdc292049acce4576d700648d062e1c5` |
+| `tests/c/compression_sig.c` | `b97477e549d98c8262bcc702539ebb72cf9a97472241369a50d1aaadd7eef0e4` |
 | `tests/c/diffusion_support.c` | `c7fabb6e23e96763cff33f2126da322404fd9a90c9bf882a7f8e0961fd425d42` |
 | `tests/c/fuzz.c` | `f6d20a1d844ca0e4d7ccf54a27d0b14d4af22d3d4522630fed5c4c8323ffc0dd` |
-| `tests/c/garde.c` | `6ecc32ed2f302118d42b05a5353628eb734538ee306d8126f428b3cf9c26f8ae` |
+| `tests/c/garde.c` | `50930a275b518b36a5a63edf1f4c48aeb5c56ab98335f4eec9891908a282dee7` |
 | `tests/c/garde_test.c` | `84909ac34274d51460fd223197ab293abe75fe1729021a65cf3796ce4f5b06ce` |
 | `tests/c/isd_comparaison.c` | `8a6933df5d2267711887c0ea59fd0be2946d6708d28c03bbc0a2a5aea75609fb` |
 | `tests/c/isd_reel.c` | `1b1c6853cbded1d0b1c86ee38c33208a4f6ddeb9b900946436529d84fd729f12` |
@@ -67,10 +69,11 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 | `tests/c/kem_valgrind.c` | `4000bfb3352ac1b94ff3fd336eb71142adcec13675a50b7da9dbb93bc945deba` |
 | `tests/c/mini_brume.c` | `dc88028e62404b66c575cb2a28e07b46a6a89b1293f69bc3711bfe6f70f5e6f3` |
 | `tests/c/noyau.c` | `4b6e7584b0f1fba466c11a9a034cda790167556d6e4c4ef3a6463526c1d263d4` |
-| `tests/c/nuit_cryptanalyse.c` | `3a771fd87c771d06e6398ca255b705c887682990a15ccfa6512e508bee38f06a` |
-| `tests/c/nuit_isd.c` | `d35c0dae189fd871ed47ac63548556f0424b11e1fb6897d3a0b086c8a603ca8b` |
+| `tests/c/nuit_cryptanalyse.c` | `4a1fbc7c10efc14c234a8a77a1ace487b4d1ad12c0ff46caf650354fa362f56a` |
+| `tests/c/nuit_isd.c` | `2c91530e47187ea9e68982b80b292a07a68cae37f4401670ec82b8f6179a1f3e` |
 | `tests/c/nuit_kem_reel.c` | `19f0f62098944fce2b301ccbc26a9abe3087c4e9446e28f579b3e164e105aa24` |
-| `tests/c/resultat.h` | `9bb976d5c2bb7e7634e7371d1436637fa2e5b1146d1a3cb057624947ed778de7` |
+| `tests/c/resultat.h` | `65186d1ad0cf9aa1e9b191277d2f73fffbfc58ef00120f841901bd0cf735d2b1` |
+| `tests/c/rsd_attaques.c` | `e47a1c6af326c7804098bbb873f69eb2fc738b55eebb2ed1684c0d3d0f41d740` |
 | `tests/c/sig_ct.c` | `17a9a1dde668cd44f84ebeb05da74c96e176c916110d79f39deb655d09e92920` |
 | `tests/c/sig_flux.c` | `7bddabedc3d6e5c0ea2112dd3d8fa7a5b7f1095f43dc38848bc18e6f8073d382` |
 | `tests/c/sig_valgrind.c` | `834f634ed3f1b0c5321fd693b345632f7970855b32a97b88c7fd1d0984d188d3` |
@@ -78,15 +81,18 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 | `tests/c/structure_miss.c` | `8064bb4d1267a2f41607723b98920d58b037c1c7ec2b284c006041e0378dc69a` |
 | `tests/c/temps.c` | `f59b5aadb5b6d33dec9461bd80b172771d2d1150da9aca2d9234534a3d77d368` |
 | `tests/c/trace_pc.c` | `97300089809ac8bb53d3fc3f183a4c7eff4a069e9737d9aecf58b683383f0741` |
+| `tests/c/vole_kat.h` | `b72f26bc437c4685f5175cc3956a3b35540a5fa2f608de77b6d923dfc56cf256` |
+| `tests/c/vole_params.c` | `f84f53c714832f392d63a593b3ee84ead5bc0a48f194683dabf4e57ebdf57f06` |
+| `tests/c/vole_proto.c` | `1cfd017e4ea4d6ea0668e0b6eda8b9977b8c702450f7231248fc0b94edcd9777` |
 | `tests/commun.py` | `4c42c8e3bb8ff345006777c6ffa1fe08a8cc78ec45181be2d5c044f3edef968e` |
 | `tests/dp_cpsat.py` | `9f7efe1431e9a0e0286bb88c77cbaa6484689d7c974a8627ea9e578512013370` |
 | `tests/dp_queue.py` | `fdad527d13321006d4a3cedbadb4fca77bfffeb3a3c865da4391481bcfe61425` |
 | `tests/dp_sat.py` | `98b1fb72dba68d1acae98369747458819bdb837def7f054d4e30dc81b2aa8733` |
 | `tests/empreintes.py` | `b774f1ed3a4c72df921746679a71618f37729101b1a13cf04356db681e0634f0` |
 | `tests/noyau_c.py` | `8b2531d11172dd1a013c40044fa779b2d7d06f53c68bf6623a6981f47a275588` |
-| `tests/nuit_brume.py` | `9799d6b35f4c1393087f3ea8b6967b0dac9ff69511878acd5f3d1dd062ede102` |
+| `tests/nuit_brume.py` | `608bccf35ed1aca14db41d11a7f70fde026e6763b7f09d4ebdbce904921325ac` |
 | `tests/pistes_monomiales.py` | `d3e71c04cd304e754967867f4a2d5fcaafbd646e41d2406ab2b53fcd3ee5f840` |
-| `tests/run_all.py` | `ceb8241948f68dfab151966cb867b29d3ffd24a2a2fea52a112c99d8ab0a25aa` |
+| `tests/run_all.py` | `f887fe2ab7fb4c95c7f07fc6235822418ed4a4afa2d8ee28f680a166b8650403` |
 | `tests/test_aead.py` | `174b1d4eded90afb749947f1e7ead1470c838aba7b9797b4cf9da55e96fe23a7` |
 | `tests/test_aead_modele.py` | `e663adb2d461585c2f492522edadfec7c804e2c381a1e77aa6c30c6299846c5c` |
 | `tests/test_aead_parallele.py` | `3792c928a5c703c745049347d247a9e6dcd3bb216e37cf0405579fdb7bbdf44d` |
@@ -122,7 +128,7 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 | `tests/test_hull.py` | `4a5fd66aec69e3c241951306459769ca1ff099f6eee719990eb1b416e4e01dab` |
 | `tests/test_indiff_arbre.py` | `3eac302e51a333781abc0068589ea3d81b2ce1846547fdf8a06be0eb6d8be196` |
 | `tests/test_integral_degre.py` | `faf0a3f4ebe36036b32f2ce9ccb9de4ba325717d89993b4549c34d6af24c6211` |
-| `tests/test_isd_parametres.py` | `ae0b5e67c07572e118be35bfe04e906fdf9b79738da775c9ebe9576052dde73e` |
+| `tests/test_isd_parametres.py` | `2a55c14d4cdcaabe27576b78007553949578b12a6834b3af583e9ac98e717c3c` |
 | `tests/test_kem.py` | `83e96e05073e6ef27aab771f1c9fbed3b276a514cd18d1820d5086d89706ad1f` |
 | `tests/test_mode_aead.py` | `f2ef9157de7302a6e86c67dbc9c68f8812079ffe6390426de60a67ad01d577d2` |
 | `tests/test_robustesse.py` | `4cdd96f277111e518018058451042c265aa9e93da6908d96a2a47fe5f3ba9783` |
@@ -142,7 +148,7 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 
 | Fichier | SHA-256 |
 |---|---|
-| `resultats/SYNTHESE.md` | `75184b2c20e3d4b1de20681b170fedef1ce3876ae1d491cc62493b05e8511b74` |
+| `resultats/SYNTHESE.md` | `654dd47bd8e0ba3537564b03ac3da165e46df124a8b654f6a8bc5e3675dd5108` |
 | `resultats/aead.json` | `b91185ddf202b24c80d815a17efa9342e1e833cedd33d2524a2c353ec6dd8d7d` |
 | `resultats/aead_modele.json` | `38def47f98b116cc7da599ffc3db66785158e4aff9a9665204f8285cf79ae962` |
 | `resultats/aead_parallele.json` | `d428b94ff6becb56284d69fcf74801667c4005140cf1b2b4c4cadc5d18728e15` |
@@ -152,27 +158,29 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 | `resultats/bench_c.json` | `f2e2ce15bdd8846a0299918dd86ed3bec59a34a0a80058b7960af98e7f563dad` |
 | `resultats/bench_tailles.json` | `e247d79fc9975b776f60d070d59dcd0f01e7e7b021be7d9b94746bba8a71e5d4` |
 | `resultats/branch_exact.json` | `cb8b463cbca6c10f59a33532f6bcb2d2d699cd0519ba6687a91d11a91838ca61` |
-| `resultats/brume_algebre.json` | `83bcccdb1fd2f0b1022349fe04b0dd8470dfd2861881fdb4a9993af324cf928c` |
+| `resultats/brume_algebre.json` | `2fba31a842c564b01e14959ab8973805e6f885355c16e57100233226689a55c1` |
 | `resultats/brume_attaques.json` | `86b6f7fbff1b06591d894a1f6eb1c1a10d7bbe7837270a234c0bc7e8d3561329` |
 | `resultats/c_cube_init.json` | `fa6cd415f544625ea053f444e2ade7aad33dff8f017d942e632fac8a695aa91a` |
 | `resultats/c_degre.json` | `61a75ceb9b0498710adcd614823ca9fbcd1bb8236fdde8fda4f66d75ce164acb` |
 | `resultats/c_diff_lin.json` | `b32482ded8dcac7b8901d777cc60ab3f6f322fd3c9384750fc47008b25a695ed` |
 | `resultats/c_diff_lin_x4.json` | `5000755ba3699799516cd4e061e294f9d82296ba46bb6920637041941126537b` |
 | `resultats/c_fuzz.json` | `0c4c0eef52395633eb33f1d76363f8584b8515b4da2a0cbbeb9bffa0d7c8e5a3` |
-| `resultats/c_impl.json` | `00f4ed6f3551e9895827bc8f18100b538ec3355ffbf4e3e098a4ed0e30ccab7c` |
+| `resultats/c_impl.json` | `9f4bd64545971f000e373a2e370afed19870d885c98a8fd0ebdd55ff622176c7` |
 | `resultats/c_integral.json` | `fe17e47315c4fb3969e4b86977b234ed7416ff26ed6234d91d8504eda98b4157` |
 | `resultats/c_integral_x8.json` | `886d2341ef7325edd1ecb465617f98c7cea2180ada2cc73b4140830cefdcef13` |
-| `resultats/c_kem_bruit.json` | `fe162119d9820a00e3b5b26094213bec9922ce21d48453eb31989b1a579e9f76` |
+| `resultats/c_kem_bruit.json` | `e4fc711c9e2a3ea541f1c3a497f27225b15ca50440d2349311182379a88d0800` |
 | `resultats/c_kem_bruit_x4.json` | `776cebd292199f6f376f7975ca4b903dc6e7c01ff0f119753d11545229097989` |
 | `resultats/c_kem_valgrind.json` | `b9ec1bc5a3fd0c71bf23539ebf54afb120c26a4207456ab7e3718301fa07cb0f` |
 | `resultats/c_sac.json` | `abaeea3551c2d705fc67a3adf0831e98f2667821e6dbfe03ab5ef3bbc3859582` |
 | `resultats/c_sac_x4.json` | `591df87caff6c769a69a8445b2d1068bc64e5dd44d9661014f19288ee9bbff3f` |
 | `resultats/c_sig_valgrind.json` | `0bc530416f6d361f1e523c8f22d70982e4ddaa1c6f2d67f88f9edb43357837b3` |
 | `resultats/c_simd.json` | `1831c6a5c65f744ca2f8a037c1600e760b5f86faa6db8e08396449bd09aebf45` |
-| `resultats/c_statistiques.json` | `b0404c7c6cb79902bc4be4a1069471b4feb185ce4f54587f363ded7412bf3eeb` |
+| `resultats/c_statistiques.json` | `e99ef8a5d938d026c1302c8f61c0b2feaad652026b46c6bcc7ef0419641220e4` |
 | `resultats/c_statistiques_x4.json` | `cd06d13fc74fba027fffeeb6ffc592326eacba48922cd57a58b16bfad88d8610` |
-| `resultats/c_temps.json` | `e479c6bac66d767a43004b315ed08ae4115cb9bd5f6ffb2928ed92fef8f322c5` |
+| `resultats/c_temps.json` | `e668de7d06fe0ab5a223a4535c426cc289cac5bbe04e8b5c7513fbf7bf67e6f7` |
 | `resultats/cache_trails.json` | `4833b63ca63002838b96bcdc17487a3dfd682868fde7d00bd3213e46b141cb14` |
+| `resultats/compression_kem.json` | `ad2119229ebf21ea5907c8aeb4e62f7dcd1b35815b5b6aff087aecc3de248785` |
+| `resultats/compression_sig.json` | `feee314a3c2e1aec4d1bfd5adb84f8a737c1de0e224c436a0b93e176e38c6bf8` |
 | `resultats/cycles.json` | `1325f0c84f64a060da5fee19555a1949e11a011106b1c046d10de0ddc76b847d` |
 | `resultats/diff_lin_empirique.json` | `5a55b998c883171db2422e9e6df2e86d9886ecfbdc093c8400bc39b6ea656a36` |
 | `resultats/diffusion_stats.json` | `815bb71b5c1f6acd0f8ca8a9d0addd27d7cd3646b39052605622987f610d324d` |
@@ -184,15 +192,15 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 | `resultats/dp_validation.json` | `8d0497b43e5d55c10d9bedb273cafa133aebc85a58855ca931482fdd9e410ca5` |
 | `resultats/fonctionnel.json` | `a4a6f4f43956f1c7db8754dd93f106e633e325eb97b31c48a3d1f77544c0ff7f` |
 | `resultats/hachage.json` | `bf1f99c5dc6f8ca3d595abe4cebd66f684dfa25829afa403219d587d150e3719` |
-| `resultats/hachage_arbre.json` | `91c2c78c123df4b1579334bb01cdad20397cec270752b0ac45e8738d051bb8f2` |
+| `resultats/hachage_arbre.json` | `2cb8a879895f7d1d510690761332cf0360e1aa8a65a2a8669cef1148af37bc2b` |
 | `resultats/hull.json` | `90342c2b045a3233873297de0461a8962785c69086ccba82fff224999d83e43b` |
 | `resultats/indiff_arbre.json` | `2d8bc1405130c7539c4849e1e2d6c1a20fd0a736a8d1eed71f421d8776959b8c` |
 | `resultats/integral_degre.json` | `5f03cdcea50d8d2482c954b85bde8e947dcc8c4d311c8d34f1e440f39e6a0ca5` |
 | `resultats/isd_comparaison.json` | `cbf2bd2e5de2cb5385abbe0bb2e1dc3c455f20e90738816e16b6a5f66f104d4e` |
-| `resultats/isd_parametres.json` | `15292ed304793f503e719c2ad35a68404dd2f0da4ad2638ecf77db8048e72b45` |
+| `resultats/isd_parametres.json` | `61f8e2a38294be88e8eb8ec376c6880206ad143d14f15334d449c0042bd2414e` |
 | `resultats/isd_reel.json` | `ff79972f5125fd007c12cc27e1155d424384db95478ea00c87fce73a44e7f339` |
-| `resultats/kem.json` | `c3ef3aa8769677dab87fd4e41fc5972e45aeb9e63ada181d2d4900006dc833fa` |
-| `resultats/kem_distributions.json` | `e94ea81e3ab197573b1f887934dafe644df7577955a23a4dbe22f382631dedd8` |
+| `resultats/kem.json` | `8292f63aac9c62a4ab0d28b309263eecbbc234b573f0684a19defb85742dc05a` |
+| `resultats/kem_distributions.json` | `77336568e1a31f89c0e2e0fdb54ce994d762a58884b672e6e59f9d16d02a9587` |
 | `resultats/mini_brume.json` | `2a807e5bf9d6269dc6df991ca9c3c5f5b604fd3b5cf936caefea81b3d7c9d733` |
 | `resultats/mini_brume_detail.json` | `39e5e08f96bf3e63aac0cd0fb896fe256478c0a0587e44c88d0aed3ae7f90cd4` |
 | `resultats/mini_brume_instances.json` | `b2bccce1c1188a8fecfc2a7c0ac4594da4794d138c0f12a8a0e4fbbb3eaf4151` |
@@ -202,16 +210,19 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 | `resultats/nuit_isd.json` | `c39287eaccab608dde73a885dafbfbf0eaf7473aafc08c76828ca4de77a3a334` |
 | `resultats/nuit_kem_reel.json` | `b83f7c6ce5256ef581a145989e48adfe8c2c95897e5aff589eb94a7fe7596329` |
 | `resultats/nuit_temps.json` | `4f289e467002a56beb4275bd9e6ad6005b65475ab39a915b799fa9c996ef2fa2` |
-| `resultats/robustesse.json` | `ff24c81ad6077f906d4eba6b744001aea3e2e084e7bbdfaaa64d09a6aee99af5` |
-| `resultats/sig.json` | `ae2cad835927c5f3ceaf6641ba1baa849adb9f75af02eb2cb858c45bda14b5e2` |
-| `resultats/sig_flux.json` | `a872e154b8de6ea38070e353816660164cb573c884d11b686fadb6a108f6e5b1` |
-| `resultats/sig_modele.json` | `596912a84da6e1aa3abd82d375ceb5214fc126b88f8804e9882b86c5282308da` |
+| `resultats/robustesse.json` | `ef6bf91ac3a0c017e4490820e916c32833a9987fe91d544078c289e0a5ee34ec` |
+| `resultats/rsd_attaques.json` | `04bf7a4c7e2303487cc84b3f93250f908f7ed9ff7b5e9d9e6856910cc1d7f096` |
+| `resultats/sig.json` | `88f65cc2940c27b19f93e57132fc0ac04fd55fd06ed42217a10407bb1974ac30` |
+| `resultats/sig_flux.json` | `5406fec788e6a202a19688dbd28ebfbc88c882655c11a9a0501c57701ec1b854` |
+| `resultats/sig_modele.json` | `141e049867c66019984468eb0ff0a4a5bad346b1966c1d48aebd608f184450bb` |
 | `resultats/statiques.json` | `3a82c07a40ce053af6bb5815c193ae0a865099e1d7cbf907f604e0584193ea5f` |
 | `resultats/structure_miss.json` | `792d62c718361c1fbbbfda9a320889fdec7dd8d414e2608cd2699483be50df7d` |
 | `resultats/symetries_invariants.json` | `14c13d99a122f55bcdae93efb5e6e7abfb7d9c4e678822482983a13ac7d534a9` |
-| `resultats/synthese.json` | `30d848bb0fd4b110a3b51600b3f72c712b6703a113e7b032d45519376ca6fed6` |
+| `resultats/synthese.json` | `3b72eba83de4e5ba69ea0ab6465fd8288807b24782deebcfb77ef21f3929c741` |
 | `resultats/te.json` | `19b3b92d061b07253c7b7dc732bc4d1169c01cdfc66036566ac47dc88ad4838c` |
 | `resultats/trails.json` | `f149e63c675ec2061ffdd1d9240ae9a34a72b2b72d8f9f34f45180a3ec59797f` |
+| `resultats/vole_params.json` | `30e65f8e34624898f81e0c2c512615eb9568226da2d185414e95c709ccc71973` |
+| `resultats/vole_proto.json` | `bbc4640ddfd9663326ea95b9b0531d0699b6ef24a6c37c3df0f559c0e6dfca01` |
 | `resultats/wide_trail.json` | `908b2ded5bf3ecfb84c1a3a4071b4d1fd8e5c6baa7bce91a6a89a56926ba3657` |
 
 ## Preuves et rapports
@@ -219,9 +230,12 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 | Fichier | SHA-256 |
 |---|---|
 | `docs/AUDIT_EXTERNE.md` | `15181ffed3a873c321f66b349144a0030f07e45f021e088b030613a554ca0a31` |
-| `docs/PISTES.md` | `fe1599d99d0c7274295f159f415aa86701cc4828db0656cdaf5fa52e67df5831` |
-| `docs/PREUVES.md` | `01d8a67caf0dd72b347b6c768629f90cd16e5eb7e876af7e6893b355d49eadb4` |
-| `docs/RAPPORT_AUDIT.md` | `91549e7ed9da34cbe41b8f9cc9dbc63e4966875c644196f7d00a8b84d7b1d66d` |
+| `docs/CAMPAGNE_24H.md` | `3f63cb78b53ae1150f403bd973f9cc8654c2da43bb5d63292d43e3c789771d07` |
+| `docs/PISTES.md` | `b95e34b8fe5d145f3cd22d8a131f61ed86232e12de1993f079d3e7e311eb20c0` |
+| `docs/PREUVES.md` | `9beb934e74f83102750ced9e5cf9823a649e00296ee34cb9456e426f0c450161` |
+| `docs/RAPPORT_AUDIT.md` | `6006fdc094acdeb610ff4fa8161d4d738764d9bfc0c48e86b6062dccb5e42a71` |
+| `docs/REVUE_CODE_DEPOT_C.md` | `def7d3b741d31e21a4efb31337fcbca59feac6c2357e1ad87a54fbdd0ec41cff` |
+| `docs/REVUE_CODE_VOLE.md` | `4f9588e8227401492d2ad2b06c60a4411031922a0671096b9fa1a495d869f225` |
 | `docs/guide.md` | `a43e2fd5c073431e6c0b6573e1817ec026ebb5e49ad30e01c7f2abb58a1afb90` |
-| `docs/rapport-piste-compression.md` | `237a0881149ef7e775b35bacd84909239bdfe8a1c52100496d8bcc8b201c9379` |
+| `docs/rapport-piste-compression.md` | `1d79705c40b5be919a7c0124543868c777a5994373a4da25d248baa75f40ccac` |
 | `docs/rapport31codex.md` | `367dac368aa8582b826df979f3323ad822dd42b0252294d3956373283e181c60` |

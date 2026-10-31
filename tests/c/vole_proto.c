@@ -6,7 +6,7 @@
  * p_j(X) = w_j X + V_j, évalués par le vérifieur en Δ. Contraintes homogénéisées de degré d, mêlées par γ : leur terme en X^d
  * est nul si le témoin est valide. α = coefficients de degré < d de ce polynôme masqué.
  *     build/vole_proto   (depuis la racine) → resultats/vole_proto.json
- *     build/vole_proto --kat | --fuzz N ; compilé avec -DSL_VALGRIND : --ct, --ct-temoin (ctgrind)
+ *     build/vole_proto --kat | --fuzz N [graine] ; compilé avec -DSL_VALGRIND : --ct, --ct-temoin (ctgrind)
  */
 #include <math.h>
 #include <omp.h>
@@ -1044,8 +1044,10 @@ static int mode_kat(void)
 }
 
 /* sous ASan/UBSan : tout ce qui diffère de la signature exacte doit être rejeté, sans lecture hors du tampon */
-static int mode_fuzz(long n)
+static int mode_fuzz(long n, uint32_t graine)
 {
+    kat_actif = 1;                                       /* rejouable : la graine suffit à reproduire un échec */
+    kat_ctr = graine << 16;
     ctx_t c;
     ctx_init(&c, &PRTOY);
     hcache_t hc = {.cols = alloue((size_t)c.k, (size_t)c.cB)};
@@ -1086,15 +1088,15 @@ static int mode_fuzz(long n)
 
 #ifdef SL_VALGRIND
 /* --ct : keygen et signature, positions secrètes ; --ct-temoin : le branchement du témoin doit être détecté */
-static int mode_ct(int temoin)
+static int mode_ct(int temoin, const vp_t *v)
 {
     ctx_t c;
-    ctx_init(&c, &PRTOY);
+    ctx_init(&c, v);
     hcache_t hc = {.cols = alloue((size_t)c.k, (size_t)c.cB)};
-    uint16_t pos[8];
+    uint16_t pos[256];
     vpk_t pk;
     keygen(&c, &pk, pos, &hc);
-    VALGRIND_SECRET(pos, sizeof pos);
+    VALGRIND_SECRET(pos, (size_t)v->w * 2);
     if (temoin) {
         volatile int t = 0;
         if (pos[0] & 1) t = 1;
@@ -1124,10 +1126,10 @@ static stat_t stats(double *v, int n)
 int main(int argc, char **argv)
 {
     if (argc > 1 && !strcmp(argv[1], "--kat")) return mode_kat();
-    if (argc > 1 && !strcmp(argv[1], "--fuzz")) return mode_fuzz(argc > 2 ? atol(argv[2]) : 2000);
+    if (argc > 1 && !strcmp(argv[1], "--fuzz")) return mode_fuzz(argc > 2 ? atol(argv[2]) : 2000, argc > 3 ? (uint32_t)atol(argv[3]) : 1);
 #ifdef SL_VALGRIND
-    if (argc > 1 && !strcmp(argv[1], "--ct")) return mode_ct(0);
-    if (argc > 1 && !strcmp(argv[1], "--ct-temoin")) return mode_ct(1);
+    if (argc > 1 && !strcmp(argv[1], "--ct")) return mode_ct(0, argc > 2 ? &PR128 : &PRTOY);   /* avec un argument : profil complet, paires comprises */
+    if (argc > 1 && !strcmp(argv[1], "--ct-temoin")) return mode_ct(1, &PRTOY);
 #endif
     resultat_t r = {.nom = "vole_proto"};
     static char json[12000];

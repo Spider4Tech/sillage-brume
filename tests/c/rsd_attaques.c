@@ -206,7 +206,7 @@ static long prange_reel(int n, int cod, int w, const lig_t *H, const int *pos)
 }
 
 /* linéarisation réelle, b = taille de bloc, degré D : monômes = au plus un x_{i,v} (v < b−1) par bloc. Renvoie 1 si la solution sort. */
-#define MMAX 6000
+#define MMAX 40000
 static int monomes(int w, int b, int D, int (*mon)[8])
 {
     int nb = 1;
@@ -335,11 +335,12 @@ int main(void)
     /* validation du degré de linéarisation : modèle contre instances réelles */
     {
         /* cod > w·log2 b + 4 : solution unique, sinon le noyau reste de dimension > 1 quel que soit le degré */
-        static const int T[8][3] = {{6, 4, 16}, {6, 4, 17}, {5, 5, 17}, {5, 5, 19}, {4, 8, 17}, {4, 8, 22}, {6, 5, 20}, {6, 5, 23}};
+        static const int T[12][3] = {{6, 4, 16}, {6, 4, 17}, {5, 5, 17}, {5, 5, 19}, {4, 8, 17}, {4, 8, 22}, {6, 5, 20}, {6, 5, 23},
+                                     {8, 3, 15}, {8, 3, 16}, {8, 4, 21}, {7, 5, 21}};   /* les 4 derniers visent un degré plus élevé */
         int ecart = 0, tot = 0;
         char buf[1024];
         size_t lb_ = (size_t)snprintf(buf, sizeof buf, "[");
-        for (int q = 0; q < 8; q++) {
+        for (int q = 0; q < 12; q++) {
             double tl;
             int pred = degre_hilbert(T[q][0], T[q][1] - 1, T[q][2], T[q][0], &tl);
             int reel = degre_reel(T[q][0], T[q][1], T[q][2], T[q][0]);

@@ -25,12 +25,17 @@ static void *alloue(size_t taille, size_t align)
     size_t page = (size_t)sysconf(_SC_PAGESIZE);
     if (align < 16)
         align = 16;
+    if ((align & (align - 1)) || taille > SIZE_MAX / 2 - align * 2 - page * 2)
+        return NULL;
     size_t total = ((taille + sizeof(meta_t) + 2 * align + page - 1) / page + 1) * page;
     uint8_t *base = mmap(NULL, total, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (base == MAP_FAILED)
         return NULL;
     uint8_t *garde = base + total - page;
-    mprotect(garde, page, PROT_NONE);
+    if (mprotect(garde, page, PROT_NONE)) {
+        munmap(base, total);
+        return NULL;
+    }
     uintptr_t p = ((uintptr_t)(garde - taille)) & ~(uintptr_t)(align - 1);
     memset((uint8_t *)p + taille, CANARI, (size_t)(garde - ((uint8_t *)p + taille)));
     meta_t m = {base, total, taille};
@@ -58,7 +63,11 @@ void free(void *p)
     mprotect(m.base, m.total, PROT_NONE);       /* réservé mais inaccessible */
 }
 
-void *calloc(size_t a, size_t b) { return alloue(a * b, 16); }   /* mmap : déjà à zéro */
+void *calloc(size_t a, size_t b)                 /* mmap : déjà à zéro */
+{
+    size_t t;
+    return __builtin_mul_overflow(a, b, &t) ? NULL : alloue(t, 16);
+}
 
 void *realloc(void *p, size_t n)
 {

@@ -2,6 +2,7 @@
  * d'entiers dérivés de SHAKE, tirages creux et permutations (miroir exact
  * de sillage/sillage_common.py), aléa système. */
 #include <math.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #ifdef __AVX2__
@@ -224,6 +225,8 @@ void sl_shake_dom(const char *dom, const uint8_t *dom2, size_t dom2len,
 /* _shake_int_stream : bloc c = SHAKE256(dom ‖ "|bits|" ‖ seed ‖ "|" ‖ c_be64), 64 o */
 void sl_flux_init(sl_flux_t *f, const char *dom, const uint8_t *seed, size_t seedlen)
 {
+    if (seedlen > sizeof f->seed)
+        abort();                                     /* erreur de programmation : ne pas déborder */
     strncpy(f->dom, dom, sizeof f->dom - 1);
     f->dom[sizeof f->dom - 1] = 0;
     memcpy(f->seed, seed, seedlen);
@@ -356,7 +359,7 @@ void sl_echanges(const uint8_t *seed, size_t seedlen, uint32_t m, const char *do
 {
     sl_flux_t f;
     sl_flux_init(&f, dom, seed, seedlen);
-    for (uint32_t i = m - 1; i > 0;) {
+    for (uint32_t i = m ? m - 1 : 0; i > 0;) {
         uint32_t x = flux_suivant(&f) & ((2u << (31 - __builtin_clz(i))) - 1);
         r[i] = x;
         i -= x <= i;
@@ -371,7 +374,7 @@ void sl_perm(const uint8_t *seed, size_t seedlen, uint32_t m, const char *dom, u
     sl_echanges(seed, seedlen, m, dom, r);
     for (uint32_t i = 0; i < m; i++)
         perm[i] = i;
-    for (uint32_t i = m - 1; i > 0; i--) {
+    for (uint32_t i = m ? m - 1 : 0; i > 0; i--) {
         uint32_t t = perm[i]; perm[i] = perm[r[i]]; perm[r[i]] = t;
     }
     free(r);
@@ -381,6 +384,8 @@ void sl_perm(const uint8_t *seed, size_t seedlen, uint32_t m, const char *dom, u
  * (len < TAUX) : mêmes sorties que 4 appels successifs. */
 void sl_shake4(const uint8_t *const m[4], size_t len, uint8_t *const out[4], size_t outlen)
 {
+    if (len >= TAUX)
+        abort();                                     /* erreur de programmation : ne pas déborder */
     v4 st[25] = {0};
     size_t nw = len / 8 + 1;                     /* seuls ces mots du bloc portent le message et son 0x1F */
     for (int j = 0; j < 4; j++) {
@@ -431,8 +436,11 @@ int sl_alea(void *out, size_t len)
     uint8_t *p = out;
     while (len) {
         ssize_t k = getrandom(p, len, 0);
-        if (k < 0)
+        if (k < 0) {
+            if (errno == EINTR)                      /* signal reçu : ce n'est pas un échec de l'aléa */
+                continue;
             return -1;
+        }
         p += k; len -= (size_t)k;
     }
     return 0;

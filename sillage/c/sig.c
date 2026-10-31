@@ -447,6 +447,10 @@ static void hacher_h2(const sp_t *p, const uint8_t *salt, const uint8_t *pkh, co
 /* ------------------------------------------------------------- API */
 void sl_sig_tailles(int niv, size_t *pk, size_t *sk, size_t *sig_max)
 {
+    if (niv < 0 || niv > 1) {
+        *pk = *sk = *sig_max = 0;
+        return;
+    }
     const sp_t *p = &SP[niv];
     *pk = 32 + NB(p->r);
     *sk = XB(p) + 2 * QB(p);
@@ -455,6 +459,8 @@ void sl_sig_tailles(int niv, size_t *pk, size_t *sk, size_t *sig_max)
 
 int sl_sig_keygen(int niv, uint8_t *pk, uint8_t *sk)
 {
+    if (niv < 0 || niv > 1)
+        return -3;
     const sp_t *p = &SP[niv];
     uint32_t k = p->k, w = p->w, e = p->e;
     uint8_t g[32], xn[NB(4096)];
@@ -607,7 +613,7 @@ int sl_sig_sign_sel(int niv, const uint8_t *sk, const uint8_t *pk, const uint8_t
     }
     *siglen = (size_t)(o - sig);
     sl_effacer(arbres, tau * Lt); sl_effacer(cotes, (size_t)tau * D * Lp); sl_effacer(tots, tau * Lp);
-    sl_effacer(mseed, sizeof mseed);
+    sl_effacer(auxs, tau * La); sl_effacer(mseed, sizeof mseed);
     free(arbres); free(coms); free(auxs); free(cotes); free(tots); free(hs); free(diff); free(ouv); free(r); free(eps);
     return 0;
 }
@@ -616,7 +622,7 @@ int sl_sig_sign(int niv, const uint8_t *sk, const uint8_t *pk, const uint8_t *ms
                 size_t len, uint8_t *sig, size_t *siglen)
 {
     uint8_t salt[32];
-    if (sl_alea(salt, 32))
+    if (niv < 0 || niv > 1 || sl_alea(salt, 32))
         return -3;
     return sl_sig_sign_sel(niv, sk, pk, msg, len, salt, sig, siglen);
 }
@@ -624,6 +630,8 @@ int sl_sig_sign(int niv, const uint8_t *sk, const uint8_t *pk, const uint8_t *ms
 int sl_sig_verify(int niv, const uint8_t *pk, const uint8_t *msg, size_t len,
                   const uint8_t *sig, size_t siglen)
 {
+    if (niv < 0 || niv > 1)
+        return 0;
     const sp_t *p = &SP[niv];
     uint32_t N = 1u << p->D, D = p->D, tau = p->tau, sb = p->sb, hb = p->hb, t = p->t;
     size_t Lp = L_PART(p), La = L_AUX(p), xb = XB(p), qb = QB(p), pts = PTS(p), lrep_d = (2 + 3 * (size_t)D) * pts;

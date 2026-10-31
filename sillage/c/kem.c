@@ -426,6 +426,8 @@ static double borne(int niveau, const uint64_t *x, const uint64_t *y)
 
 double sl_kem_borne(int niveau, const uint8_t *xb, const uint8_t *yb)
 {
+    if (niveau < 0 || niveau > 1)
+        return 0;                                    /* 0 = aucune garantie (borne triviale) */
     const params_t *p = &P[niveau];
     uint64_t *x = nouveau(p->n), *y = nouveau(p->n);
     charger(x, xb, p->n);
@@ -463,6 +465,10 @@ static void derives(int niveau, const uint8_t sigma[32], const uint64_t **h, con
 
 void sl_kem_tailles(int niveau, size_t *pk, size_t *sk, size_t *ct, size_t *ss)
 {
+    if (niveau < 0 || niveau > 1) {
+        *pk = *sk = *ct = *ss = 0;
+        return;
+    }
     const params_t *p = &P[niveau];
     *pk = NB(p->n) + 32;
     *sk = 3 * NB(p->n) + 64;
@@ -528,6 +534,8 @@ static void secret(int niveau, const uint8_t *mu, const uint8_t *ct, uint8_t *ss
 
 int sl_kem_encaps_det(int niveau, const uint8_t *pk, const uint8_t *mu, uint8_t *ct, uint8_t *ss)
 {
+    if (niveau < 0 || niveau > 1)
+        return -3;
     const params_t *p = &P[niveau];
     uint64_t *u = nouveau(p->n), *v = nouveau(p->n2);
     size_t lpk = 32 + NB(p->n);
@@ -552,13 +560,17 @@ int sl_kem_encaps_det(int niveau, const uint8_t *pk, const uint8_t *mu, uint8_t 
 int sl_kem_encaps(int niveau, const uint8_t *pk, uint8_t *ct, uint8_t *ss)
 {
     uint8_t mu[32];
-    if (sl_alea(mu, P[niveau].k / 8))
+    if (niveau < 0 || niveau > 1 || sl_alea(mu, P[niveau].k / 8))
         return -3;
-    return sl_kem_encaps_det(niveau, pk, mu, ct, ss);
+    int rc = sl_kem_encaps_det(niveau, pk, mu, ct, ss);
+    sl_effacer(mu, sizeof mu);
+    return rc;
 }
 
 int sl_kem_keygen(int niveau, uint8_t *pk, uint8_t *sk)
 {
+    if (niveau < 0 || niveau > 1)
+        return -3;
     const params_t *p = &P[niveau];
     uint8_t sigma_h[32], sigma_rej[32], graine[32];
     if (sl_alea(sigma_h, 32) || sl_alea(sigma_rej, 32))
@@ -595,7 +607,7 @@ int sl_kem_keygen(int niveau, uint8_t *pk, uint8_t *sk)
     memcpy(sk + 2 * nb, sigma_h, 32);
     memcpy(sk + 2 * nb + 32, sigma_rej, 32);
     ranger(sk + 2 * nb + 64, s, p->n);
-    sl_effacer(graine, 32); sl_effacer(px, 4 * p->w); sl_effacer(py, 4 * p->w);
+    sl_effacer(graine, 32); sl_effacer(sigma_rej, 32); sl_effacer(px, 4 * p->w); sl_effacer(py, 4 * p->w);
     sl_effacer(x, NW(p->n) * 8); sl_effacer(y, NW(p->n) * 8);
     free(x); free(y); free(s); free(px); free(py);
     return 0;
@@ -603,6 +615,8 @@ int sl_kem_keygen(int niveau, uint8_t *pk, uint8_t *sk)
 
 int sl_kem_decaps(int niveau, const uint8_t *sk, const uint8_t *ct, uint8_t *ss)
 {
+    if (niveau < 0 || niveau > 1)
+        return -3;
     const params_t *p = &P[niveau];
     size_t nb = NB(p->n), nb2 = NB(p->n2), ctlen = nb + nb2;
     uint64_t *x = nouveau(p->n), *u = nouveau(p->n), *v = nouveau(p->n2), *nv = nouveau(p->n2);

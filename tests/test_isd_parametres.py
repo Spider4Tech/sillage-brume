@@ -112,7 +112,8 @@ def run():
         while not artin(n1):
             n1 -= 1
         sec1 = isd_estimate(2 * n1, n1, 2 * p["w"])["classique"] - math.log2(n1)
-        nb = 12 if p["k"] == 128 else 3
+        # 256 : taux vrai ≈ 43 % à D − 2 ; avec 3 clés, le contrôle échouait une fois sur 5,5 par simple hasard
+        nb = 12 if p["k"] == 128 else 30
         taux = taux_depassement(n1, p["k"], p["D"], p["w"], p["we"], p["theta"], -(p["lam"] + 8), nb)
         # même exigence sur le code : deux répétitions de moins ne suffisent pas
         taux_D = taux_depassement(p["n"], p["k"], p["D"] - 2, p["w"], p["we"], p["theta"], -(p["lam"] + 8), nb)

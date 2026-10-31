@@ -23,6 +23,7 @@
 #if defined(__ARM_FEATURE_AES) && !defined(__PCLMUL__)
 #include <arm_neon.h>
 #endif
+_Static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, "formats et états sérialisés depuis la mémoire : petit-boutiste uniquement");
 #define SL_NONCE 24                /* comme XChaCha20 : tirable au hasard (PREUVES § 4.3) */
 #ifdef SL_VALGRIND                 /* tests/test_c_*_valgrind.py : valeur déclarée publique */
 #include <valgrind/memcheck.h>

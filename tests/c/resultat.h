@@ -20,6 +20,7 @@ typedef struct {
 
 static void res_controle(resultat_t *r, const char *nom, int ok)
 {
+    if (r->nc >= RES_MAX) { fprintf(stderr, "%s : trop de contrôles\n", r->nom); exit(2); }
     r->cn[r->nc] = strdup(nom);
     r->cv[r->nc++] = ok != 0;
     fprintf(stderr, "  %-60s %s\n", nom, ok ? "OK" : "ÉCHEC");
@@ -33,6 +34,7 @@ static void res_mesure(resultat_t *r, const char *nom, const char *fmt, ...)
     va_start(ap, fmt);
     vsnprintf(buf, sizeof buf, fmt, ap);
     va_end(ap);
+    if (r->nm >= RES_MAX) { fprintf(stderr, "%s : trop de mesures\n", r->nom); exit(2); }
     r->mn[r->nm] = strdup(nom);
     r->mv[r->nm++] = strdup(buf);
 }
@@ -53,7 +55,8 @@ static int res_ecrire(const resultat_t *r)
     for (int i = 0; i < r->nm; i++)
         fprintf(f, "%s\n  \"%s\": %s", i ? "," : "", r->mn[i], r->mv[i]);
     fprintf(f, "\n }\n}\n");
-    if (ferror(f) | fclose(f)) {
+    int erreur_ecriture = ferror(f), erreur_fermeture = fclose(f);
+    if (erreur_ecriture || erreur_fermeture) {
         perror(chemin);
         return 2;
     }

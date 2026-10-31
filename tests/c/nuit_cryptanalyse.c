@@ -312,10 +312,10 @@ int main(int argc, char **argv)
     res_controle(&res, "permutation_rapide_conforme_a_la_reference", ok_conf);
     if (!ok_conf) return res_ecrire(&res);
     /* étalonnage : coût d'une évaluation d'un tour, tous les cœurs */
-    int nib_v[10], nb_v = 0;                           /* voisinage du sommet 0 (+ voisins de voisins) */
+    int nib_v[11], nb_v = 0;                           /* voisinage du sommet 0 (+ voisins de voisins) */
     for (int j = 0; j < BR_N && nb_v < 7; j++)
         if (BM[0][j]) nib_v[nb_v++] = j;
-    for (int j = 0; j < BR_N && nb_v < 10; j++)
+    for (int j = 0; j < BR_N && nb_v < 11; j++)
         if (BM[nib_v[1]][j]) {
             int deja = 0;
             for (int k = 0; k < nb_v; k++) deja |= nib_v[k] == j;
@@ -377,12 +377,16 @@ int main(int argc, char **argv)
         {'c', 0, 5, 0, 34, 0, 1}, {'c', 0, 6, 1, 34, 0, 1}, {'c', 1, 5, 1, 34, 0, 1},
         {'c', 0, 5, 0, 32, 0, 1}, {'c', 1, 4, 0, 32, 0, 1},
         {'t', 0, 6, 0, 33, 0, 0}, {'t', 1, 3, 0, 33, 0, 0},
-        /* noyau AVX2 : plus loin en sens direct */
+        /* facultatives (voir nb_requises) : pour les longues campagnes, sur beaucoup de cœurs */
         {'c', 0, 5, 1, 38, 0, 1}, {'c', 0, 6, 1, 38, 0, 1}, {'c', 0, 5, 1, 40, 0, 1},
+        {'k', 0, 5, 1, 28, 0, 32}, {'k', 1, 4, 1, 28, 0, 32}, {'t', 0, 6, 0, 35, 0, 0}, {'t', 1, 3, 0, 35, 0, 0},
+        {'l', 0, 2, 0, 32, 0, 0}, {'l', 1, 2, 0, 32, 0, 0}, {'l', 0, 3, 0, 32, 0, 0},
+        {'c', 1, 4, 1, 38, 0, 1}, {'c', 0, 6, 1, 40, 0, 1}, {'c', 0, 5, 0, 38, 0, 1}, {'c', 0, 5, 1, 42, 0, 1},
     };
+    enum { nb_facultatives = 17 };                     /* faute de temps, elles ne rendent pas la campagne incomplète */
     int ne = (int)(sizeof E / sizeof *E), temoins_ok = 1, faits = 0, nouveaux = 0;
     int couvert[6] = {0}, max_t[6] = {0}, inv36 = 0;
-    static char liste[16000] = "[", tmp[16100];
+    static char liste[24000] = "[", tmp[24100];
     for (int x = 0; x < ne; x++) {
         const exp_t *e = &E[x];
         double evals = pow(2.0, e->log2n), est = 0;
@@ -397,8 +401,9 @@ int main(int argc, char **argv)
         if (e->type == 'c' && e->sens == 1 && e->R == 4 && e->voisinage && e->log2n == 34 && inv36) continue;
         if (est > reste && !e->temoin) {
             snprintf(ligne, sizeof ligne, "%s{\"type\": \"%c\", \"sens\": \"%s\", \"tours\": %d, \"log2\": %d, "
-                     "\"nibbles\": \"%s\", \"statut\": \"non lancé (budget : %.0f s estimés, %.0f s restants)\"}", faits ? ", " : "",
-                     e->type, SENS[e->sens], e->R, e->log2n, e->voisinage ? "voisinage" : "hasard", est, reste);
+                     "\"nibbles\": \"%s\", \"statut\": \"%s (budget : %.0f s estimés, %.0f s restants)\"}", faits ? ", " : "",
+                     e->type, SENS[e->sens], e->R, e->log2n, e->voisinage ? "voisinage" : "hasard",
+                     x >= ne - nb_facultatives ? "facultative, pas assez de temps" : "non lancé", est, reste);
             strcat(liste, ligne);
             faits++;
             continue;
@@ -407,10 +412,10 @@ int main(int argc, char **argv)
         int distingue = 0;
         char corps[300];
         if (e->type == 'c' || e->type == 'k') {
-            int nib[10], K = e->type == 'k' ? e->K : 1, cpt[512] = {0}, tot = 0;
+            int nib[11], K = e->type == 'k' ? e->K : 1, cpt[512] = {0}, tot = 0;
             alea_t g;
             alea_init(&g, 77 + (uint64_t)x);
-            for (int k = 0; k < 10; k++) {
+            for (int k = 0; k < 11; k++) {
                 if (e->voisinage) nib[k] = nib_v[k];
                 else {
                     int ok, v;
