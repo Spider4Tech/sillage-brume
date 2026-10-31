@@ -24,8 +24,11 @@ build/sig_flux: sig_flux.c trace_pc.c resultat.h $(SRC)
 	$(CC) $(CFLAGS) -Dsl_alea=sl_alea_systeme -I $(LIB) -c -o build/commun_rejeu.o $(LIB)/commun.c
 	$(CC) $(CFLAGS) -fsanitize-coverage=trace-pc -I $(LIB) -o $@ $< build/trace_pc.o build/commun_rejeu.o \
 		$(LIB)/brume512.c $(LIB)/brume512_avx2.c -lm
-# Études de taille (docs/PISTES.md, piste 9). kem_var.c : kem.c avec sa table de paramètres modifiable, pour ce seul outil
-compression: build/compression_kem build/compression_sig build/vole_params build/vole_proto
+# Études de taille et attaques sur SD régulier (docs/PISTES.md, piste 9). kem_var.c : kem.c avec sa table de paramètres modifiable, pour ce seul outil
+compression: build/compression_kem build/compression_sig build/vole_params build/vole_proto build/rsd_attaques
+build/rsd_attaques: rsd_attaques.c resultat.h $(LIB)/isd.c
+	@mkdir -p build
+	$(CC) $(CFLAGS) -I $(LIB) -o $@ $< $(LIB)/isd.c $(LIB)/commun.c $(LIB)/brume512.c $(LIB)/brume512_avx2.c -lquadmath -lm
 build/vole_proto: vole_proto.c resultat.h $(LIB)/commun.c
 	@mkdir -p build
 	$(CC) $(CFLAGS) -I $(LIB) -o $@ $< $(LIB)/commun.c $(LIB)/brume512.c $(LIB)/brume512_avx2.c -lm
