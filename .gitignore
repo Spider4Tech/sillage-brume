@@ -1,0 +1,21 @@
+# Compilation et caches
+__pycache__/
+*.pyc
+build/
+*.so
+vgcore.*
+
+# Rapports d'audit externes, non publiés
+docs/AUDIT_EXTERNE.md
+docs/rapport31codex.md
+docs/rapport-piste-compression.md
+docs/historique/
+
+# Sorties : seules les synthèses et les certificats sont publiés
+resultats/*
+!resultats/SYNTHESE.md
+!resultats/EMPREINTES.md
+!resultats/BENCH_C.md
+!resultats/BENCH_TAILLES.md
+!resultats/pistes_division.json
+!resultats/pistes_exactes.json

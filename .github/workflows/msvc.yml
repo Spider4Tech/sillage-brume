@@ -9,12 +9,7 @@
 name: Microsoft C++ Code Analysis
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-  schedule:
-    - cron: '44 6 * * 2'
+  workflow_dispatch:  # le dépôt n'a pas de CMakeLists : lancement manuel seulement
 
 env:
   # Path to the CMake build directory.
