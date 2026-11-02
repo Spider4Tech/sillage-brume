@@ -1,0 +1,5 @@
+# Un clone Windows ne doit pas convertir les scripts Linux en CRLF : bash les refuserait
+*.sh       text eol=lf
+scripts/*  text eol=lf
+*.ps1      text eol=crlf
+*.cmd      text eol=crlf

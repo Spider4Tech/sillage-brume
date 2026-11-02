@@ -4,7 +4,8 @@
 Pour chaque opération : entrée fixe contre entrées aléatoires, classes
 entrelacées, entrées préparées avant les mesures, test t de Welch.
 |t| ≥ 4,5 signale une fuite probable (seuil de dudect) ; en cas de
-dépassement, une seconde mesure (deux fois plus longue) tranche.
+dépassement, une seconde mesure (deux fois plus longue) est notée mais ne
+blanchit pas la première, car elle retire ses valeurs fixes (voir ./scripts/runspecial).
   - permutation (AVX2), AEAD : clé et clair secrets ;
   - kem_oracle : même clé, réserves de chiffrés honnêtes et de chiffrés qui font
     échouer le décodage — l'oracle des attaques par réaction (avant correction :
@@ -73,7 +74,7 @@ def run():
         r = mesurer(exe, op, n, th)
         if abs(r["t_welch"]) >= SEUIL and not op.endswith("_ref"):
             r2 = mesurer(exe, op, 2 * n, th)
-            r = {**r2, "premiere_mesure_t": r["t_welch"]}
+            r = {**r, "seconde_mesure_t": r2["t_welch"]}
         r.pop("x", None)
         m[cle] = r
     c["permutation_avx2_sans_fuite_detectee"] = abs(m["permutation"]["t_welch"]) < SEUIL

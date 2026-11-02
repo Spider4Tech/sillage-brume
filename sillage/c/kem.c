@@ -28,7 +28,7 @@ static const params_t P[2] = {
 #define NB(x) (((x) + 7) / 8)
 #define NW(x) (((x) + 63) / 64)
 
-static uint64_t *nouveau(size_t nbits) { return calloc(NW(nbits) + 4, 8); }
+static uint64_t *nouveau(size_t nbits) { return sl_calloc(NW(nbits) + 4, 8); }
 
 static inline uint64_t lire64(const uint64_t *v, size_t p)
 {
@@ -161,7 +161,7 @@ static void kara(const uint64_t *a, const uint64_t *b, size_t n, uint64_t *r, ui
 static void mul_ct(const uint64_t *a, const uint64_t *b, uint32_t n, uint64_t *out, size_t lim)
 {
     size_t W = NW(n);
-    uint64_t *F = malloc((2 * W + 4) * 8), *tmp = malloc((8 * W + 256) * 8);
+    uint64_t *F = sl_malloc((2 * W + 4) * 8), *tmp = sl_malloc((8 * W + 256) * 8);
     kara(a, b, W, F, tmp);
     memset(F + 2 * W, 0, 32);
     for (size_t i = 0; i < NW(lim); i++)                 /* repli z^n = 1 */
@@ -184,11 +184,11 @@ static void construire_code(int niveau)
     if (code_rm[niveau].Q)
         return;
     uint8_t g[4] = {(uint8_t)(p->D >> 24), (uint8_t)(p->D >> 16), (uint8_t)(p->D >> 8), (uint8_t)p->D};
-    uint32_t *pm = malloc(4 * (size_t)L);
-    uint8_t *Q = malloc(L);
+    uint32_t *pm = sl_malloc(4 * (size_t)L);
+    uint8_t *Q = sl_malloc(L);
     sl_perm(g, 4, L, "SILLAGE-KEM|rm", pm);
     for (int t = 0; t < 8; t++)
-        code_rm[niveau].lignes[t] = calloc(L / 64, 8);
+        code_rm[niveau].lignes[t] = sl_calloc(L / 64, 8);
     for (uint32_t q = 0; q < L; q++) {
         Q[q] = (uint8_t)(pm[q] % 128);
         for (int t = 0; t < 8; t++)
@@ -255,7 +255,7 @@ enum { C_MAX = 15, F_TABLE = 12, NB_S = 254 };
 static int comptes(const params_t *p, const uint8_t *Q, const uint64_t *v, uint64_t *M, const uint32_t *T)
 {
     uint32_t n = p->n, L = 128 * p->D;
-    uint8_t *V = malloc((size_t)n + L + 64);
+    uint8_t *V = sl_malloc((size_t)n + L + 64);
     for (uint32_t i = 0; i < n; i++)
         V[i] = (uint8_t)(v[i >> 6] >> (i & 63) & 1);
     memcpy(V + n, V, L + 64 < n ? L + 64 : n);
@@ -432,7 +432,12 @@ double sl_kem_borne(int niveau, const uint8_t *xb, const uint8_t *yb)
     uint64_t *x = nouveau(p->n), *y = nouveau(p->n);
     charger(x, xb, p->n);
     charger(y, yb, p->n);
-    double b = borne(niveau, x, y);
+    masquer(x, p->n);
+    masquer(y, p->n);
+    size_t wx = 0, wy = 0;
+    for (size_t i = 0; i < NW(p->n); i++)
+        wx += (size_t)__builtin_popcountll(x[i]), wy += (size_t)__builtin_popcountll(y[i]);
+    double b = wx == p->w && wy == p->w ? borne(niveau, x, y) : 0;   /* hors domaine : aucune garantie */
     free(x); free(y);
     return b;
 }
@@ -446,10 +451,10 @@ static void derives(int niveau, const uint8_t sigma[32], const uint64_t **h, con
     if (!cache[niveau].h || memcmp(cache[niveau].sigma, sigma, 32)) {
         if (!cache[niveau].h) {
             cache[niveau].h = nouveau(p->n);
-            cache[niveau].pi = malloc(sizeof(uint32_t) * (p->n2 / 8));
-            cache[niveau].pk = malloc(32 + NB(p->n));
+            cache[niveau].pi = sl_malloc(sizeof(uint32_t) * (p->n2 / 8));
+            cache[niveau].pk = sl_malloc(32 + NB(p->n));
         }
-        uint8_t *raw = malloc(NB(p->n));
+        uint8_t *raw = sl_malloc(NB(p->n));
         const uint8_t *parts[1] = {sigma};
         size_t lens[1] = {32};
         sl_shake_dom("SILLAGE-KEM|h", NULL, 0, parts, lens, 1, raw, NB(p->n));
@@ -497,7 +502,7 @@ static void chiffrer(int niveau, const uint8_t *pk, const uint8_t *pkh, const ui
         size_t lens[2] = {p->k / 8, 32};
         sl_shake_dom("SILLAGE-KEM|coins", NULL, 0, parts, lens, 2, coins, 32);
     }
-    uint32_t *r1 = malloc(4 * p->w), *r2 = malloc(4 * p->w), *e = malloc(4 * p->we);
+    uint32_t *r1 = sl_malloc(4 * p->w), *r2 = sl_malloc(4 * p->w), *e = sl_malloc(4 * p->we);
     sl_creux(coins, 32, (int)p->w, p->n, "SILLAGE-KEM|r1", r1);
     sl_creux(coins, 32, (int)p->w, p->n, "SILLAGE-KEM|r2", r2);
     uint64_t *s = nouveau(p->n), *r1d = nouveau(p->n), *e2d = nouveau(p->n2);
@@ -537,8 +542,10 @@ int sl_kem_encaps_det(int niveau, const uint8_t *pk, const uint8_t *mu, uint8_t 
     if (niveau < 0 || niveau > 1)
         return -3;
     const params_t *p = &P[niveau];
-    uint64_t *u = nouveau(p->n), *v = nouveau(p->n2);
     size_t lpk = 32 + NB(p->n);
+    if ((p->n & 7) && (pk[lpk - 1] >> (p->n & 7)))     /* encodage non canonique de s (public) */
+        return -3;
+    uint64_t *u = nouveau(p->n), *v = nouveau(p->n2);
     const uint64_t *h;
     const uint32_t *pi;
     derives(niveau, pk, &h, &pi);                        /* alloue le cache */
@@ -576,7 +583,7 @@ int sl_kem_keygen(int niveau, uint8_t *pk, uint8_t *sk)
     if (sl_alea(sigma_h, 32) || sl_alea(sigma_rej, 32))
         return -3;
     uint64_t *x = nouveau(p->n), *y = nouveau(p->n), *s = nouveau(p->n);
-    uint32_t *px = malloc(4 * p->w), *py = malloc(4 * p->w);
+    uint32_t *px = sl_malloc(4 * p->w), *py = sl_malloc(4 * p->w);
     do {                         /* validation : δ PROUVÉ ≤ 2^-λ (FO) */
         memset(x, 0, (NW(p->n) + 4) * 8);
         memset(y, 0, (NW(p->n) + 4) * 8);
@@ -620,7 +627,7 @@ int sl_kem_decaps(int niveau, const uint8_t *sk, const uint8_t *ct, uint8_t *ss)
     const params_t *p = &P[niveau];
     size_t nb = NB(p->n), nb2 = NB(p->n2), ctlen = nb + nb2;
     uint64_t *x = nouveau(p->n), *u = nouveau(p->n), *v = nouveau(p->n2), *nv = nouveau(p->n2);
-    uint8_t *ctc = malloc(ctlen), *ct2 = malloc(ctlen), mu[32] = {0};
+    uint8_t *ctc = sl_malloc(ctlen), *ct2 = sl_malloc(ctlen), mu[32] = {0};
     charger(x, sk, p->n);
     charger(u, ct, p->n);
     charger(v, ct + nb, p->n2);
@@ -641,7 +648,7 @@ int sl_kem_decaps(int niveau, const uint8_t *sk, const uint8_t *ct, uint8_t *ss)
      * décodage : sinon l'échec serait visible au temps de réponse, oracle
      * des attaques par réaction) ; les deux secrets sont calculés et l'un
      * est choisi par masque. */
-    uint8_t *pkb = malloc(32 + nb), ss_ok[64], ss_rej[64];
+    uint8_t *pkb = sl_malloc(32 + nb), ss_ok[64], ss_rej[64];
     memcpy(pkb, sk + 2 * nb, 32);
     memcpy(pkb + 32, sk + 2 * nb + 64, nb);
     {

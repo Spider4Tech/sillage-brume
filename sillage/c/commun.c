@@ -370,7 +370,7 @@ void sl_echanges(const uint8_t *seed, size_t seedlen, uint32_t m, const char *do
 /* perm_from_seed : Fisher–Yates déterministe (π est public ici) */
 void sl_perm(const uint8_t *seed, size_t seedlen, uint32_t m, const char *dom, uint32_t *perm)
 {
-    uint32_t *r = malloc(4 * (size_t)m);
+    uint32_t *r = sl_malloc(4 * (size_t)m);
     sl_echanges(seed, seedlen, m, dom, r);
     for (uint32_t i = 0; i < m; i++)
         perm[i] = i;
@@ -429,6 +429,23 @@ void sl_shake256(const uint8_t *m, size_t len, uint8_t *out, size_t outlen)
     sl_shake_absorb(&h, m, len);
     sl_shake_final(&h);
     sl_shake_squeeze(&h, out, outlen);
+}
+
+/* ponytail: abort sur manque de mémoire, comme sl_flux_init ; propager -3 jusqu'à l'API si un appelant doit survivre à l'OOM */
+void *sl_malloc(size_t n)
+{
+    void *p = malloc(n);
+    if (!p && n)
+        abort();
+    return p;
+}
+
+void *sl_calloc(size_t a, size_t b)
+{
+    void *p = calloc(a, b);
+    if (!p && a && b)
+        abort();
+    return p;
 }
 
 int sl_alea(void *out, size_t len)

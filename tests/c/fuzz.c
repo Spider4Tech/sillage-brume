@@ -51,7 +51,7 @@ static void signal_faute(int sig)
 int main(int argc, char **argv)
 {
     long it = argc > 1 ? atol(argv[1]) : 2000;
-    if (argc > 2)                                    /* graine : campagnes longues (rundenuit.sh) */
+    if (argc > 2)                                    /* graine : campagnes longues (scripts/rundenuit.sh) */
         g ^= strtoull(argv[2], NULL, 0) * 0x2545f4914f6cdd1dULL;
     int rep_ks = argc > 3 ? atoi(argv[3]) : 1;
     signal(SIGILL, signal_faute);

@@ -57,7 +57,7 @@ static void tables(int niv)
     const sp_t *p = &SP[niv];
 #pragma omp critical(sl_sig_tables)
     if (!tab_sig[niv].phi) {
-        uint64_t *t = calloc(p->n, 8), c = 1;
+        uint64_t *t = sl_calloc(p->n, 8), c = 1;
         for (uint32_t i = 0; i < p->e; i++) {
             tab_sig[niv].base[i] = c;
             for (uint32_t j = 0; j < 1u << i; j++)
@@ -79,7 +79,7 @@ static const uint64_t *matrice(int niv, const uint8_t seed[32])
     if (cache_H[niv].H && !memcmp(cache_H[niv].seed, seed, 32))
         return cache_H[niv].H;
     if (!cache_H[niv].H)
-        cache_H[niv].H = calloc((size_t)p->k * rw, 8);
+        cache_H[niv].H = sl_calloc((size_t)p->k * rw, 8);
     uint64_t *Hm = cache_H[niv].H;
     /* colonne j = SHAKE256("SILLAGE-SIG|Hcol|" ‖ j_be64 ‖ "|" ‖ graine), 4 par 4 */
 #pragma omp parallel for schedule(static)
@@ -225,7 +225,7 @@ static void feuilles(const sp_t *p, const uint8_t *salt, uint32_t rep, const uin
 {
     uint32_t N = 1u << p->D, D = p->D, sb = p->sb, hb = p->hb;
     size_t Lp = L_PART(p);
-    uint8_t *pile = malloc(D * Lp), *px = malloc(4 * Lp), m[4][54 + SB_MAX], *cx = malloc(4 * hb);
+    uint8_t *pile = sl_malloc(D * Lp), *px = sl_malloc(4 * Lp), m[4][54 + SB_MAX], *cx = sl_malloc(4 * hb);
     const uint8_t *pm[4] = {m[0], m[1], m[2], m[3]};
     memset(cote, 0, D * Lp);
     for (uint32_t i = 0; i < N; i += 4) {
@@ -269,7 +269,7 @@ static void preparer(int niv, const uint64_t *r, prep_t *P)
     const sp_t *p = &SP[niv];
     uint32_t n = p->n, w = p->w;
     const uint64_t *phi = tab_sig[niv].phi;
-    uint64_t *pre = malloc(8 * (size_t)n);
+    uint64_t *pre = sl_malloc(8 * (size_t)n);
     for (uint32_t j = 0; j < p->t; j++) {
         uint64_t rj = r[j], Fr = rj, *L = P->L + (size_t)j * n, *pw = P->pw + (size_t)j * w;
         for (uint32_t i = 0; i < p->e; i++)
@@ -371,7 +371,7 @@ static void hacher(const char *dom, const uint8_t *const *parts, const size_t *l
 static void defis1(const sp_t *p, const uint8_t *h1, uint64_t *r, uint64_t *eps)
 {
     size_t o = (size_t)2 * p->tau * p->t * 6;
-    uint8_t *s = malloc(o);
+    uint8_t *s = sl_malloc(o);
     const uint8_t *a[1] = {h1};
     size_t la[1] = {p->hb};
     hacher("SILLAGE-SIG|ch1", a, la, 1, s, o);
@@ -526,13 +526,13 @@ int sl_sig_sign_sel(int niv, const uint8_t *sk, const uint8_t *pk, const uint8_t
         hacher("SILLAGE-SIG|mseed", a, la, 3, mseed, hb);
     }
     size_t Lt = (size_t)2 * N * sb;
-    uint8_t *arbres = malloc(tau * Lt), *coms = malloc((size_t)tau * N * hb), *auxs = malloc(tau * La);
-    uint8_t *cotes = malloc((size_t)tau * D * Lp), *tots = malloc(tau * Lp), *hs = malloc((size_t)tau * hb);
-    uint8_t *diff = malloc(tau * lrep_d), *ouv = malloc(tau * 2 * pts);
+    uint8_t *arbres = sl_malloc(tau * Lt), *coms = sl_malloc((size_t)tau * N * hb), *auxs = sl_malloc(tau * La);
+    uint8_t *cotes = sl_malloc((size_t)tau * D * Lp), *tots = sl_malloc(tau * Lp), *hs = sl_malloc((size_t)tau * hb);
+    uint8_t *diff = sl_malloc(tau * lrep_d), *ouv = sl_malloc(tau * 2 * pts);
 #pragma omp parallel for schedule(static)
     for (uint32_t rep = 0; rep < tau; rep++) {
         uint8_t *tr = arbres + rep * Lt, *cm = coms + (size_t)rep * N * hb, *cote = cotes + (size_t)rep * D * Lp;
-        uint8_t *tot = tots + rep * Lp, *aux = auxs + rep * La, rb[4], *connu = calloc(2 * N, 1);
+        uint8_t *tot = tots + rep * Lp, *aux = auxs + rep * La, rb[4], *connu = sl_calloc(2 * N, 1);
         be32(rb, rep);
         {
             const uint8_t *a[2] = {mseed, rb};
@@ -565,15 +565,15 @@ int sl_sig_sign_sel(int niv, const uint8_t *sk, const uint8_t *pk, const uint8_t
     }
     hacher_h1(p, salt, pkh, mh, hs, h1);
     SL_PUBLIC(h1, hb);                                     /* publié dans la signature */
-    uint64_t *r = malloc(8 * (size_t)tau * t), *eps = malloc(8 * (size_t)tau * t);
+    uint64_t *r = sl_malloc(8 * (size_t)tau * t), *eps = sl_malloc(8 * (size_t)tau * t);
     defis1(p, h1, r, eps);
     tables(niv);
 #pragma omp parallel for schedule(static)
     for (uint32_t rep = 0; rep < tau; rep++) {
         const uint64_t *Hr = H;
         prep_t Pr;
-        Pr.L = malloc(8 * (size_t)t * p->n);
-        Pr.pw = malloc(8 * (size_t)t * p->w);
+        Pr.L = sl_malloc(8 * (size_t)t * p->n);
+        Pr.pw = sl_malloc(8 * (size_t)t * p->w);
         preparer(niv, r + (size_t)rep * t, &Pr);
         uint64_t oa[T_MAX], ob[T_MAX], x1[T_MAX], x2[T_MAX], x3[T_MAX];
         const uint64_t *er = eps + (size_t)rep * t;
@@ -643,7 +643,7 @@ int sl_sig_verify(int niv, const uint8_t *pk, const uint8_t *msg, size_t len,
         return 0;
     size_t lr = (size_t)D * sb + hb + La + 2 * pts;
     const uint8_t *salt = sig, *h1 = sig + 32, *h2 = sig + 32 + hb, *corps = sig + 32 + 2 * (size_t)hb;
-    uint8_t *masque = malloc(Lp);                           /* encodage canonique */
+    uint8_t *masque = sl_malloc(Lp);                           /* encodage canonique */
     memset(masque, 0xFF, Lp);
     masquer_part(p, masque);
     int ok = 1;
@@ -669,15 +669,15 @@ int sl_sig_verify(int niv, const uint8_t *pk, const uint8_t *msg, size_t len,
             for (size_t i = 0; i < La; i++)
                 if (corps[rep * lr + (size_t)D * sb + hb + i])
                     return 0;
-    uint64_t *r = malloc(8 * (size_t)tau * t), *eps = malloc(8 * (size_t)tau * t);
+    uint64_t *r = sl_malloc(8 * (size_t)tau * t), *eps = sl_malloc(8 * (size_t)tau * t);
     defis1(p, h1, r, eps);
     tables(niv);
-    uint8_t *hs = malloc((size_t)tau * hb), *diff = malloc(tau * lrep_d);
+    uint8_t *hs = sl_malloc((size_t)tau * hb), *diff = sl_malloc(tau * lrep_d);
 #pragma omp parallel for schedule(static)
     for (uint32_t rep = 0; rep < tau; rep++) {
         const uint8_t *q = corps + rep * lr, *com = q + (size_t)D * sb, *aux = com + hb, *al = aux + La, *be = al + pts;
-        uint8_t *tr = calloc(2 * (size_t)N, sb), *connu = calloc(2 * (size_t)N, 1), *cm = malloc((size_t)N * hb);
-        uint8_t *cote = malloc((size_t)D * Lp), *tot = malloc(Lp);
+        uint8_t *tr = sl_calloc(2 * (size_t)N, sb), *connu = sl_calloc(2 * (size_t)N, 1), *cm = sl_malloc((size_t)N * hb);
+        uint8_t *cote = sl_malloc((size_t)D * Lp), *tot = sl_malloc(Lp);
         uint32_t j = N + ci[rep];
         for (uint32_t l = 0; l < D; l++) {
             memcpy(tr + (size_t)(j ^ 1) * sb, q + (size_t)l * sb, sb);
@@ -698,8 +698,8 @@ int sl_sig_verify(int niv, const uint8_t *pk, const uint8_t *msg, size_t len,
         }
         hacher_coms(p, salt, rep, cm, hs + (size_t)rep * hb);
         prep_t Pr;
-        Pr.L = malloc(8 * (size_t)t * p->n);
-        Pr.pw = malloc(8 * (size_t)t * p->w);
+        Pr.L = sl_malloc(8 * (size_t)t * p->n);
+        Pr.pw = sl_malloc(8 * (size_t)t * p->w);
         preparer(niv, r + (size_t)rep * t, &Pr);
         uint64_t oa[T_MAX], ob[T_MAX], x1[T_MAX], x2[T_MAX], x3[T_MAX];
         for (uint32_t c = 0; c < t; c++) {
@@ -712,7 +712,7 @@ int sl_sig_verify(int niv, const uint8_t *pk, const uint8_t *msg, size_t len,
         for (uint32_t d = 0; d < D; d++) {
             const uint8_t *cd = cote + (size_t)d * Lp;
             if (ci[rep] >> d & 1) {                        /* cachée du côté 1 : on simule le côté 0 */
-                uint8_t *c0 = malloc(Lp);
+                uint8_t *c0 = sl_malloc(Lp);
                 memcpy(c0, cd, Lp);
                 xor_oct(c0, tot, Lp);
                 simuler(niv, c0, H, pk + 32, er, &Pr, 1, oa, ob, x1, x2, x3);

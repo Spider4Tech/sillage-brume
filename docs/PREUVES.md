@@ -38,9 +38,19 @@ hypothèses et le jeu final de la preuve IND-CPA.
 Notons `R_β = {a ∈ R : a(1) = β}`, l'ensemble des éléments de parité β, et
 `β(h) = (w mod 2)·(h(1) ⊕ 1)`.
 
-**(H1-P) QCSD décisionnel à 2 blocs, avec parité.** Pour `h ← R`
-uniforme et `x, y ← S_w^n`, la paire `(h, x·h ⊕ y)` est indistinguable de
-`(h, s)` avec `s ← R_{β(h)}` uniforme.
+**(H1-P) QCSD décisionnel à 2 blocs, avec parité, sur clés acceptées.** Pour `h ← R`
+uniforme et `(x, y)` tiré comme par `KeyGen` (uniforme sur `S_w^n × S_w^n`, conditionné par
+l'acceptation de § 2.3), la paire `(h, x·h ⊕ y)` est indistinguable de `(h, s)` avec
+`s ← R_{β(h)}` uniforme.
+
+*Pourquoi les clés acceptées (correctif du 2026-11-02).* L'acceptation E dépend de (x, y), que
+(h, s) détermine. Un énoncé sur des secrets uniformes ne s'étend pas aux secrets acceptés : on a
+seulement `|Pr[D | E] − Pr_idéal[D]| ≤ (Adv + ε_rej)/(1 − ε_rej)`, et le terme additif ε_rej
+(≈ 5 % et 8 %) n'est pas négligeable. La forme **calculatoire** (retrouver x, y) se transfère, elle :
+la loi conditionnée a une densité au plus `1/(1 − ε_rej)` par rapport à la loi uniforme, donc
+`Pr_E[A trouve (x, y)] ≤ Pr[A trouve (x, y)]/(1 − ε_rej)`. Les coûts d'ISD restent valables sur clés
+acceptées, à log₂(1/(1 − ε_rej)) ≤ 0,13 bit près. L'énoncé décisionnel, lui, est posé sur la loi
+réelle des clés : c'est celle que `tests/c/kem_distributions.c` éprouve (600 et 150 clés acceptées).
 
 **(H2-P) QCSD décisionnel à 3 blocs tronqué, avec parité.** Pour `h ← R`
 uniforme, `s ← R_{β(h)}` uniforme, `r1, r2 ← S_w^n` et `e = e1 ⊕ π(e2)`
@@ -53,6 +63,37 @@ uniforme de `r` lignes et `k` colonnes (dérivée d'une graine publique), et
 `x ← S_w^n`, retrouver un `x'` de poids ≤ w tel que `H·x' = H·x` est difficile.
 La forme systématique est sans perte (un code aléatoire s'y ramène par élimination), et
 `log₂ C(n, w) < r` rend la solution unique en général : les poids < w n'ajoutent rien.
+
+**Lemme 0 (spectre linéaire exact de H1-P et H2-P).** Soit `h̄(z) = h(z^{−1})`,
+`κ^{(N)}_w(t) = K_w(t)/C(N, w)` le polynôme de Krawtchouk normalisé (`= E[(−1)^{⟨a, x⟩}]` pour
+`x ← S_w^N` et `|a| = t`), et `b̃ ∈ R` le vecteur `b ∈ F2^{n2}` posé sur les n2 positions conservées.
+Pour tout h, tout s, toute permutation π et tous `a ∈ R`, `b ∈ F2^{n2}` :
+
+    x, y ← S_w^n :                 E[(−1)^{⟨a, x·h ⊕ y⟩}] = κ_w(|a|) · κ_w(|a·h̄|)
+    r1, r2 ← S_w^n, e1, e2 ← S_we^{n2} :
+        E[(−1)^{⟨a, r1·h ⊕ r2⟩ ⊕ ⟨b, (r1·s)|_{n2} ⊕ e1 ⊕ π(e2)⟩}] = κ_w(|a|) · κ_w(|a·h̄ ⊕ b̃·s̄|) · κ_we^{(n2)}(|b|)²
+
+*Preuve.* `⟨a, r·h⟩ = Σ_k a_k Σ_i r_i h_{k−i} = ⟨a·h̄, r⟩`, et de même `⟨b, (r1·s)|_{n2}⟩ = ⟨b̃·s̄, r1⟩`,
+`⟨b, π(e2)⟩ = ⟨π^{−1}(b), e2⟩` avec `|π^{−1}(b)| = |b|`. L'exposant est donc
+`⟨a·h̄ ⊕ b̃·s̄, r1⟩ ⊕ ⟨a, r2⟩ ⊕ ⟨b, e1⟩ ⊕ ⟨π^{−1}(b), e2⟩`, somme de formes en des secrets
+indépendants : l'espérance est le produit des quatre facteurs. (H1-P : de même avec x, y.) ∎
+
+*Corollaire (seul invariant linéaire, à toutes les tailles).* Pour `0 < w < n`, `|κ_w(t)| = 1` si et
+seulement si `t ∈ {0, n}`. (H1-P) : un test de biais ±1 exige `a, a·h̄ ∈ {0, 𝟙}`, donc `a ∈ {0, 𝟙}` :
+c'est la parité de s, de signe `(−1)^{β(h)}`, que la loi idéale `R_{β(h)}` reproduit exactement. (H2-P),
+pour `0 < we < n2 < n` et n premier d'Artin : il faut `a ∈ {0, 𝟙}`, `b ∈ {0, 𝟙}` et
+`a·h̄ ⊕ b̃·s̄ ∈ {0, 𝟙}`. Pour `b = 𝟙`, cela impose `b̃·s̄ ∈ {0, 𝟙}`, soit `b̃·s̄ ≡ 0 mod Φ_n` (car
+`𝟙 = Φ_n`). Comme `F2[z]/Φ_n` est un corps et que `b̃ ∉ {0, 𝟙}`, on a alors `s̄ ≡ 0`, c'est-à-dire
+`s ∈ {0, 𝟙}`, ce qui arrive avec probabilité `2^{−(n−1)}` pour `s ← R_{β(h)}`. Hors de ce cas, seule la
+parité de u est invariante. La mesure du rang sur instances réduites devient un théorème.
+
+*Lecture.* Un distingueur linéaire de (H1-P) demande un a dont a et a·h̄ sont tous deux loin du poids
+n/2 : c'est un mot de poids faible du code `{(a, a·h̄)}`, donc un problème de décodage. Pour (H2-P),
+c'est un mot de poids faible de `{(a, b, a·h̄ ⊕ b̃·s̄)}`. En estimant le coût de ce mot par Prange
+(p = 1) et l'avantage par le biais, rotations de a comprises (`tests/c/h1p_fourier.c`, **heuristique**),
+log₂(coût/avantage) ≈ 139,1 (H1-P) et 138,8 (H2-P) pour Sillage-128, et 268,0 et 267,2 pour
+Sillage-256 : du même ordre que l'ISD (138,2 et 265,1), et pas en dessous. Le lemme lui-même est
+vérifié coefficient par coefficient, en entiers, sur des instances réduites exhaustives.
 
 Le meilleur algorithme connu pour (H1-P), (H2-P) et (H3) est l'ISD. La
 contrainte de parité ne fixe qu'un bit, public : elle ne change pas les
@@ -75,18 +116,22 @@ décodage à maximum de vraisemblance de `v ⊕ (u·x)|_{n2}`. Le code `cw` port
 bloc de `L = 128·D` bits (§2.3).
 
 **Théorème 1 (IND-CPA).** Sous (H1-P) et (H2-P), PKE est IND-CPA :
-`Adv^{IND-CPA}_{PKE}(A) ≤ Adv^{H1-P}(B1)/(1 − ε_rej) + Adv^{H2-P}(B2)`,
-où `ε_rej` (≈ 5 % et 8 %) est la probabilité de rejet d'une clé (mesurée).
+`Adv^{IND-CPA}_{PKE}(A) ≤ Adv^{H1-P}(B1) + Adv^{H2-P}(B2)`
+(`Adv^{IND-CPA} = |Pr[b' = b] − 1/2|`, comme chez HHK17 ; celui d'un distingueur, `|Pr[1 | réel] − Pr[1 | idéal]|`).
 
-*Preuve.* Jeu 0 : le jeu IND-CPA réel. Jeu 1 : `s` est remplacé par un
-élément uniforme de `R_{β(h)}`. La différence est bornée par un
-distingueur de (H1-P). La sélection des clés n'accepte qu'une fraction
-`1 − ε_rej` des `(x, y)`, ce qui multiplie l'avantage au plus par
-`1/(1 − ε_rej)`. Jeu 2 : `(u, (r1·s)|_{n2} ⊕ e)` est remplacé par
+*Preuve.* Jeu 0 : le jeu IND-CPA réel, clés acceptées. Jeu 1 : `s` est remplacé par un
+élément uniforme de `R_{β(h)}`. B1 reçoit (h, s), tire b, simule le défi et renvoie [b' = b] ; la
+différence est bornée par (H1-P), posée sur la loi des clés acceptées : aucun facteur de rejet
+n'intervient. Jeu 2 : `(u, (r1·s)|_{n2} ⊕ e)` est remplacé par
 `(u, v')` avec `u ← R_{β(h)}` et `v'` uniformes. La différence est bornée
 par (H2-P), puisque `s` suit désormais exactement la loi de (H2-P). Dans
 le Jeu 2, `u` ne dépend que de h, et `v = cw(μ_b) ⊕ v'` est uniforme et
 indépendant de b : l'avantage est nul. ∎
+
+*Correctif (2026-11-02).* La version précédente bornait le Jeu 1 par `Adv^{H1-P}/(1 − ε_rej)`, avec
+H1-P sur des secrets uniformes. Ce facteur vaut pour un événement de recherche, pas pour un avantage de
+distinction (voir « Pourquoi les clés acceptées », § 1) : la borne correcte aurait un terme additif
+ε_rej non négligeable. H1-P est désormais posée sur la loi réelle des clés.
 
 Comme `|M| = 2^k ≥ 2^λ`, on a aussi
 `Adv^{OW-CPA} ≤ Adv^{IND-CPA} + 2^{−k}`.
@@ -1389,12 +1434,15 @@ profondeur 48 ; oracle de graine d'un Keccak ; profondeur totale limitée à MAX
 - La dureté de (H1-P), (H2-P) et (H3) est une hypothèse, appuyée sur les
   estimateurs ISD. Ceux-ci sont validés sur instances réduites
   (`tests/c/isd_reel.c`) : le coût réel de Prange suit la formule à 8 %
-  près, le gain quasi-cyclique mesuré égale le crédit de log₂ n de
-  l'estimateur, et la parité est le seul invariant linéaire de s. Pour
-  H2-P, la parité de u est le seul invariant linéaire de (u, v′) sur
-  instances réduites, et aucune corrélation entre u, v et s n'est
-  détectée aux tailles réelles (`tests/c/kem_distributions.c`). Ce sont
-  des tests de détection.
+  près, et le gain quasi-cyclique mesuré égale le crédit de log₂ n de
+  l'estimateur. **Prouvé (Lemme 0) :** le spectre linéaire exact de H1-P et
+  de H2-P, d'où la parité de s (resp. de u) seul invariant linéaire, à
+  toutes les tailles ; un distingueur linéaire revient à un problème de
+  décodage, estimé au niveau de l'ISD (`tests/c/h1p_fourier.c`, heuristique).
+  Aucune corrélation entre u, v et s n'est détectée aux tailles réelles
+  (`tests/c/kem_distributions.c`). Restent hors preuve : les distingueurs
+  non linéaires, et le transfert de H1-P des secrets uniformes aux clés
+  acceptées (posé en hypothèse, § 1).
 - Hachage arborescent : preuve complétée (Lemme 15, Théorème 16), relue par une IA
   et éprouvée sur modèle réduit ; **relecture humaine indépendante à faire**.
 - SIG : le protocole MPC-in-the-Head et le Théorème 8 sont nouveaux en v0.4, ni audités ni relus par un tiers. Ils reprennent des

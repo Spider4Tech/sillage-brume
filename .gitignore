@@ -10,6 +10,7 @@ vgcore.*
 docs/AUDIT_EXTERNE.md
 docs/rapport31codex.md
 docs/rapport-piste-compression.md
+docs/REVUE_CODE_DEPOT_C.md
 docs/historique/
 
 # Sorties : seules les synthèses et les certificats sont publiés
@@ -20,3 +21,7 @@ resultats/*
 !resultats/BENCH_TAILLES.md
 !resultats/pistes_division.json
 !resultats/pistes_exactes.json
+
+# Archives de campagnes (journaux et fiches machine) : non publiées
+campagne_*/
+campagne_*.tar.gz

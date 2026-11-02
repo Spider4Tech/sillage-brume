@@ -71,14 +71,16 @@ static inline void permuter(uint64_t w[8])
     br_permuter_avx2(w);
 #elif defined(__ARM_NEON)
     br_permuter_neon(w);
+#elif defined(SL_REPLI_NON_CT)
+    permuter_ref(w);                    /* accès mémoire dépendant de l'état : pas constant-time */
 #else
-    permuter_ref(w);
+#error "BRUME sans AVX2 ni NEON : le repli à tables n'est pas constant-time (définir SL_REPLI_NON_CT pour l'accepter)"
 #endif
 }
 
 void sl_brume_permute_ref(uint8_t etat[64])
 {
-    uint64_t w[8];
+    uint64_t w[8] __attribute__((aligned(64)));
     memcpy(w, etat, 64);
     permuter_ref(w);
     memcpy(etat, w, 64);
@@ -86,7 +88,7 @@ void sl_brume_permute_ref(uint8_t etat[64])
 
 void sl_brume_permute(uint8_t etat[64])
 {
-    uint64_t w[8];
+    uint64_t w[8] __attribute__((aligned(64)));
     memcpy(w, etat, 64);
     permuter(w);
     memcpy(etat, w, 64);
@@ -94,12 +96,15 @@ void sl_brume_permute(uint8_t etat[64])
 
 #define OCT(w) ((uint8_t *)(w))
 
+/* Tout état w sur la pile est aligné sur 64 octets : non aligné, le temps de l'AEAD dépendait
+ * de la clé selon sa position dans la ligne de cache (dudect, RAPPORT_AUDIT, errata du 2026-11-02). Mécanisme non
+ * identifié ; l'alignement supprime l'écart dans tous les cas mesurés. Sorties inchangées. */
 /* ------------------------------------------------------------- hachage */
 /* Éponge à domaine (dernier nibble de la capacité, octet 63 haut, XORé avant
  * la permutation finale d'absorption) ; dom = 0 : hachage séquentiel. */
 void br_eponge(const uint8_t *m, size_t len, int dom, uint8_t *out, size_t outlen)
 {
-    uint64_t w[8] = {0};
+    uint64_t w[8] __attribute__((aligned(64))) = {0};
     size_t i = 0;
     for (; i + 32 <= len; i += 32) {
         for (int k = 0; k < 32; k++)
@@ -192,7 +197,7 @@ int sl_aead_cle(sl_aead_cle_t *c, int profil, const uint8_t cle[64])
     if (profil < 0 || profil > 1)
         return -3;
     int rb = PROFIL[profil].debit;
-    uint64_t w[8];
+    uint64_t w[8] __attribute__((aligned(64)));
     memcpy(w, S0[profil], 64);
     for (int b = 0; b < 64 / rb; b++) {
         for (int k = 0; k < rb; k++)
@@ -212,7 +217,7 @@ static void duplex(const sl_aead_cle_t *c, const uint8_t nonce[SL_NONCE],
                    int dechiffre, uint8_t *out, uint8_t *tag)
 {
     int profil = c->profil, rb = PROFIL[profil].debit, tl = PROFIL[profil].tag;
-    uint64_t w[8];
+    uint64_t w[8] __attribute__((aligned(64)));
     static const uint8_t zero[64] = {0};
     memcpy(w, c->etat, 64);                 /* suite de l'absorption clé ‖ nonce */
     absorber_depuis(w, rb, zero, 64, nonce, SL_NONCE, (size_t)(64 / rb), 0);
@@ -307,7 +312,7 @@ int sl_aead_decrypt(int profil, const uint8_t cle[64], const uint8_t nonce[SL_NO
 }
 
 /* ------------------------------------------------------------ mode TE */
-size_t sl_te_par_len(size_t len) { return 7 * ((len + 63) / 64); }
+size_t sl_te_par_len(size_t len) { return 7 * (len / 64 + (len % 64 != 0)); }
 
 static void syndromes(const uint8_t *b, uint8_t *acc, uint8_t syn[8])
 {
@@ -358,13 +363,14 @@ int sl_te_decrypt(int profil, const uint8_t cle[64], const uint8_t nonce[SL_NONC
                   const uint8_t *par, size_t parlen, const uint8_t *tag,
                   const uint8_t meta[8], uint8_t *pt, size_t *corrections, size_t *ncorr)
 {
-    size_t nb = (len + 63) / 64;
+    size_t nb = len / 64 + (len % 64 != 0);
     uint64_t lm = 0;
     for (int k = 0; k < 8; k++)
         lm = (lm << 8) | meta[k];
     *ncorr = 0;
     if (parlen != 7 * nb || lm != len)
         return -2;
+    for (int applique = 0; applique < 2; applique++)   /* passe 0 : tout valider ; passe 1 : corriger */
     for (size_t i = 0; i < nb; i++) {
         uint8_t b[64], acc, syn[8], d[8];
         bloc(ct, len, i, b);
@@ -391,6 +397,8 @@ int sl_te_decrypt(int profil, const uint8_t cle[64], const uint8_t nonce[SL_NONC
             }
         if (pos < 0)
             pos = 0;
+        if (!applique)
+            continue;
         size_t g = 64 * i + (size_t)pos;
         if (g < len)                   /* (une correction du bourrage est sans effet) */
             ct[g] ^= dm;

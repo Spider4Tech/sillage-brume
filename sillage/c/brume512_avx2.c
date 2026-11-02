@@ -431,8 +431,8 @@ static int cmp_len(const void *a, const void *b)
 /* ordre de traitement : par longueur, pour que les voies d'un lot finissent ensemble */
 static size_t *ordre(size_t n, const size_t *lens)
 {
-    cle_tri_t *t = malloc(n * sizeof *t);
-    size_t *o = malloc(n * sizeof *o);
+    cle_tri_t *t = sl_calloc(n, sizeof *t);
+    size_t *o = sl_calloc(n, sizeof *o);
     for (size_t i = 0; i < n; i++) { t[i].len = lens[i]; t[i].idx = i; }
     qsort(t, n, sizeof *t, cmp_len);
     for (size_t i = 0; i < n; i++)
@@ -641,11 +641,11 @@ void sl_hash_arbre(const uint8_t *m, size_t len, uint8_t *out, size_t outlen)
         br_eponge(m, len, DOM_SEUL, out, outlen);
         return;
     }
-    size_t k = (len + ARBRE_BLOC - 1) / ARBRE_BLOC, pleines = len / ARBRE_BLOC;
+    size_t k = len / ARBRE_BLOC + (len % ARBRE_BLOC != 0), pleines = len / ARBRE_BLOC;
     if (pleines == k)
         pleines--;                               /* la dernière feuille : traitée à part */
     size_t lr = ARBRE_CV * k + 12;
-    uint8_t *racine = malloc(lr);
+    uint8_t *racine = sl_malloc(lr);
     if (par_lots(pleines)) {                     /* lots de 32 feuilles, un lot par cœur */
         long ng = (long)((pleines + 31) / 32);
 #pragma omp parallel for schedule(dynamic)
@@ -743,11 +743,11 @@ static int aead_p(int profil, const uint8_t *cle, const uint8_t *nonce, const ui
                   const uint8_t *in, size_t len, int dech, uint8_t *out, uint8_t *tag)
 {
     int rb = PROF[profil].debit, tl = PROF[profil].tag, cvl = PROF[profil].lam / 4;
-    size_t k = len ? (len + SL_AEADP_FEUILLE - 1) / SL_AEADP_FEUILLE : 1, pleines = len / SL_AEADP_FEUILLE;
-    uint8_t *cv = malloc((size_t)cvl * k), fin[16];
+    size_t k = len ? len / SL_AEADP_FEUILLE + (len % SL_AEADP_FEUILLE != 0) : 1, pleines = len / SL_AEADP_FEUILLE;
+    uint8_t *cv = sl_malloc((size_t)cvl * k), fin[16];
     if (!cv)
         return -3;
-    uint64_t w[8], sa[8];
+    uint64_t w[8] __attribute__((aligned(64))), sa[8];
     memcpy(w, br_etat_iv(profil + 2), 64);
     br_absorber(w, rb, cle, 64, nonce, SL_NONCE, 0);
     br_absorber(w, rb, aad, aadlen, NULL, 0, DOM_AAD_P);

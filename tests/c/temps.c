@@ -19,7 +19,10 @@
  * kem_oracle_fo : mêmes chiffrés honnêtes, intacts ou avec un bit de v inversé
  * (décodage réussi, rejet à la comparaison FO seulement).
  * kem_decaps : clé fixe contre 64 clés de même σ_h (mêmes h et π), chiffrés tirés
- * dans la même réserve de 16 pour les deux classes : seuls x, y, σ_rej varient.
+ * dans la même réserve de 16 pour les deux classes : seuls x, y, σ_rej varient. La clé fixe se
+ * recopie depuis 64 copies distinctes, comme la classe aléatoire : avec une source unique
+ * (kem_decaps_asym, plan d'origine, témoin), la recopie avant mesure charge le cache différemment
+ * selon la classe et |t| dépasse 4,5 sans rapport avec la clé (run 20261102_035910 contre 20261101_222349).
  * kem_encaps : encapsulation déterministe, μ (secret) fixe contre aléatoire.
  * kem_aa : mêmes données dans les deux classes : t mesure le biais du banc.
  * kem_temoin : kem_aa + 300 cycles d'attente en classe 1 : sensibilité du banc.
@@ -32,6 +35,20 @@
  *     ./temps <permutation|permutation_ref|aead|aead_p|kem_oracle|kem_oracle_fo|kem_decaps|
  *              kem_encaps|kem_aa|kem_temoin|kem_ct_public|kem256_oracle|kem256_decaps|…|
  *              sig_tour|sig_tour_ref|sig_sign> <mesures>
+ * SILLAGE_TEMPS_GRAINE=<texte> (aead, aead_sym, aead_aa_fixe, kem_decaps, kem_decaps_aa et
+ * variantes kem256_) : les valeurs de mise en place (clés, entrées, réserves) sont dérivées de ce
+ * texte, et la sortie porte leur empreinte. D'un processus à l'autre, seule la disposition mémoire
+ * change. Les tirages faits pendant la mesure (classes, entrées de la classe aléatoire) restent
+ * aléatoires. Voir ./scripts/runspecial.
+ * Contrôles du banc AEAD, préparés sans appel système entre les entrées (les deux classes passent
+ * par le même memcpy, depuis une réserve tirée d'un bloc) :
+ * aead_sym : fixe contre aléatoire ; aead_aa_fixe : même valeur fixe dans les deux classes ;
+ * aead_aa_alea : valeurs aléatoires dans les deux classes. kem_decaps_aa : mêmes réserves de 64 clés
+ * et de 16 chiffrés dans les deux classes. Dans un A/A, la classe ne porte aucune information.
+ * aead_cle : clé fixe contre aléatoire, clair aléatoire partout ; aead_clair : clair fixe contre
+ * aléatoire, clé aléatoire partout. kem_decaps_sym : clé fixe recopiée depuis 64 copies distinctes,
+ * contre 64 clés : les deux classes lisent autant de mémoire avant la mesure.
+ * Avec une graine, la sortie donne aussi les adresses des tampons (champ "adresses").
  */
 #include <math.h>
 #include <stdio.h>
@@ -42,6 +59,22 @@
 #include "sillage.h"
 #include "kem.c"
 #include "sig.c"
+
+/* Aléa de ce fichier seulement (kem.c et sig.c, inclus plus haut, gardent le vrai) :
+ * dérivé de SILLAGE_TEMPS_GRAINE pendant la mise en place, s'il est défini. */
+static const char *graine_mise_en_place;
+
+static int temps_alea(void *out, size_t len)
+{
+    static uint64_t compteur;
+    if (!graine_mise_en_place)
+        return sl_alea(out, len);
+    char m[256];
+    int k = snprintf(m, sizeof m, "temps/%s/%llu", graine_mise_en_place, (unsigned long long)compteur++);
+    sl_shake256((const uint8_t *)m, (size_t)k, out, len);
+    return 0;
+}
+#define sl_alea temps_alea
 
 /* clé de σ_h imposé : x, y creux aléatoires validés (δ ≤ 2^-λ) */
 static void cle_sigma(int niv, const uint8_t sigma[32], uint8_t *pk, uint8_t *sk)
@@ -116,6 +149,16 @@ int main(int argc, char **argv)
     const char *kop = kem ? op + (niv ? 7 : 4) : "";
     int encaps = !strcmp(kop, "encaps"), temoin = !strcmp(kop, "temoin");
     int sig = !strncmp(op, "sig_", 4), sigsign = !strcmp(op, "sig_sign"), sigref = !strcmp(op, "sig_tour_ref");
+    int aead_sym = !strcmp(op, "aead_sym"), aa_fixe = !strcmp(op, "aead_aa_fixe"), aa_alea = !strcmp(op, "aead_aa_alea");
+    int aead_cle = !strcmp(op, "aead_cle"), aead_clair = !strcmp(op, "aead_clair");
+    int prep_sym = aead_sym || aa_fixe || aa_alea || aead_cle || aead_clair, aead_simple = prep_sym || !strcmp(op, "aead");
+    int decaps_aa = !strcmp(kop, "decaps_aa"), decaps_asym = !strcmp(kop, "decaps_asym");
+    int decaps_sym = !strcmp(kop, "decaps") || !strcmp(kop, "decaps_sym");
+    graine_mise_en_place = getenv("SILLAGE_TEMPS_GRAINE");
+    if (graine_mise_en_place && (aa_alea || !(aead_simple || decaps_aa || decaps_sym || decaps_asym))) {
+        fprintf(stderr, "SILLAGE_TEMPS_GRAINE : plans aead et kem_decaps seulement, pas %s\n", op);
+        return 2;
+    }
     const sp_t *sp = &SP[0];
     size_t Lp = L_PART(sp), spk, ssk, smax, slen;
     sl_sig_tailles(0, &spk, &ssk, &smax);
@@ -184,11 +227,17 @@ int main(int argc, char **argv)
                 } else if (pub)
                     sl_kem_encaps(niv, pk, vc[1][j], ss);
             }
-        } else if (!strcmp(kop, "decaps")) {
+        } else if (decaps_asym || decaps_aa || decaps_sym) {
             ns[1] = 64; nv[0] = nv[1] = 16;
+            if (decaps_aa || decaps_sym) ns[0] = 64;
             for (int j = 0; j < 64; j++) {
                 vs[1][j] = malloc(lsk);
                 cle_sigma(niv, sigma, pk, vs[1][j]);
+                if (decaps_aa) vs[0][j] = vs[1][j];
+                if (decaps_sym) {                      /* mêmes données, 64 zones de mémoire */
+                    vs[0][j] = malloc(lsk);
+                    memcpy(vs[0][j], sk0, lsk);
+                }
             }
             for (int j = 0; j < 16; j++)
                 vc[0][j] = vc[1][j] = ct_alea(niv, lct);
@@ -204,13 +253,43 @@ int main(int argc, char **argv)
     uint8_t sortie[64], tag[32], nonce[SL_NONCE] = {0}, acc = 0;
     sl_alea(fixe, 64);
     sl_alea(cle_f, 64);
+    char champ_empreinte[48] = "", champ_adresses[256] = "";
+    if (graine_mise_en_place) {                        /* preuve que les valeurs sont les mêmes d'un processus à l'autre */
+        uint8_t e[8];
+        sl_shake_t h;
+        sl_shake_init(&h);
+        sl_shake_absorb(&h, fixe, 64);
+        sl_shake_absorb(&h, cle_f, 64);
+        if (kem) {
+            sl_shake_absorb(&h, vs[0][0], lsk);
+            for (int j = 0; j < ns[1]; j++) sl_shake_absorb(&h, vs[1][j], lsk);
+            for (int j = 0; j < nv[0]; j++) sl_shake_absorb(&h, vc[0][j], lct);
+        }
+        sl_shake_final(&h);
+        sl_shake_squeeze(&h, e, 8);
+        int k = snprintf(champ_empreinte, sizeof champ_empreinte, ", \"empreinte\": \"");
+        for (int j = 0; j < 8; j++) k += snprintf(champ_empreinte + k, sizeof champ_empreinte - (size_t)k, "%02x", e[j]);
+        snprintf(champ_empreinte + k, sizeof champ_empreinte - (size_t)k, "\"");
+        snprintf(champ_adresses, sizeof champ_adresses,
+                 ", \"adresses\": {\"ent\": \"%p\", \"cle\": \"%p\", \"sortie\": \"%p\", \"tag\": \"%p\", \"fixe\": \"%p\", "
+                 "\"ts\": \"%p\", \"tc\": \"%p\", \"code\": \"%p\"}", (void *)ent, (void *)cle, (void *)sortie, (void *)tag,
+                 (void *)fixe, kem ? (void *)ts[0] : NULL, kem ? (void *)tc[0] : NULL, (void *)(uintptr_t)sl_aead_encrypt);
+        graine_mise_en_place = NULL;                   /* la mesure reprend le vrai aléa */
+    }
     double *t[2] = {malloc(n * sizeof(double)), malloc(n * sizeof(double))};
     long nc[2] = {0, 0};
+    static uint8_t res_ent[PAQ][64], res_cle[PAQ][64];
     for (long base = 0; base < n; base += PAQ) {
         sl_alea(cls, PAQ); sl_alea(idx, PAQ); sl_alea(idc, PAQ);
+        if (prep_sym) { sl_alea(res_ent, sizeof res_ent); sl_alea(res_cle, sizeof res_cle); }
         for (int i = 0; i < PAQ; i++) {
-            cls[i] &= 1; idx[i] &= NK - 1;
-            if (cls[i]) { sl_alea(ent[i], 64); sl_alea(cle[i], 64); }
+            cls[i] &= 1;
+            if (prep_sym) {
+                int al_ent = aa_alea || aead_cle || (cls[i] && !aa_fixe);
+                int al_cle = aa_alea || aead_clair || (cls[i] && !aa_fixe);
+                memcpy(ent[i], al_ent ? res_ent[i] : fixe, 64);
+                memcpy(cle[i], al_cle ? res_cle[i] : cle_f, 64);
+            } else if (cls[i]) { sl_alea(ent[i], 64); sl_alea(cle[i], 64); }
             else { memcpy(ent[i], fixe, 64); memcpy(cle[i], cle_f, 64); }
             if (sig && !sigsign) {
                 if (cls[i]) {
@@ -240,12 +319,12 @@ int main(int argc, char **argv)
                 sl_brume_permute(ent[i]);
             else if (!strcmp(op, "permutation_ref"))
                 sl_brume_permute_ref(ent[i]);
-            else if (!strcmp(op, "aead"))
+            else if (aead_simple)
                 sl_aead_encrypt(0, cle[i], nonce, NULL, 0, ent[i], 64, sortie, tag);
             else if (sigsign) {
                 /* pk : graine de H commune ; le syndrome n'influe que sur un hachage public */
                 memcpy(spkf, seedH, 32);
-                sl_sig_sign(0, ssk_t[c][idx[i]], spkf, smsg, 32, ssig, &slen);
+                sl_sig_sign(0, ssk_t[c][idx[i] & (NK - 1)], spkf, smsg, 32, ssig, &slen);
                 sortie[0] = ssig[40];
             } else if (sigref) {
                 /* chemin direct : on saute les colonnes et les points des bits nuls */
@@ -289,6 +368,6 @@ int main(int argc, char **argv)
     double t90 = t_coupe(t, nc, tout[(long)(0.9 * (nc[0] + nc[1]))], m);
     double t50 = t_coupe(t, nc, tout[(long)(0.5 * (nc[0] + nc[1]))], m50);
     printf("{\"operation\": \"%s\", \"mesures\": %ld, \"cycles_fixe\": %.1f, \"cycles_aleatoire\": %.1f, "
-           "\"t_welch\": %.2f, \"t_p50\": %.2f, \"x\": %d}\n", op, n, m[0], m[1], t90, t50, acc);
+           "\"t_welch\": %.2f, \"t_p50\": %.2f, \"x\": %d%s%s}\n", op, n, m[0], m[1], t90, t50, acc, champ_empreinte, champ_adresses);
     return 0;
 }

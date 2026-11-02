@@ -49,8 +49,11 @@ int main(void)
         }
         memset(pk, 0x5a, 32);                          /* même graine de H' pour toutes les signatures */
         alea_rejouer(77);
+        /* appel indirect : sinon gcc ≥ 14 peut dupliquer ce corps de boucle pour c == 5 et y inliner
+         * sl_sig_sign : le premier bloc changerait d'adresse, sans aucun rapport avec la clé */
+        static int (*volatile signer)(int, const uint8_t *, const uint8_t *, const uint8_t *, size_t, uint8_t *, size_t *) = sl_sig_sign;
         trace_debut();
-        sl_sig_sign(niv, sk, pk, msg, sizeof msg, sig, &sl);
+        signer(niv, sk, pk, msg, sizeof msg, sig, &sl);
         trace_fin();
         if (c == 0) { h0 = trace_h; n0 = trace_n; }
         else ok_sign &= trace_h == h0 && trace_n == n0;

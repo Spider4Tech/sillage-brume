@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Campagne de nuit, volet cryptanalyse de BRUME et modèles de preuve (./rundenuit.sh).
+"""Campagne de nuit, volet cryptanalyse de BRUME et modèles de preuve (./scripts/rundenuit.sh).
     python3 -m tests.nuit_brume <budget_s> [--reprise]   → resultats/nuit_brume.{json,md}, réécrits après chaque étape.
 --reprise repart du JSON existant et saute les étapes déjà écrites ; seule l'étape interrompue est recommencée.
 Étapes, chacune avec sa part du budget : boomerang et impossibles (C), modèle exact mini-BRUME (C), activité certifiée

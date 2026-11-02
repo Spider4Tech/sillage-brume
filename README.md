@@ -4,7 +4,7 @@
 
 SILLAGE is a research suite built around code-based constructions and noisy decoding. The repository contains a key-encapsulation mechanism, a binary-syndrome-decoding signature scheme, the BRUME-512 permutation, authenticated-encryption modes, hash functions, C implementations, and a collection of tests and cryptanalysis tools.
 
-> **Research prototype — not for production use.** The parameters and constructions are experimental. The v0.4.0 designs have not received a complete independent cryptanalysis. The reductions and computational estimates documented here are conditional on the assumptions and models stated in [`docs/PREUVES.md`](docs/PREUVES.md). Passing the test suite is not evidence that a construction is secure.
+> **Research prototype — not for production use.** The parameters and constructions are experimental. The v0.4.0 designs have not received a complete independent cryptanalysis. The reductions and computational estimates documented here are conditional on the assumptions and models stated in [`docs/PROOFS.md`](docs/PROOFS.md). Passing the test suite is not evidence that a construction is secure.
 
 The measurements and test totals below refer to dated runs committed with the project; they are not live CI results. The design notes, proofs, comments and test names are primarily in French; the C implementation and Python package are under `sillage/`.
 
@@ -219,7 +219,7 @@ The PKE is wrapped in a Fujisaki–Okamoto transform with implicit rejection. De
 
 The v0.4 code uses RM(1,7) repeated `D` times and a public pseudo-random spreading of the positions. A block of `128·D` bits carries one byte of the shared secret. Decoding uses a Walsh transform.
 
-Correctness is analysed with a Chernoff bound that does not assume independent error bits. Key generation evaluates the bound for each candidate key and rejects keys whose certified failure bound exceeds `2⁻λ`. The observed key rejection rates in the documented parameter generation are approximately 5% and 8% for the two profiles. The median bounds are substantially below the acceptance thresholds; see [`docs/PREUVES.md`](docs/PREUVES.md), §2.3.
+Correctness is analysed with a Chernoff bound that does not assume independent error bits. Key generation evaluates the bound for each candidate key and rejects keys whose certified failure bound exceeds `2⁻λ`. The observed key rejection rates in the documented parameter generation are approximately 5% and 8% for the two profiles. The median bounds are substantially below the acceptance thresholds; see [`docs/PROOFS.md`](docs/PROOFS.md), §2.3.
 
 ### Parameters
 
@@ -244,7 +244,7 @@ The classical estimates use the concrete ISD estimators documented in the reposi
 
 The IND-CPA argument is conditional on the decisional quasi-cyclic syndrome-decoding assumptions H1-P and H2-P, stated with the public parity information. The original formulations without parity were distinguishable and were replaced. The FO transform gives an IND-CCA argument in the random-oracle model under the stated correctness condition and assumptions.
 
-The proof and parameter analysis are in [`docs/PREUVES.md`](docs/PREUVES.md), §§2 and 5. The tests include correctness, malformed-input handling, implicit rejection, distribution checks, ISD estimator comparisons and simulated validation of the `δ` bound. Those tests do not establish the hardness of H1-P or H2-P at the full parameter sizes.
+The proof and parameter analysis are in [`docs/PROOFS.md`](docs/PROOFS.md), §§2 and 5. The tests include correctness, malformed-input handling, implicit rejection, distribution checks, ISD estimator comparisons and simulated validation of the `δ` bound. Those tests do not establish the hardness of H1-P or H2-P at the full parameter sizes.
 
 ---
 
@@ -301,7 +301,7 @@ The division-property result is obtained by combining degree arguments, trail st
 
 The linear layer has 16 invariant subspaces. The current experiments indicate that the selected S-box does not preserve their individual lines; this does not amount to a general proof that the full round has no exploitable invariant structure.
 
-For the derivations, experiment definitions and remaining attack space, see [`docs/PREUVES.md`](docs/PREUVES.md), §4.2 bis, and the BRUME-related tests under `tests/`.
+For the derivations, experiment definitions and remaining attack space, see [`docs/PROOFS.md`](docs/PROOFS.md), §4.2 bis, and the BRUME-related tests under `tests/`.
 
 ---
 
@@ -318,7 +318,7 @@ The sequential mode absorbs the key, nonce and associated data, then encrypts by
 | `BRUME-512` | 64 bytes | 24 bytes | 256 bits | 256 bits | 16 bytes | 128 bits |
 | `BRUME-512-256` | 64 bytes | 24 bytes | 128 bits | 384 bits | 32 bytes | 256 bits |
 
-The ideal-permutation analysis is given in [`docs/PREUVES.md`](docs/PREUVES.md), §4.3. It accounts for the total number of permutation calls, data processed, decryption queries and tag length. It does not prove that the concrete BRUME permutation behaves as a random permutation.
+The ideal-permutation analysis is given in [`docs/PROOFS.md`](docs/PROOFS.md), §4.3. It accounts for the total number of permutation calls, data processed, decryption queries and tag length. It does not prove that the concrete BRUME permutation behaves as a random permutation.
 
 ### Nonce policy
 
@@ -338,7 +338,7 @@ Profiles:
 - `BRUME-512p`;
 - `BRUME-512-256p`.
 
-The parallel mode has its own IV/domain separation and produces different ciphertexts from the sequential mode. Its proof is stated in §4.5 of [`docs/PREUVES.md`](docs/PREUVES.md). In addition to the sequential-mode terms, the bound includes a term for collisions among leaf chaining values. The same nonce policy applies as for the matching sequential profile.
+The parallel mode has its own IV/domain separation and produces different ciphertexts from the sequential mode. Its proof is stated in §4.5 of [`docs/PROOFS.md`](docs/PROOFS.md). In addition to the sequential-mode terms, the bound includes a term for collisions among leaf chaining values. The same nonce policy applies as for the matching sequential profile.
 
 A 4 KiB leaf size was selected from experiments with 2, 4 and 8 KiB leaves. On the benchmark machine, the parallel mode becomes useful when messages are large enough to amortise the per-leaf and root costs; the measured 16 MiB case is reported below. For short messages, the sequential mode is usually faster.
 
@@ -362,7 +362,7 @@ The generic classical collision scale associated with the 256-bit capacity is `2
 
 `brume512_hash_arbre(data, out_len)` is a separate function with separate test vectors and domain separation. Messages up to 8 KiB use a single-node domain. Larger messages are divided into 8 KiB leaves, each leaf is hashed independently, and a root sponge absorbs the ordered chaining values and tree metadata.
 
-The construction currently uses one level of leaves and a 256-bit chaining value. The indifferentiability argument is documented in §4.4 of [`docs/PREUVES.md`](docs/PREUVES.md). It is proved in the stated ideal-sponge model, subject to the conditions in that section. The implementation processes leaves in batches and can use OpenMP.
+The construction currently uses one level of leaves and a 256-bit chaining value. The indifferentiability argument is documented in §4.4 of [`docs/PROOFS.md`](docs/PROOFS.md). It is proved in the stated ideal-sponge model, subject to the conditions in that section. The implementation processes leaves in batches and can use OpenMP.
 
 The tree hash is **not interchangeable** with the sequential sponge hash. Applications must identify which function was used when storing or verifying digests.
 
@@ -395,7 +395,7 @@ The virtual parties are arranged as a hypercube with `N = 2¹² = 4096` leaves. 
 | Classical ISD work-factor estimate | 160.3 bits | 316.2 bits |
 | ROM forgery estimate in the stated theorem | 128.3 bits | 264 bits |
 
-The work factors are estimates under the code-decoding models and parameter search documented in the repository. The signature sizes are fixed by the v0.4.0 format. The protocol and proof are new in v0.4.0; the proof is in [`docs/PREUVES.md`](docs/PREUVES.md), §3.
+The work factors are estimates under the code-decoding models and parameter search documented in the repository. The signature sizes are fixed by the v0.4.0 format. The protocol and proof are new in v0.4.0; the proof is in [`docs/PROOFS.md`](docs/PROOFS.md), §3.
 
 ### Security qualifications
 
@@ -426,7 +426,7 @@ The multi-message API groups independent states into batches and distributes bat
 
 ### Side-channel testing
 
-The C paths have been tested with dudect-style timing experiments and, for KEM and SIG, Valgrind/ctgrind checks and control-flow instrumentation. The current results did not detect secret-dependent timing or control-flow differences in the tested builds and inputs. These are empirical checks, not a proof of constant-time execution. Results depend on compiler, flags, CPU, operating system and test methodology.
+The C paths have been tested with dudect-style timing experiments and, for KEM and SIG, Valgrind/ctgrind checks and control-flow instrumentation. The current results did not detect secret-dependent timing or control-flow differences in the tested builds and inputs. These are empirical checks, not a proof of constant-time execution. A key-dependent timing difference in the AEAD, tied to where the 64-byte duplex state fell within a cache line, was found and fixed on 2026-11-02 by aligning that state to 64 bytes (`docs/RAPPORT_AUDIT.md`, errata of 2026-11-02). Results depend on compiler, flags, CPU, operating system and test methodology.
 
 The Python reference implementation is not constant-time. The generic table-based BRUME reference path is also not intended as a constant-time implementation. NEON output conformance under QEMU does not establish native timing behaviour.
 
@@ -457,16 +457,18 @@ python3 -m tests.empreintes             # source, KAT and result fingerprints
 For a longer campaign:
 
 ```bash
-./rundenuit.sh 10
+./scripts/rundenuit.sh 10
 ```
 
 To resume a campaign using the repository's resume script:
 
 ```bash
-./reprendre_nuit.sh 10
+./scripts/reprendre_nuit.sh 10
 ```
 
-For a long run on any machine, `./runlong [hours]` checks it, starts the campaign in the background, monitors temperature and stuck campaigns, resumes after an interruption, and writes a results archive; see [`docs/CAMPAGNE_24H.md`](docs/CAMPAGNE_24H.md).
+For a long run on any machine, `./scripts/runlong [hours]` checks it, starts the campaign in the background, monitors temperature and stuck campaigns, resumes after an interruption, and writes a results archive; see [`docs/CAMPAGNE_24H.md`](docs/CAMPAGNE_24H.md).
+
+On Windows, `scripts/rundenuit.cmd [hours]` runs the same campaign inside WSL 2, blocks sleep, and copies the results archive back to Windows; see the same guide.
 
 The extended campaign is compute-intensive and uses all available cores during some C tests. Its outputs are generated locally; not all raw campaign files are committed.
 
@@ -608,7 +610,8 @@ sillage-brume/
 ├── docs/
 │   ├── guide.md             Original design note
 │   ├── RAPPORT_AUDIT.md     Development audit history and corrected issues
-│   ├── PREUVES.md           Proofs, assumptions and parameter derivations
+│   ├── PROOFS.md            Proofs, assumptions and parameter derivations (English)
+│   ├── PREUVES.md           Same document, French source
 │   └── PISTES.md            Measured optimisations and research leads
 ├── sillage/
 │   ├── sillage_common.py    Rings, sparse vectors, SHAKE helpers and estimators
@@ -643,8 +646,15 @@ sillage-brume/
 │   ├── EMPREINTES.md        Source and test fingerprints
 │   ├── pistes_division.json Division-property certificates
 │   └── pistes_exactes.json  Exact-trail certificates
-├── rundenuit.sh             Extended campaign launcher
-└── reprendre_nuit.sh        Campaign resume script
+└── scripts/                 Campaign launchers, run from the repository root
+    ├── rundenuit.sh         Extended (night) campaign
+    ├── reprendre_nuit.sh    Resume an interrupted campaign
+    ├── runlong              Long campaign in the background, with monitoring and resume
+    ├── preparer_campagne.sh Machine check and Python environment setup
+    ├── runspecial           Targeted dudect measurements (timing investigations)
+    ├── rungpu               GPU cryptanalysis campaigns (tests/gpu)
+    ├── rundenuit.cmd, .ps1  Windows launcher (runs the campaign in WSL 2)
+    └── rundenuit_wsl.sh     Linux side of the Windows launcher
 ```
 
 Generated binaries, per-test JSON files and raw campaign logs are not all committed. They are produced locally when the corresponding commands are run. The `.gitignore` file documents which result files are retained in the repository.
@@ -702,7 +712,7 @@ A CodeQL workflow is also configured for the C/C++ and Python code. The C/C++ bu
 ## Further reading
 
 - [`docs/guide.md`](docs/guide.md) — original design direction and component concepts.
-- [`docs/PREUVES.md`](docs/PREUVES.md) — formal statements, assumptions, reductions, parameter bounds and open proof obligations.
+- [`docs/PROOFS.md`](docs/PROOFS.md) — formal statements, assumptions, reductions, parameter bounds and open proof obligations.
 - [`docs/PISTES.md`](docs/PISTES.md) — measured performance work, optimisations and research leads not adopted into the construction.
 - [`docs/RAPPORT_AUDIT.md`](docs/RAPPORT_AUDIT.md) — development audit history, previously identified flaws and their corrections.
 - [`resultats/SYNTHESE.md`](resultats/SYNTHESE.md) — committed test-suite snapshot.

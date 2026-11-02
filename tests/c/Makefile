@@ -5,7 +5,7 @@ CC      ?= gcc
 CFLAGS  ?= -O3 -march=native -fopenmp -Wall -Wextra
 LIB     := ../../sillage/c
 SRC     := $(LIB)/commun.c $(LIB)/brume512.c $(LIB)/brume512_avx2.c $(LIB)/kem.c $(LIB)/sig.c
-NATIFS  := structure_miss isd_reel isd_comparaison diffusion_support kem_distributions sig_flux brume_attaques mini_brume vole_proto compression_sig
+NATIFS  := revue_c h1p_fourier structure_miss isd_reel isd_comparaison diffusion_support kem_distributions sig_flux brume_attaques mini_brume vole_proto compression_sig
 NUIT    := nuit_cryptanalyse nuit_kem_reel nuit_isd
 all: $(addprefix build/,$(NATIFS))
 nuit: $(addprefix build/,$(NUIT))

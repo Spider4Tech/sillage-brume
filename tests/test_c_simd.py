@@ -25,7 +25,7 @@ def run():
     os.makedirs(BUILD, exist_ok=True)
     avx2 = sortie("simd_avx2", "gcc", ["-march=native"])
     c = {"sortie_non_vide": avx2.count("\n") > 70,
-         "repli_sans_simd_identique": sortie("simd_sans", "gcc", ["-mno-avx2"]) == avx2}
+         "repli_sans_simd_identique": sortie("simd_sans", "gcc", ["-mno-avx2", "-DSL_REPLI_NON_CT"]) == avx2}
     m = {"lignes_comparees": avx2.count("\n")}
     if shutil.which("aarch64-linux-gnu-gcc") and shutil.which("qemu-aarch64"):
         c["neon_sous_qemu_identique"] = sortie("simd_neon", "aarch64-linux-gnu-gcc", ["-static", "-march=armv8-a+crypto"],

@@ -418,3 +418,92 @@ Détail : `docs/PREUVES.md` § 3, § 4.4, § 5 et § 5 bis ; historique du `READ
   n'avait pas vus. L'un touche aussi le KEM (`sl_creux`).
 - **Lemme 15 et Théorème 16 :** preuve complétée, voir le statut au § 4.4. **La relecture faite
   est celle d'une IA ; le point « relecture par un tiers » reste ouvert.**
+
+## Errata du 2026-11-01 (banc dudect)
+
+Les « OK » de `aead` et `kem_decaps` dans `resultats/NUIT.md` du 2026-10-31 ne tenaient qu'à une
+seconde mesure. Le run `resultats/special/20261101_131954` (4 valeurs × 3 processus) retrouve des
+écarts reproductibles (|t| jusqu'à 26 sur `aead`, 7 sur `kem_decaps`). **Origine non élucidée à
+cette date.** Corrections du banc :
+
+- **Seconde mesure :** elle ne blanchit plus un dépassement (`scripts/rundenuit.sh`, `tests/test_c_temps.py`).
+  Elle retirait ses valeurs fixes et sa disposition mémoire, donc ne retestait pas la même chose.
+- **`kem_decaps` :** la classe aléatoire n'utilisait que 8 clés sur 64 (`idx[i] &= NK - 1`).
+  Corrigé ; les mesures antérieures portent sur 8 clés.
+- **`aead` :** les classes étaient préparées différemment (deux appels système par entrée pour
+  l'une, `memcpy` pour l'autre). Nouveaux plans `aead_sym`, `aead_aa_fixe`, `aead_aa_alea`,
+  `kem_decaps_aa`, mesurés par `./scripts/runspecial`, avec et sans ASLR.
+- **Verdict de `./scripts/runspecial` :** il se juge sur toutes les graines (permutation du F), plus sur une
+  seule graine répétée.
+
+## Errata du 2026-11-02 (AEAD : temps dépendant de la clé, corrigé)
+
+**`kem_decaps` : artefact du banc.** Le plan d'origine recopiait la clé fixe depuis une seule zone mémoire, contre 64 pour la
+classe aléatoire. Dans le même binaire, sans ASLR, il dépasse 5 fois sur 9 (t_p50 : 9 sur 9), et le plan symétrique 0 fois sur 9.
+`kem_decaps` mesure maintenant le plan symétrique ; l'ancien reste comme témoin (`kem_decaps_asym`).
+
+**`aead` : vraie dépendance à la clé, liée à la position de l'état `w` de `duplex()` et de `sl_aead_cle()` dans une ligne de
+cache.** Mesures de `./scripts/runspecial`, 62,5 M ou 12,5 M d'appels par point, seuil |t| = 4,5 :
+- **Signe et clé.** Le signe suit la clé (aead_cle dépasse jusqu'à |t| = 29, aead_clair jamais). L'écart est minuscule : 0,2 cycle
+  au plus sur environ 13 100.
+- **Causalité.** Forcer la disposition de la pile fait apparaître l'écart (6 sur 6) ou disparaître (0 sur 6) à volonté.
+- **Grille de positions** (`--bloc grille` et `grille1`). La position du contexte de clé n'a aucun effet. Avec une position de `w`
+  imposée, 1 seul dépassement sur 96 mesures (t = 4,63, `w` à 32 octets), alors que les témoins du même run dépassent (t = −6,08 et
+  +8,87, signes opposés selon la graine). `w` à 32 octets d'une ligne garde un biais faible, de signe constant quelle que soit la clé
+  (24 mesures sur 24 positives, t de 0,8 à 4,6) ; à 0 octet, |t| ≤ 1,98.
+- **Correctif.** Tout état `w` de 64 octets sur la pile est aligné sur 64 octets (`sillage/c/brume512.c`, `brume512_avx2.c`). Sorties
+  inchangées : `test_c_impl` 38/38.
+- **Confirmation** sur le binaire de base corrigé (`--bloc confirme`, run 20261102_152718) : 0 dépassement sur 24 mesures, dans les
+  deux dispositions de pile (aead_cle 4 graines, aead_sym 2 graines, 2 passages), |t| ≤ 2,16, signes mêlés ; témoin +300 cycles détecté.
+
+**Mécanisme non identifié** (processeur Zen 3) : l'alignement supprime l'écart, il ne l'explique pas. Une autre microarchitecture ou un
+autre compilateur peuvent se comporter autrement ; dudect reste à refaire sur toute nouvelle machine.
+
+## Errata du 2026-11-02 (H1-P / H2-P, revue du code C)
+
+**Théorème 1 : un pas de preuve faux, corrigé.** Le Jeu 1 bornait la perte due au rejet des clés par
+un facteur `1/(1 − ε_rej)` sur l'avantage de H1-P. Ce facteur vaut pour un problème de recherche, pas
+pour un avantage de distinction : l'acceptation dépend de (x, y), que (h, s) détermine, et la borne
+correcte garde un terme additif ε_rej (5 et 8 %). H1-P est maintenant posée sur la loi réelle des clés
+acceptées. La version calculatoire, elle, se transfère, avec une perte d'au plus 0,13 bit : les coûts
+d'ISD sont inchangés. Le schéma, les KAT et les niveaux sont inchangés (`docs/PREUVES.md` § 1 et § 2.1).
+
+**Lemme 0 (nouveau, prouvé) : spectre linéaire exact de H1-P et H2-P.** Chaque biais linéaire est
+un produit de polynômes de Krawtchouk. Corollaire : la parité de s (resp. de u) est le seul invariant
+linéaire, à toutes les tailles. Jusqu'ici, ce n'était mesuré que sur instances réduites. Un
+distingueur linéaire revient à trouver un mot de poids faible. L'estimation, heuristique, donne
+139 bits pour 128 et 267 pour 256, au niveau de l'ISD. Vérification exhaustive en entiers par
+`tests/c/h1p_fourier.c` (6 contrôles). Les mesures de l'artefact sont reproduites :
+`isd_reel` 5/5 (Prange 2^8,20, 2^10,16, 2^12,36 ; gain QC ×163), `kem_distributions` 11/11.
+**H1-P et H2-P restent des hypothèses** : les distingueurs non linéaires sont hors preuve.
+
+**Théorème 16 : relu à nouveau** (Lemme 15, trois conditions de BDPV, composition) ; aucun défaut
+trouvé, et `test_indiff_arbre` passe (15/15). C'est encore une relecture d'IA : le statut « en
+validation » reste en place jusqu'à une relecture humaine.
+
+**Revue du code C (externe, non publiée), suivi constat par constat :**
+
+| Constat | État | Correction |
+|---|---|---|
+| C-01 repli scalaire non constant-time | **corrigé** | `#error` sans AVX2 ni NEON ; le repli à tables demande `-DSL_REPLI_NON_CT` (seul `test_c_simd` l'utilise, pour comparer) |
+| C-02 longueurs absentes des API | **corrigé à la frontière** | `sillage_c.py` vérifie pk, sk, ct, mu, x, y avant tout appel C ; l'API C garde son contrat de tailles fixes, documenté |
+| C-03 profils et niveaux | corrigé (commit 55bb6aa) | — |
+| C-04 allocations non vérifiées | **corrigé** | `sl_malloc` / `sl_calloc` : arrêt net plutôt que pointeur nul déréférencé ; `sl_calloc` refuse le débordement de n × taille (lots) |
+| C-05 secrets non effacés | corrigé (55bb6aa) | — |
+| C-06 caches `_Thread_local` | ouvert | demande une API de contexte ; sans effet tant que le pool OpenMP est stable |
+| C-07 TE : capacité, mutation partielle | **corrigé** | validation de tous les blocs avant toute correction (ct intact si −2) ; capacité de `corrections[]` documentée |
+| C-08 débordements de longueur | **corrigé** | arrondis `len / B + (len % B != 0)` (TE, arbre, AEAD parallèle) ; `l1 + l2` borné par l'espace d'adressage |
+| C-09 préconditions internes | corrigé (55bb6aa) | — |
+| C-10 `ferror | fclose` | corrigé (55bb6aa) | — |
+| C-11 petit-boutiste | corrigé (55bb6aa) | `_Static_assert` dans `sillage.h` |
+| C-12 `-march=native` | ouvert | politique de build ; C-01 rend explicite tout build sans SIMD |
+| C-13 tests en CI | **étendu** | la CI lance `revue_c` et contrôle les tables générées |
+| C-14 domaine de `sl_kem_borne` | **corrigé** | renvoie 0 (aucune garantie) si le poids de x ou y diffère de w |
+| C-15 clé publique non canonique | **corrigé** | `sl_kem_encaps_det` refuse les bits de bourrage de s (−3) |
+| C-16 tables générées | **corrigé** | job CI : `make tables` puis `git diff --exit-code` (reproduit à l'octet en local) |
+| C-17 `getrandom` / EINTR | corrigé (55bb6aa) | — |
+| C-18 en-tête public / interne | ouvert | réorganisation sans effet sur la sûreté |
+| C-19 allocateur de garde | corrigé (55bb6aa) | — |
+
+Contrôles : `tests/c/revue_c.c` (6/6) ; `test_api_c`, `test_c_impl`, `test_te`, `test_c_fuzz`, `test_c_simd`,
+`test_kem`, `test_fonctionnel`, `test_robustesse`, `test_hachage_arbre`, `test_aead_parallele` réussis.

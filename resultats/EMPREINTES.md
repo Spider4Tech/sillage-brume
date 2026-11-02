@@ -1,6 +1,6 @@
 # Empreintes SHA-256 — SILLAGE v0.4
 
-Batterie : 533/534 contrôles, 53 tests.
+Batterie : 534/534 contrôles, 53 tests.
 Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 
 ## KAT
@@ -83,7 +83,7 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 | `tests/c/trace_pc.c` | `97300089809ac8bb53d3fc3f183a4c7eff4a069e9737d9aecf58b683383f0741` |
 | `tests/c/vole_kat.h` | `b72f26bc437c4685f5175cc3956a3b35540a5fa2f608de77b6d923dfc56cf256` |
 | `tests/c/vole_params.c` | `f84f53c714832f392d63a593b3ee84ead5bc0a48f194683dabf4e57ebdf57f06` |
-| `tests/c/vole_proto.c` | `1cfd017e4ea4d6ea0668e0b6eda8b9977b8c702450f7231248fc0b94edcd9777` |
+| `tests/c/vole_proto.c` | `363e350cb20a8b0c33ca10e83284ba993b14beea388a3fb54c17ab5ffa540dae` |
 | `tests/commun.py` | `4c42c8e3bb8ff345006777c6ffa1fe08a8cc78ec45181be2d5c044f3edef968e` |
 | `tests/dp_cpsat.py` | `9f7efe1431e9a0e0286bb88c77cbaa6484689d7c974a8627ea9e578512013370` |
 | `tests/dp_queue.py` | `fdad527d13321006d4a3cedbadb4fca77bfffeb3a3c865da4391481bcfe61425` |
@@ -148,36 +148,36 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 
 | Fichier | SHA-256 |
 |---|---|
-| `resultats/SYNTHESE.md` | `654dd47bd8e0ba3537564b03ac3da165e46df124a8b654f6a8bc5e3675dd5108` |
+| `resultats/SYNTHESE.md` | `b561121971040573429685bb64b1c9a91f377ff8442ff8fa93b5ff3255e3512b` |
 | `resultats/aead.json` | `b91185ddf202b24c80d815a17efa9342e1e833cedd33d2524a2c353ec6dd8d7d` |
-| `resultats/aead_modele.json` | `38def47f98b116cc7da599ffc3db66785158e4aff9a9665204f8285cf79ae962` |
-| `resultats/aead_parallele.json` | `d428b94ff6becb56284d69fcf74801667c4005140cf1b2b4c4cadc5d18728e15` |
+| `resultats/aead_modele.json` | `99f38fca951ef123211b2b4d706d70f8a5429e5824af617e6acdd0ad6f703185` |
+| `resultats/aead_parallele.json` | `4fb6e0e56e82c5edac3d138353e818e2d4959b883e7ab2acc9d289ddde0efa60` |
 | `resultats/api_c.json` | `a6e07688dc0df3fb28ef606ddcbaf99500c9186d2068114fca5cc5389806ec58` |
 | `resultats/banc_cryptanalyse.json` | `f2db4cd157152947fdd9701464503e80e982d94d23683a4ee3fc63ce696b006d` |
 | `resultats/beam_trails.json` | `c25f4c31e407ebd70df0edf97926eb606cb87b48cb1c4d7ab002dae0d84edfe6` |
 | `resultats/bench_c.json` | `f2e2ce15bdd8846a0299918dd86ed3bec59a34a0a80058b7960af98e7f563dad` |
 | `resultats/bench_tailles.json` | `e247d79fc9975b776f60d070d59dcd0f01e7e7b021be7d9b94746bba8a71e5d4` |
 | `resultats/branch_exact.json` | `cb8b463cbca6c10f59a33532f6bcb2d2d699cd0519ba6687a91d11a91838ca61` |
-| `resultats/brume_algebre.json` | `2fba31a842c564b01e14959ab8973805e6f885355c16e57100233226689a55c1` |
-| `resultats/brume_attaques.json` | `86b6f7fbff1b06591d894a1f6eb1c1a10d7bbe7837270a234c0bc7e8d3561329` |
+| `resultats/brume_algebre.json` | `dd8af05875c911551ec3a641f31f88e164000053a87089ff5651b1caf66e00c9` |
+| `resultats/brume_attaques.json` | `33fa7db39b985240474e16376be0785832cd2a779fd5da18ad7529e3d412a1e8` |
 | `resultats/c_cube_init.json` | `fa6cd415f544625ea053f444e2ade7aad33dff8f017d942e632fac8a695aa91a` |
 | `resultats/c_degre.json` | `61a75ceb9b0498710adcd614823ca9fbcd1bb8236fdde8fda4f66d75ce164acb` |
 | `resultats/c_diff_lin.json` | `b32482ded8dcac7b8901d777cc60ab3f6f322fd3c9384750fc47008b25a695ed` |
 | `resultats/c_diff_lin_x4.json` | `5000755ba3699799516cd4e061e294f9d82296ba46bb6920637041941126537b` |
 | `resultats/c_fuzz.json` | `0c4c0eef52395633eb33f1d76363f8584b8515b4da2a0cbbeb9bffa0d7c8e5a3` |
-| `resultats/c_impl.json` | `9f4bd64545971f000e373a2e370afed19870d885c98a8fd0ebdd55ff622176c7` |
+| `resultats/c_impl.json` | `0a94d6b52a429defc5ac4bc55825b3a628fca7de33d33e621004dc0c0a8618b6` |
 | `resultats/c_integral.json` | `fe17e47315c4fb3969e4b86977b234ed7416ff26ed6234d91d8504eda98b4157` |
 | `resultats/c_integral_x8.json` | `886d2341ef7325edd1ecb465617f98c7cea2180ada2cc73b4140830cefdcef13` |
-| `resultats/c_kem_bruit.json` | `e4fc711c9e2a3ea541f1c3a497f27225b15ca50440d2349311182379a88d0800` |
+| `resultats/c_kem_bruit.json` | `5daddb3fb5f4a566ad05c7d6e4beef82d3c79ce4b8c7bf64fff365cfabd2849d` |
 | `resultats/c_kem_bruit_x4.json` | `776cebd292199f6f376f7975ca4b903dc6e7c01ff0f119753d11545229097989` |
 | `resultats/c_kem_valgrind.json` | `b9ec1bc5a3fd0c71bf23539ebf54afb120c26a4207456ab7e3718301fa07cb0f` |
 | `resultats/c_sac.json` | `abaeea3551c2d705fc67a3adf0831e98f2667821e6dbfe03ab5ef3bbc3859582` |
 | `resultats/c_sac_x4.json` | `591df87caff6c769a69a8445b2d1068bc64e5dd44d9661014f19288ee9bbff3f` |
 | `resultats/c_sig_valgrind.json` | `0bc530416f6d361f1e523c8f22d70982e4ddaa1c6f2d67f88f9edb43357837b3` |
 | `resultats/c_simd.json` | `1831c6a5c65f744ca2f8a037c1600e760b5f86faa6db8e08396449bd09aebf45` |
-| `resultats/c_statistiques.json` | `e99ef8a5d938d026c1302c8f61c0b2feaad652026b46c6bcc7ef0419641220e4` |
+| `resultats/c_statistiques.json` | `d0771913f5a34d3d54c85b6ae105b69c4a8250bfc606a470395cfef8302224a4` |
 | `resultats/c_statistiques_x4.json` | `cd06d13fc74fba027fffeeb6ffc592326eacba48922cd57a58b16bfad88d8610` |
-| `resultats/c_temps.json` | `e668de7d06fe0ab5a223a4535c426cc289cac5bbe04e8b5c7513fbf7bf67e6f7` |
+| `resultats/c_temps.json` | `3e25d60b2121ba266662d42d406a807ab88f7936703b281e62bd47add7c31424` |
 | `resultats/cache_trails.json` | `4833b63ca63002838b96bcdc17487a3dfd682868fde7d00bd3213e46b141cb14` |
 | `resultats/compression_kem.json` | `ad2119229ebf21ea5907c8aeb4e62f7dcd1b35815b5b6aff087aecc3de248785` |
 | `resultats/compression_sig.json` | `feee314a3c2e1aec4d1bfd5adb84f8a737c1de0e224c436a0b93e176e38c6bf8` |
@@ -192,37 +192,39 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 | `resultats/dp_validation.json` | `8d0497b43e5d55c10d9bedb273cafa133aebc85a58855ca931482fdd9e410ca5` |
 | `resultats/fonctionnel.json` | `a4a6f4f43956f1c7db8754dd93f106e633e325eb97b31c48a3d1f77544c0ff7f` |
 | `resultats/hachage.json` | `bf1f99c5dc6f8ca3d595abe4cebd66f684dfa25829afa403219d587d150e3719` |
-| `resultats/hachage_arbre.json` | `2cb8a879895f7d1d510690761332cf0360e1aa8a65a2a8669cef1148af37bc2b` |
+| `resultats/hachage_arbre.json` | `2f4440964245b6bf8bd84e6897c2a80eea3166adfcf8c5d23e8002c365632513` |
 | `resultats/hull.json` | `90342c2b045a3233873297de0461a8962785c69086ccba82fff224999d83e43b` |
 | `resultats/indiff_arbre.json` | `2d8bc1405130c7539c4849e1e2d6c1a20fd0a736a8d1eed71f421d8776959b8c` |
 | `resultats/integral_degre.json` | `5f03cdcea50d8d2482c954b85bde8e947dcc8c4d311c8d34f1e440f39e6a0ca5` |
 | `resultats/isd_comparaison.json` | `cbf2bd2e5de2cb5385abbe0bb2e1dc3c455f20e90738816e16b6a5f66f104d4e` |
-| `resultats/isd_parametres.json` | `61f8e2a38294be88e8eb8ec376c6880206ad143d14f15334d449c0042bd2414e` |
+| `resultats/isd_parametres.json` | `00abcf6940c7ac791eb4470a8f6a86efd7a9bfe1865b1e0b1b9fba87f4331f1d` |
 | `resultats/isd_reel.json` | `ff79972f5125fd007c12cc27e1155d424384db95478ea00c87fce73a44e7f339` |
-| `resultats/kem.json` | `8292f63aac9c62a4ab0d28b309263eecbbc234b573f0684a19defb85742dc05a` |
-| `resultats/kem_distributions.json` | `77336568e1a31f89c0e2e0fdb54ce994d762a58884b672e6e59f9d16d02a9587` |
-| `resultats/mini_brume.json` | `2a807e5bf9d6269dc6df991ca9c3c5f5b604fd3b5cf936caefea81b3d7c9d733` |
-| `resultats/mini_brume_detail.json` | `39e5e08f96bf3e63aac0cd0fb896fe256478c0a0587e44c88d0aed3ae7f90cd4` |
-| `resultats/mini_brume_instances.json` | `b2bccce1c1188a8fecfc2a7c0ac4594da4794d138c0f12a8a0e4fbbb3eaf4151` |
+| `resultats/kem.json` | `a7e09b2a373bb2e3abc71ff126a3c7aa7261e17e6a628bb15201e3c541018da0` |
+| `resultats/kem_distributions.json` | `157dcd2ce0e97b200e6eec555374e37726e6a8bbd2688ff9a1af4b3b76b7202d` |
+| `resultats/mini_brume.json` | `5da9a13eec73fb4bb6a0995c7036ab28ad215e1edaeccb44ed848caecb0e436e` |
+| `resultats/mini_brume_detail.json` | `b328de0e54dd611f9865cbdf1a073c3a5f308bf6212e1304b0b1fa82e06352d5` |
+| `resultats/mini_brume_instances.json` | `fc937d3dbfe9e33fba9288c1218f6cbd3b3afcacbde4bdec5a9a6f971984bcb3` |
 | `resultats/mode_aead.json` | `d1cdd256eb031796b28dd9c790a180aa411a63225dc7de0c0d82a7aa4053c389` |
-| `resultats/nuit_brume.json` | `804c124be72272c4464aa3fcc46ed7f7c59f210c8d0dc9dc405b515d8bcc98cd` |
-| `resultats/nuit_fuzz.json` | `d6a58a9b4cc40e06261bc284466b59edcea87aceb19d1c577f14d38de8806923` |
-| `resultats/nuit_isd.json` | `c39287eaccab608dde73a885dafbfbf0eaf7473aafc08c76828ca4de77a3a334` |
-| `resultats/nuit_kem_reel.json` | `b83f7c6ce5256ef581a145989e48adfe8c2c95897e5aff589eb94a7fe7596329` |
-| `resultats/nuit_temps.json` | `4f289e467002a56beb4275bd9e6ad6005b65475ab39a915b799fa9c996ef2fa2` |
-| `resultats/robustesse.json` | `ef6bf91ac3a0c017e4490820e916c32833a9987fe91d544078c289e0a5ee34ec` |
-| `resultats/rsd_attaques.json` | `04bf7a4c7e2303487cc84b3f93250f908f7ed9ff7b5e9d9e6856910cc1d7f096` |
-| `resultats/sig.json` | `88f65cc2940c27b19f93e57132fc0ac04fd55fd06ed42217a10407bb1974ac30` |
+| `resultats/nuit_brume.json` | `f959b080fcce641a25f82374f1fa1a128806f7e0030b748d3604b6670a18d853` |
+| `resultats/nuit_cryptanalyse.json` | `389f876cb119600dca8d701f0d7892e67b345c826daa972eacc744c6e5f9f1da` |
+| `resultats/nuit_fuzz.json` | `4db3658a66ffb72057ae19f3d43d6644c7f2f18242d5661ce092aebd128262b2` |
+| `resultats/nuit_isd.json` | `e6675e559ff91a54380641ab4d834eab2180db79ab85b07838baf399f7dfaad7` |
+| `resultats/nuit_kem_reel.json` | `279f559836fb8d0ebaddbf1c23d060dadf4c5bbf32d2dfe78a6721377f255b55` |
+| `resultats/nuit_temps.json` | `6dc40945ba1d8de17471bfe8942e55cd4d321a5092e87d1afa92b33161f50e3b` |
+| `resultats/nuit_vole.json` | `c59f0a83e0ea1685dcfeed91ed560fffa3046799150886baeebbe72b69def1ab` |
+| `resultats/robustesse.json` | `b1cd8e07dd3caaf7fddc360852ba68938688fcac41b916613351c51d8a3d9540` |
+| `resultats/rsd_attaques.json` | `8d552c0139ab44d10b22853a3846c3448f3312c2f5d7468f769a8ce4711b10fd` |
+| `resultats/sig.json` | `0104c89f999fd6f4b1083cc270df008b2ff8c34256d35cdc3e1f2a60d11f370d` |
 | `resultats/sig_flux.json` | `5406fec788e6a202a19688dbd28ebfbc88c882655c11a9a0501c57701ec1b854` |
-| `resultats/sig_modele.json` | `141e049867c66019984468eb0ff0a4a5bad346b1966c1d48aebd608f184450bb` |
+| `resultats/sig_modele.json` | `a3f3902ddd98d3f49a0a24ada3155dcada6ee84c7241a15a6933470c21e6b296` |
 | `resultats/statiques.json` | `3a82c07a40ce053af6bb5815c193ae0a865099e1d7cbf907f604e0584193ea5f` |
 | `resultats/structure_miss.json` | `792d62c718361c1fbbbfda9a320889fdec7dd8d414e2608cd2699483be50df7d` |
 | `resultats/symetries_invariants.json` | `14c13d99a122f55bcdae93efb5e6e7abfb7d9c4e678822482983a13ac7d534a9` |
-| `resultats/synthese.json` | `3b72eba83de4e5ba69ea0ab6465fd8288807b24782deebcfb77ef21f3929c741` |
+| `resultats/synthese.json` | `a5e5e8c1211f189f625e332b55255f6348608bc10974444b7a6de4641b80e182` |
 | `resultats/te.json` | `19b3b92d061b07253c7b7dc732bc4d1169c01cdfc66036566ac47dc88ad4838c` |
 | `resultats/trails.json` | `f149e63c675ec2061ffdd1d9240ae9a34a72b2b72d8f9f34f45180a3ec59797f` |
 | `resultats/vole_params.json` | `30e65f8e34624898f81e0c2c512615eb9568226da2d185414e95c709ccc71973` |
-| `resultats/vole_proto.json` | `bbc4640ddfd9663326ea95b9b0531d0699b6ef24a6c37c3df0f559c0e6dfca01` |
+| `resultats/vole_proto.json` | `a17bf9a1bda29a8202bc91771ff8085ad955ebf72be5c6e25c6d7a2802697d70` |
 | `resultats/wide_trail.json` | `908b2ded5bf3ecfb84c1a3a4071b4d1fd8e5c6baa7bce91a6a89a56926ba3657` |
 
 ## Preuves et rapports
@@ -230,7 +232,7 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 | Fichier | SHA-256 |
 |---|---|
 | `docs/AUDIT_EXTERNE.md` | `15181ffed3a873c321f66b349144a0030f07e45f021e088b030613a554ca0a31` |
-| `docs/CAMPAGNE_24H.md` | `3f63cb78b53ae1150f403bd973f9cc8654c2da43bb5d63292d43e3c789771d07` |
+| `docs/CAMPAGNE_24H.md` | `534e72bcf0ba815f8e3cedd8599ebcb7cb50c5c8df0409d4373a4d463e8a64a4` |
 | `docs/PISTES.md` | `b95e34b8fe5d145f3cd22d8a131f61ed86232e12de1993f079d3e7e311eb20c0` |
 | `docs/PREUVES.md` | `9beb934e74f83102750ced9e5cf9823a649e00296ee34cb9456e426f0c450161` |
 | `docs/RAPPORT_AUDIT.md` | `6006fdc094acdeb610ff4fa8161d4d738764d9bfc0c48e86b6062dccb5e42a71` |

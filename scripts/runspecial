@@ -1,0 +1,373 @@
+#!/usr/bin/env bash
+# Dudect ciblé : d'où viennent les écarts de aead et de kem_decaps ? Le banc, les données, la disposition mémoire ?
+#
+#   ./scripts/runspecial [options]     lance en arrière-plan (défaut : tous les blocs, 3 répétitions, ≈ 5 h 45)
+#       --bloc B               adresses (≈ 35 min), aead (≈ 2 h 10), kem (≈ 3 h), tout ;
+#                              suite (≈ 3 h 15) : alignement forcé, variantes de l'état AEAD, témoin kem_decaps ;
+#                              grille (≈ 1 h) : aead_cle pour 32 positions de w et de etat
+#                              grille1 (≈ 30 min) : idem en pile1, 8 positions, 4 graines
+#                              confirme (≈ 20 min) : binaire de base, pile0 et pile1, après correctif
+#       --repetitions R        passages des blocs aead et kem (au moins 2)
+#       --echelle E            fraction du nombre de mesures de la campagne de nuit (défaut 1)
+#       --forcer               lance même si la machine n'est pas au repos ou si le compilateur diffère de la campagne
+#   ./scripts/runspecial --statut      où on en est
+#   ./scripts/runspecial --arreter     arrêt propre (le bilan porte sur ce qui a été mesuré)
+#   ./scripts/runspecial --rebilan D   réécrit à l'écran le bilan du dossier D
+#
+# Résultat : resultats/special/<date>/BILAN.md. Machine au repos pendant la mesure : un seul cœur est utilisé.
+set -u
+export LC_ALL=C
+cd "$(dirname "$(readlink -f "$0")")/.."   # racine du dépôt
+RACINE=resultats/special
+PID=$RACINE/run.pid
+SEUIL=4.5
+N_AEAD=62500000; N_DECAPS=1500000; N_TEMOIN=375000      # comme la campagne de 10 h
+
+en_cours() { [ -s "$PID" ] && kill -0 "$(cat "$PID")" 2>/dev/null && grep -q scripts/runspecial "/proc/$(cat "$PID")/cmdline" 2>/dev/null; }
+descendants() { local p; for p in $(pgrep -P "$1" 2>/dev/null); do echo "$p"; descendants "$p"; done; }
+dernier() { ls -dt "$RACINE"/20* 2>/dev/null | head -1; }
+ech() { awk -v n="$1" -v e="$2" 'BEGIN { v = int(n * e); print v < 2048 ? 2048 : v }'; }
+
+# verdict <mesures.tsv> <opération> <aslr : vide ou « non »> <colonne : 4 = t de Welch, 5 = t_p50>
+# Une seule graine répétée ne suffit pas : le lien à la valeur se juge sur toutes les graines (test de permutation du F,
+# qui ne suppose pas de loi pour t), et des signes opposés à valeur égale l'excluent.
+verdict() {
+    awk -F'\t' -v op="$2" -v a="$3" -v col="$4" -v S="$SEUIL" '
+    function fisher(lab,    i, n, s, T, B, xx, v) {
+        T = 0; xx = 0; B = 0; delete n; delete s
+        for (i = 1; i <= N; i++) { n[lab[i]]++; s[lab[i]] += x[i]; T += x[i]; xx += x[i] * x[i] }
+        for (v in n) B += s[v] * s[v] / n[v]
+        if (xx - B <= 1e-12) return 1e30
+        return ((B - T * T / N) / (nv - 1)) / ((xx - B) / (N - nv))
+    }
+    $1 == op && $9 == a {
+        N++; x[N] = $col + 0; g[N] = $2
+        if (!($2 in vu)) { vu[$2] = 1; nv++ }
+        cnt[$2]++
+        if (x[N] > S) { p[$2]++; dp++ }
+        if (x[N] < -S) { m[$2]++; dm++ }
+    }
+    END {
+        if (!N) { print "non mesuré"; exit }
+        dep = dp + dm
+        for (v in vu) {
+            if (p[v] && m[v]) conflit++
+            if (cnt[v] >= 2) rep++
+            if ((p[v] || m[v]) && p[v] + m[v] < cnt[v]) varie++
+        }
+        r = sprintf("%d dépassement(s) sur %d (%d positifs, %d négatifs)", dep, N, dp, dm)
+        pv = -1
+        if (nv >= 2 && N > nv && rep) {
+            F0 = fisher(g); srand(1); K = 20000; ge = 0
+            for (i = 1; i <= N; i++) h[i] = g[i]
+            for (k = 1; k <= K; k++) {
+                for (i = N; i > 1; i--) { j = 1 + int(rand() * i); t = h[i]; h[i] = h[j]; h[j] = t }
+                if (fisher(h) >= F0) ge++
+            }
+            pv = (ge + 1) / (K + 1)
+            r = r sprintf(", F = %.2f, p = %.4f", F0, pv)
+        }
+        aa = (op ~ /_aa/)
+        if (!dep) c = aa ? "BANC PROPRE dans ce plan" : "AUCUN ÉCART observé (cela n’"  "exclut ni une valeur rare ni un processus rare)"
+        else if (aa) c = "LE BANC SEUL DÉPASSE : un écart de cette ampleur ne vient pas de la différence entre les données"
+        else if (pv < 0) c = "ÉCART, valeurs non comparables : pas de conclusion sur la valeur"
+        else if (conflit || pv >= 0.05) c = "ÉCART NON LIÉ À LA VALEUR" (conflit ? sprintf(" (signes opposés à valeur égale : %d)", conflit) : "")
+        else if (pv < 0.01) c = "ÉCART LIÉ À LA VALEUR" (varie ? ", présent ou non selon le processus" : ", à chaque processus")
+        else c = "INDÉCIS sur la valeur"
+        print c " : " r
+    }' "$1"
+}
+
+etiquette() {
+    local e=$1
+    case "$2" in
+        non) e="$e sans ASLR" ;;
+        scan) e="$e, balayage" ;;
+        ?*) e="$e, $2" ;;
+    esac
+    echo "$e"
+}
+
+ecrire_bilan() {     # écrit à l'écran
+    local d=$1 etat=$2 tsv=$1/mesures.tsv c op a
+    echo "# Dudect ciblé : d'où viennent les écarts"
+    echo
+    echo "État : $etat. Machine et sources : \`fiche.txt\`. Seuil : |t| < $SEUIL."
+    echo
+    [ -f "$d/autre_compilateur" ] && { echo "**Compilateur différent de la campagne : $(cat "$d/autre_compilateur"). Une absence d'écart ne dit rien du binaire de la campagne.**"; echo; }
+    if [ ! -s "$tsv" ]; then echo "Aucune mesure."; return 0; fi
+    local tem; tem=$(awk -F'\t' -v S="$SEUIL" '$1 == "kem_temoin" { print ($4 > S || $4 < -S) ? "ok" : "non" }' "$tsv")
+    case "$tem" in
+        ok)  echo "Témoin de sensibilité (+300 cycles) : détecté." ;;
+        non) echo "**Témoin de sensibilité NON détecté : banc trop peu sensible, les verdicts ci-dessous ne valent rien.**" ;;
+        *)   echo "**Témoin de sensibilité non mesuré.**" ;;
+    esac
+    awk -F'\t' '$7 + 0 > 2 { n++ } END { if (n) printf "**Machine occupée : charge > 2 au début de %d mesure(s).**\n", n }' "$tsv"
+    awk -F'\t' '$6 != "" { c = $1 "/" $2; if (c in e && e[c] != $6) bad = 1; e[c] = $6; if (($1 "/" $6) in q && q[$1 "/" $6] != $2) bad = 1; q[$1 "/" $6] = $2 } END {
+        if (bad) print "**Empreintes incohérentes : les valeurs ne sont pas celles annoncées, résultats invalides.**"
+        else print "Empreintes : identiques pour une même graine, différentes entre graines." }' "$tsv"
+    echo
+    echo "## Verdicts"
+    echo
+    echo "Lien à la valeur : test de permutation du F sur toutes les graines ; lié si p < 0,01 sans signes opposés à valeur égale. Dans un A/A, la classe ne porte aucune information."
+    echo
+    awk -F'\t' '$1 != "kem_temoin" { k = $1 "\t" $9; if (!(k in v)) { v[k] = 1; print k } }' "$tsv" | while IFS=$'\t' read -r op a; do
+        c=$(etiquette "$op" "$a")
+        echo "- **$c**, t de Welch : $(verdict "$tsv" "$op" "$a" 4)"
+        echo "- **$c**, t_p50 (indicatif, seuil non calibré) : $(verdict "$tsv" "$op" "$a" 5)"
+    done
+    echo
+    echo "## Mesures"
+    echo
+    echo "| Opération | ASLR | Graine | Répétition | t de Welch | t_p50 | Empreinte | Charge | Durée (s) |"
+    echo "|---|---|---|---|---|---|---|---|---|"
+    sort -t "$(printf '\t')" -k1,1 -k9,9 -k2,2n -k3,3n "$tsv" | awk -F'\t' -v S="$SEUIL" '{
+        a = ($4 > S || $4 < -S) ? "**" : ""; b = ($5 > S || $5 < -S) ? "**" : ""
+        printf "| %s | %s | %s | %s | %s%s%s | %s%s%s | %s | %s | %s |\n", $1, $9 == "" ? "oui" : $9 == "scan" ? "balayage" : $9, $2 == "" ? "—" : $2, $3, a, $4, a, b, $5, b, $6 == "" ? "—" : $6, $7, $8 }'
+}
+
+# Plan : une ligne par mesure : opération, graine (- si aucune), aslr (oui, non ou scan), mesures, répétition.
+# Répétitions entrelacées : une dérive de la machine ne se confond pas avec une valeur.
+# scan : balayage de processus, avec ASLR et moins de mesures, pour relier les deux régimes de t aux adresses.
+plan() {
+    local bloc=$1 R=$2 E=$3 r v a nA nD nS
+    nA=$(ech $N_AEAD "$E"); nD=$(ech $N_DECAPS "$E"); nS=$(ech $((N_AEAD / 5)) "$E")
+    echo "kem_temoin - oui $(ech $N_TEMOIN "$E") 1"
+    case "$bloc" in adresses|tout)
+        for ((r = 1; r <= 40; r++)); do echo "aead_sym 1 scan $nS $r"; done ;;
+    esac
+    case "$bloc" in aead|tout)
+        for ((r = 1; r <= R; r++)); do
+            for v in 1 2 3; do echo "aead_cle $v oui $nA $r"; done
+            for v in 1 2 3; do echo "aead_clair $v oui $nA $r"; done
+            # témoin : ce qui dépasse déjà, même binaire ; sans lui, un plan propre ne prouverait rien
+            for v in 1 2; do echo "aead_sym $v oui $nA $r"; done
+            for v in 1 2; do echo "aead_aa_fixe $v non $nA $r"; done
+        done ;;
+    esac
+    # pile : aead_cle sans ASLR, alignement de la pile forcé par la longueur de l'environnement.
+    # pile0 : `sortie` multiple de 64 (régime fort attendu), pile1 : décalée de 32 (régime faible attendu).
+    # v64, v32 : état de duplex() et contexte de clé placés à 0 ou 32 octets d'un multiple de 64 (construire_variantes).
+    case "$bloc" in suite)
+        for ((r = 1; r <= R; r++)); do
+            for a in pile0 pile1; do
+                for v in 1 2; do echo "aead_cle $v $a $nA $r"; done
+            done
+        done
+        for ((r = 1; r <= 2; r++)); do
+            for a in v64:pile0 v64:pile1 v32:pile0 v32:pile1; do
+                for v in 1 2; do echo "aead_cle $v $a $nA $r"; done
+            done
+        done
+        # témoin du bloc kem : le plan d'origine, même binaire que kem_decaps_sym
+        for ((r = 1; r <= R; r++)); do
+            for v in 1 2 3; do echo "kem_decaps_asym $v non $nD $r"; done
+        done ;;
+    esac
+    # grille : aead_cle en pile0, pour chaque position de w (q) et de etat (e) dans une ligne de cache ; témoins en tête.
+    case "$bloc" in grille)
+        for a in pile0 pile1; do
+            for v in 1 2; do echo "aead_cle $v $a $nS 1"; done
+        done
+        for q in 0 16 32 48; do
+            for e in 0 4 16 20 32 36 48 52; do
+                for v in 1 2; do echo "aead_cle $v g${q}_$e:pile0 $nS 1"; done
+            done
+        done ;;
+    esac
+    # confirme : binaire de base après l'alignement de w sur 64 octets, dans les deux régimes de pile.
+    case "$bloc" in confirme)
+        for ((r = 1; r <= R; r++)); do
+            for a in pile0 pile1; do
+                for v in 1 2 3 4; do echo "aead_cle $v $a $nS $r"; done
+                for v in 1 2; do echo "aead_sym $v $a $nS $r"; done
+            done
+        done ;;
+    esac
+    # grille1 : même chose en pile1 (régime fort de ce binaire), etat à 0 ou 32 seulement, 4 graines.
+    case "$bloc" in grille1)
+        for a in pile0 pile1; do
+            for v in 1 2; do echo "aead_cle $v $a $nS 1"; done
+        done
+        for q in 0 16 32 48; do
+            for e in 0 32; do
+                for v in 1 2 3 4; do echo "aead_cle $v g${q}_$e:pile1 $nS 1"; done
+            done
+        done ;;
+    esac
+    case "$bloc" in kem|tout)
+        for ((r = 1; r <= R; r++)); do
+            echo "kem_decaps_aa 1 non $nD $r"
+            for a in oui non; do
+                for v in 1 2 3; do echo "kem_decaps_sym $v $a $nD $r"; done
+            done
+        done ;;
+    esac
+}
+
+# Copies de brume512.c où l'état w de sl_aead_cle et de duplex, et le contexte de sl_aead_encrypt, ont une position
+# imposée par rapport aux lignes de cache ; les sources restent intactes. <suffixe> <remplissage de w> <remplissage de c>
+construire_variantes() {
+    local s q p L=sillage/c O=tests/c/build
+    gcc -O3 -march=native -fopenmp -I $L -c -o $O/var_temps.o tests/c/temps.c \
+        && gcc -O3 -march=native -fopenmp -I $L -c -o $O/var_commun.o $L/commun.c \
+        && gcc -O3 -march=native -fopenmp -I $L -c -o $O/var_avx2.o $L/brume512_avx2.c || return 1
+    while read -r s q p; do
+        sed -E "/^int sl_aead_cle\(/,/^}/ s/^    uint64_t w\[8\];/    struct { char p[$q]; uint64_t w_[8]; } __attribute__((aligned(64))) s_w; uint64_t *w = s_w.w_;/
+/^static void duplex\(/,/^}/ s/^    uint64_t w\[8\];/    struct { char p[$q]; uint64_t w_[8]; } __attribute__((aligned(64))) s_w; uint64_t *w = s_w.w_;/
+/^int sl_aead_encrypt\(/,/^}/ { s/^    sl_aead_cle_t c;/    struct { char p[$p]; sl_aead_cle_t c; } __attribute__((aligned(64))) s_c;/; s/&c/\&s_c.c/g; s/sizeof c/sizeof s_c.c/ }" \
+            $L/brume512.c > "tests/c/build/brume512_$s.c"
+        [ "$(grep -c 's_w.w_;' "tests/c/build/brume512_$s.c")" = 2 ] && [ "$(grep -c 's_c.c' "tests/c/build/brume512_$s.c")" = 3 ] \
+            || { echo "variante $s : remplacement incomplet" >&2; return 1; }
+        gcc -O3 -march=native -fopenmp -I $L -o "$O/temps_$s" $O/var_temps.o $O/var_commun.o "$O/brume512_$s.c" $O/var_avx2.o -lm || return 1
+    done
+}
+
+# Variantes de la grille : w à q octets d'un multiple de 64, etat à e octets (etat suit `int profil` : c à e − 4).
+liste_grille() {
+    local q e p
+    for q in 0 16 32 48; do
+        for e in 0 4 16 20 32 36 48 52; do
+            p=$(( (e - 4 + 64) % 64 )); [ "$p" = 0 ] && p=64
+            echo "g${q}_$e $(( q == 0 ? 64 : q )) $p"
+        done
+    done
+}
+
+# Longueur d'environnement pour laquelle `sortie` a le bit 5 voulu, sans ASLR et avec ce binaire. La longueur de la
+# commande déplace aussi la pile : même opération, même nombre de chiffres que les vraies mesures.
+pad_pour() {     # binaire bit
+    local b=$1 v=$2 l a
+    for ((l = 1; l <= 128; l += 8)); do
+        a=$(SILLAGE_PAD=$(printf '%*s' "$l" '' | tr ' ' x) SILLAGE_TEMPS_GRAINE=1 setarch -R $PIN "$b" aead_cle 00002048 2>/dev/null | sed -n 's/.*"sortie": "\(0x[0-9a-f]*\)".*/\1/p')
+        [ -n "$a" ] && [ $(( (a >> 5) & 1 )) = "$v" ] && { echo "$l"; return 0; }
+    done
+    return 1
+}
+
+# --- partie détachée ---------------------------------------------------------
+if [ "${1:-}" = --interne ]; then
+    D=$2
+    TSV=$D/mesures.tsv; LOG=$D/journal.log; ARRET=0
+    trap 'ARRET=1' TERM INT
+    journal() { echo "[$(date '+%F %T')] $*" >> "$LOG"; }
+    PIN=""; command -v taskset >/dev/null 2>&1 && PIN="taskset -c $(($(nproc) - 1))"
+    declare -A PADS
+    journal "début : $(wc -l < "$D/plan") mesures"
+    while read -r op g a n r <&3; do
+        [ "$ARRET" = 0 ] || break
+        [ "$g" = - ] && g=""
+        SA=""; AS=""; [ "$a" = non ] && { SA="setarch -R"; AS=non; }; [ "$a" = scan ] && AS=scan
+        BIN=tests/c/build/temps; PAD=""
+        case "$a" in *pile*)
+            SA="setarch -R"; AS=$a
+            case "$a" in *:*) BIN=tests/c/build/temps_${a%%:*} ;; esac
+            cle="$BIN ${a##*pile}"
+            [ -n "${PADS[$cle]:-}" ] || PADS[$cle]=$(pad_pour "$BIN" "${a##*pile}")
+            if [ -z "${PADS[$cle]}" ]; then journal "ÉCHEC : pas d'environnement pour $a"; continue; fi
+            PAD=$(printf '%*s' "${PADS[$cle]}" '' | tr ' ' x) ;;
+        esac
+        charge=$(cut -d' ' -f1 /proc/loadavg); t0=$(date +%s)
+        if [ -n "$PAD" ]; then ligne=$(SILLAGE_PAD=$PAD SILLAGE_TEMPS_GRAINE="$g" $SA $PIN "$BIN" "$op" "$n" 2>>"$LOG")
+        elif [ -n "$g" ]; then ligne=$(SILLAGE_TEMPS_GRAINE="$g" $SA $PIN "$BIN" "$op" "$n" 2>>"$LOG")
+        else ligne=$($SA $PIN "$BIN" "$op" "$n" 2>>"$LOG"); fi
+        [ "$ARRET" = 0 ] || break
+        t=$(echo "$ligne" | sed -n 's/.*"t_welch": \([-0-9.]*\).*/\1/p')
+        p=$(echo "$ligne" | sed -n 's/.*"t_p50": \([-0-9.]*\).*/\1/p')
+        e=$(echo "$ligne" | sed -n 's/.*"empreinte": "\([0-9a-f]*\)".*/\1/p')
+        if [ -z "$t" ]; then journal "ÉCHEC : $op graine=$g aslr=$a répétition=$r"; continue; fi
+        printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$op" "$g" "$r" "$t" "$p" "$e" "$charge" "$(($(date +%s) - t0))" "$AS" >> "$TSV"
+        echo "$ligne" >> "$D/mesures.jsonl"
+        journal "$op graine=${g:--} aslr=$a répétition=$r : t = $t, t_p50 = $p"
+        ecrire_bilan "$D" "en cours" > "$D/BILAN.md"
+    done 3< "$D/plan"
+    if [ "$ARRET" = 0 ]; then ecrire_bilan "$D" "terminé" > "$D/BILAN.md"; journal "terminé"
+    else ecrire_bilan "$D" "arrêté avant la fin" > "$D/BILAN.md"; journal "arrêté"; fi
+    rm -f "$PID"
+    exit 0
+fi
+
+# --- commandes ---------------------------------------------------------------
+BLOC=tout; R=3; E=1; FORCER=0
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --statut)
+            en_cours && echo "État : en cours" || echo "État : pas de mesure en cours"
+            D=$(dernier); [ -n "$D" ] || exit 0
+            echo "Dossier : $D"
+            [ -f "$D/plan" ] && echo "Mesures : $(cat "$D/mesures.tsv" 2>/dev/null | wc -l) sur $(wc -l < "$D/plan")"
+            tail -3 "$D/journal.log" 2>/dev/null
+            [ -f "$D/BILAN.md" ] && grep -E '^- \*\*.*t de Welch' "$D/BILAN.md"
+            exit 0 ;;
+        --arreter)
+            en_cours || { echo "pas de mesure en cours"; exit 0; }
+            p=$(cat "$PID"); kill -TERM "$p"
+            for d in $(descendants "$p"); do kill -TERM "$d" 2>/dev/null; done
+            echo "arrêt demandé ; bilan : $(dernier)/BILAN.md"
+            exit 0 ;;
+        --rebilan) ecrire_bilan "${2:?}" "relu"; exit 0 ;;
+        --bloc) BLOC=${2:?}; shift 2 ;;
+        --repetitions) R=${2:?}; shift 2 ;;
+        --echelle) E=${2:?}; shift 2 ;;
+        --forcer) FORCER=1; shift ;;
+        *) sed -n '2,17p' "$0" | cut -c3-; exit 1 ;;
+    esac
+done
+case "$BLOC" in adresses|aead|kem|tout|suite|grille|grille1|confirme) ;; *) echo "bloc inconnu : $BLOC" >&2; exit 1 ;; esac
+case "$R" in *[!0-9]*|'') echo "--repetitions : entier attendu" >&2; exit 1 ;; esac
+[ "$R" -ge 2 ] || { echo "il faut au moins 2 répétitions" >&2; exit 1; }
+awk -v e="$E" 'BEGIN { exit !(e > 0) }' || { echo "échelle invalide : $E" >&2; exit 1; }
+
+mkdir -p "$RACINE"
+en_cours && { echo "une mesure tourne déjà :"; "$0" --statut; exit 1; }
+if [ -s resultats/nuit/run.pid ] && kill -0 "$(cat resultats/nuit/run.pid)" 2>/dev/null \
+    && grep -q rundenuit "/proc/$(cat resultats/nuit/run.pid)/cmdline" 2>/dev/null; then
+    echo "une campagne de nuit tourne : dudect exige une machine au repos" >&2; exit 1
+fi
+command -v setarch >/dev/null 2>&1 || { echo "setarch manquant : indispensable aux mesures sans ASLR" >&2; exit 1; }
+setarch -R true 2>/dev/null || { echo "setarch -R refusé dans cet environnement" >&2; exit 1; }
+CHARGE=$(cut -d' ' -f1 /proc/loadavg)
+if [ "$FORCER" = 0 ] && awk -v c="$CHARGE" 'BEGIN { exit !(c > 2) }'; then
+    echo "machine occupée (charge $CHARGE) : attendre, ou --forcer (ce sera signalé dans le bilan)" >&2; exit 1
+fi
+
+# Un autre compilateur donne un autre binaire : les écarts de la campagne pourraient ne pas s'y reproduire
+GCC=$(gcc --version | head -1); REF=$(grep -m1 '^gcc ' resultats/nuit/fiche_machine.txt 2>/dev/null)
+AUTRE_GCC=0; [ -n "$REF" ] && [ "$GCC" != "$REF" ] && AUTRE_GCC=1
+if [ "$AUTRE_GCC" = 1 ] && [ "$FORCER" = 0 ]; then
+    echo "compilateur différent de la campagne : $GCC (campagne : $REF)" >&2
+    echo "lancer dans le même environnement, ou --forcer (ce sera signalé dans le bilan)" >&2; exit 1
+fi
+
+D=$RACINE/$(date +%Y%m%d_%H%M%S); mkdir -p "$D"
+[ "$AUTRE_GCC" = 1 ] && echo "$GCC (campagne : $REF)" > "$D/autre_compilateur"
+make -s -C sillage/c >>"$D/journal.log" 2>&1 || { tail -5 "$D/journal.log"; echo "échec de construction" >&2; exit 1; }
+mkdir -p tests/c/build
+L=sillage/c
+gcc -O3 -march=native -fopenmp -I $L -o tests/c/build/temps tests/c/temps.c $L/commun.c $L/brume512.c $L/brume512_avx2.c -lm >>"$D/journal.log" 2>&1 \
+    || { tail -5 "$D/journal.log"; echo "échec de construction de dudect" >&2; exit 1; }
+VARIANTES=""
+[ "$BLOC" = suite ] && VARIANTES=$'v64 64 60\nv32 32 28'
+case "$BLOC" in grille*) VARIANTES=$(liste_grille) ;; esac
+if [ -n "$VARIANTES" ]; then
+    construire_variantes <<<"$VARIANTES" >>"$D/journal.log" 2>&1 || { tail -5 "$D/journal.log"; echo "échec de construction des variantes" >&2; exit 1; }
+fi
+{
+    echo "date : $(date '+%F %T %z')"
+    grep -m1 'model name' /proc/cpuinfo | sed 's/.*: /CPU : /'
+    echo "$GCC"
+    echo "commit : $(git rev-parse HEAD 2>/dev/null)$(git diff --quiet HEAD -- sillage tests 2>/dev/null || echo ' + modifications locales')"
+    echo "sources : $(cat sillage/c/*.c sillage/c/*.h tests/c/temps.c | sha256sum | cut -d' ' -f1)"
+    echo "aslr système : $(cat /proc/sys/kernel/randomize_va_space)"
+    echo "paramètres : bloc $BLOC, $R répétitions, échelle $E"
+} > "$D/fiche.txt"
+plan "$BLOC" "$R" "$E" > "$D/plan"
+EST=$(awk '{ s += $4 * ($1 ~ /^aead/ ? 4.1e-6 : 3.41e-4) } END { printf "%d", s / 60 }' "$D/plan")
+setsid nohup "$0" --interne "$D" </dev/null >>"$D/journal.log" 2>&1 &
+echo $! > "$PID"
+sleep 1
+kill -0 "$(cat "$PID")" 2>/dev/null || { tail -5 "$D/journal.log"; echo "échec du lancement" >&2; exit 1; }
+echo "Lancé en arrière-plan : $(wc -l < "$D/plan") mesures, ≈ $EST min. Ne rien lancer d'autre sur la machine."
+echo "  ./scripts/runspecial --statut    où on en est"
+echo "  ./scripts/runspecial --arreter   arrêt propre"
+echo "  bilan : $D/BILAN.md"

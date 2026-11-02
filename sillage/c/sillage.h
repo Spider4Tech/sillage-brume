@@ -78,7 +78,8 @@ size_t sl_te_par_len(size_t len);             /* 7 octets par bloc de 64 */
 int sl_te_encrypt(int profil, const uint8_t cle[64], const uint8_t nonce[SL_NONCE],
                   const uint8_t *aad, size_t aadlen, const uint8_t *pt, size_t len,
                   uint8_t *ct, uint8_t *par, uint8_t *tag, uint8_t meta[8]);
-/* ct est corrigé EN PLACE ; corrections[] (≤ un par bloc) reçoit les positions. */
+/* ct est corrigé EN PLACE, seulement si tous les blocs sont corrigeables (sinon -2, ct intact) ;
+ * corrections[] doit offrir sl_te_par_len(len) / 7 entrées (une par bloc de 64 octets). */
 int sl_te_decrypt(int profil, const uint8_t cle[64], const uint8_t nonce[SL_NONCE],
                   const uint8_t *aad, size_t aadlen, uint8_t *ct, size_t len,
                   const uint8_t *par, size_t parlen, const uint8_t *tag,
@@ -155,6 +156,10 @@ void sl_echanges(const uint8_t *seed, size_t seedlen, uint32_t m, const char *do
 void sl_perm(const uint8_t *seed, size_t seedlen, uint32_t m, const char *dom, uint32_t *perm);
 void sl_shake4(const uint8_t *const m[4], size_t len, uint8_t *const out[4], size_t outlen);
 int sl_alea(void *out, size_t len);
+/* allocations internes : abort() si la mémoire manque (jamais de NULL déréférencé) ;
+ * sl_calloc refuse aussi le débordement de a × b */
+void *sl_malloc(size_t n);
+void *sl_calloc(size_t a, size_t b);
 static inline void sl_clmul64(uint64_t a, uint64_t b, uint64_t *lo, uint64_t *hi)
 {
 #ifdef __PCLMUL__

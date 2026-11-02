@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Prépare et vérifie une machine pour ./rundenuit.sh (guide : docs/CAMPAGNE_24H.md).
+# Prépare et vérifie une machine pour ./scripts/rundenuit.sh (guide : docs/CAMPAGNE_24H.md).
 #
-#   ./preparer_campagne.sh              vérifie, sans rien installer ni modifier
-#   ./preparer_campagne.sh --installer  crée .venv et y installe les paquets Python
+#   ./scripts/preparer_campagne.sh              vérifie, sans rien installer ni modifier
+#   ./scripts/preparer_campagne.sh --installer  crée .venv et y installe les paquets Python
 #
-# Code de retour non nul : il manque quelque chose d'indispensable. rundenuit.sh l'appelle au démarrage.
+# Code de retour non nul : il manque quelque chose d'indispensable. scripts/rundenuit.sh l'appelle au démarrage.
 set -u
-cd "$(dirname "$(readlink -f "$0")")"
+cd "$(dirname "$(readlink -f "$0")")/.."   # racine du dépôt
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 BLOQUANT=0
@@ -76,7 +76,7 @@ if [ "$BLOQUANT" != 0 ]; then
     echo "  Debian, Ubuntu : sudo apt install build-essential python3-venv valgrind libc6-dbg procps"
     echo "  Fedora :         sudo dnf install gcc make python3 valgrind valgrind-devel libasan libubsan libquadmath-devel procps-ng"
     echo "  Arch :           sudo pacman -S base-devel python valgrind procps-ng"
-    echo "Paquets Python :   ./preparer_campagne.sh --installer"
+    echo "Paquets Python :   ./scripts/preparer_campagne.sh --installer"
     exit 1
 fi
 echo

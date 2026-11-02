@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Lance une longue campagne SILLAGE en arrière-plan ; guide : docs/CAMPAGNE_24H.md
 #
-#   ./runlong [heures]     lance (défaut : 24 h) ; si une campagne est restée inachevée, la reprend
-#   ./runlong --neuf [h]   repart de zéro (la campagne précédente est archivée)
-#   ./runlong --statut     où on en est
-#   ./runlong --arreter    arrêt propre, reprise possible avec ./runlong
+#   ./scripts/runlong [heures]     lance (défaut : 24 h) ; si une campagne est restée inachevée, la reprend
+#   ./scripts/runlong --neuf [h]   repart de zéro (la campagne précédente est archivée)
+#   ./scripts/runlong --statut     où on en est
+#   ./scripts/runlong --arreter    arrêt propre, reprise possible avec ./scripts/runlong
 #
-# Le calcul survit à la fermeture du terminal, pas à un arrêt de la machine : après une coupure, relancer ./runlong.
+# Le calcul survit à la fermeture du terminal, pas à un arrêt de la machine : après une coupure, relancer ./scripts/runlong.
 set -u
-cd "$(dirname "$(readlink -f "$0")")"
+cd "$(dirname "$(readlink -f "$0")")/.."   # racine du dépôt
 LOG=resultats/nuit/journal.log
 PID=resultats/nuit/run.pid
 
@@ -18,7 +18,7 @@ descendants() { local p; for p in $(pgrep -P "$1" 2>/dev/null); do echo "$p"; de
 statut() {
     if en_cours; then echo "État : en cours"
     elif [ -f "$LOG" ] && grep -q '\] terminé$' "$LOG"; then echo "État : terminée"
-    elif [ -f "$LOG" ]; then echo "État : arrêtée avant la fin ; ./runlong pour reprendre"
+    elif [ -f "$LOG" ]; then echo "État : arrêtée avant la fin ; ./scripts/runlong pour reprendre"
     else echo "État : aucune campagne"; return; fi
     [ -f "$LOG" ] || return
     prevu=$(sed -n 's/.*campagne de nuit : [0-9.]* h (\([0-9]*\) s).*/\1/p' "$LOG" | head -1)
@@ -43,7 +43,7 @@ case "${1:-}" in
         p=$(cat "$PID")
         kill -TERM "$p"                                  # noté d'abord : bash le traite dès que l'enfant meurt
         for d in $(descendants "$p"); do kill -TERM "$d" 2>/dev/null; done
-        echo "arrêt demandé ; reprise : ./runlong"
+        echo "arrêt demandé ; reprise : ./scripts/runlong"
         exit 0 ;;
     --neuf) NEUF=1; shift ;;
     -*) sed -n '2,8p' "$0" | cut -c3-; exit 1 ;;
@@ -54,19 +54,19 @@ en_cours && { echo "une campagne tourne déjà :"; statut; exit 1; }
 
 H="${1:-24}"
 awk -v h="$H" 'BEGIN { exit !(h > 0) }' || { echo "durée invalide : $H" >&2; exit 1; }
-[ -x .venv/bin/python3 ] || ./preparer_campagne.sh >/dev/null 2>&1 || ./preparer_campagne.sh --installer >/dev/null 2>&1
-./preparer_campagne.sh || exit 1
+[ -x .venv/bin/python3 ] || ./scripts/preparer_campagne.sh >/dev/null 2>&1 || ./scripts/preparer_campagne.sh --installer >/dev/null 2>&1
+./scripts/preparer_campagne.sh || exit 1
 
 mkdir -p resultats/nuit
 if [ "$NEUF" = 0 ] && [ -f "$LOG" ] && ! grep -q '\] terminé$' "$LOG" && grep -q 'campagne de nuit :' "$LOG"; then
     echo "Campagne inachevée trouvée : reprise, avec le temps qu'il lui restait."
-    SILLAGE_REPRISE=1 setsid nohup ./rundenuit.sh </dev/null >>resultats/nuit/console.log 2>&1 &
+    SILLAGE_REPRISE=1 setsid nohup ./scripts/rundenuit.sh </dev/null >>resultats/nuit/console.log 2>&1 &
 else
-    setsid nohup ./rundenuit.sh "$H" </dev/null >resultats/nuit/console.log 2>&1 &
+    setsid nohup ./scripts/rundenuit.sh "$H" </dev/null >resultats/nuit/console.log 2>&1 &
 fi
 sleep 3
 kill -0 $! 2>/dev/null || { tail -20 resultats/nuit/console.log; echo "échec du lancement" >&2; exit 1; }
 echo
 echo "Lancé en arrière-plan : vous pouvez fermer ce terminal."
-echo "  ./runlong --statut    où on en est"
-echo "  ./runlong --arreter   arrêt propre"
+echo "  ./scripts/runlong --statut    où on en est"
+echo "  ./scripts/runlong --arreter   arrêt propre"

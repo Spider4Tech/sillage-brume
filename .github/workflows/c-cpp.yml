@@ -15,6 +15,8 @@ jobs:
       run: make -C sillage/c
     - name: tests C natifs (construction)
       run: make -C tests/c all compression
+    - name: contrôles de la revue C
+      run: mkdir -p resultats && tests/c/build/revue_c
     - name: KAT du prototype VOLE
       run: tests/c/build/vole_proto --kat
     - name: fuzzing court du vérifieur sous ASan et UBSan
@@ -22,3 +24,5 @@ jobs:
         gcc -O1 -g -march=native -fopenmp -fsanitize=address,undefined -fno-sanitize-recover=all -I sillage/c -I tests/c \
             -o tests/c/build/vole_asan tests/c/vole_proto.c sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c -lm
         OMP_NUM_THREADS=1 tests/c/build/vole_asan --fuzz 300 1
+    - name: tables générées à jour
+      run: python3 -m pip install numpy && make -C sillage/c tables && git diff --exit-code sillage/c/brume512_tables.h sillage/c/brume512_simd.h

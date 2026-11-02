@@ -2,7 +2,7 @@
 # Campagne de nuit SILLAGE : pousse en C, sur plusieurs heures, ce que la
 # batterie (python3 -m tests.run_all) ne peut tester qu'à petite échelle.
 #
-#   ./rundenuit.sh [heures]        (défaut : 8 ; ex. ./rundenuit.sh 9.5)
+#   ./scripts/rundenuit.sh [heures]        (défaut : 8 ; ex. ./scripts/rundenuit.sh 9.5)
 #
 # Campagnes, dans l'ordre (part du temps total) :
 #   0. batterie complète (python3 -m tests.run_all, ≈ 1 h), à partir de 6 h de campagne,
@@ -13,7 +13,7 @@
 #   2. temps constant (dudect) : permutation, AEAD, KEM (oracle de décodage,
 #      oracle FO, clé secrète, μ, niveaux 128 et 256), SIG (tour, signature
 #      complète), biais du banc (A/A), témoins positifs ; un dépassement est
-#      remesuré, seul un dépassement confirmé est un échec ........ ≈ 25 %
+#      un échec, même si sa seconde mesure passe ................... ≈ 25 %
 #   3. KEM réel : des dizaines de millions de chiffrés dont le bruit de
 #      décodage est recalculé, et une partie décapsulée réellement ; rejet
 #      implicite, recalcul de la borne, pire clé ...................... 12 %
@@ -34,14 +34,14 @@
 # resultats/nuit_archives/<date>/. La mise en veille est bloquée pendant la
 # campagne (systemd-inhibit) si possible.
 #
-# Reprise après une coupure : ./reprendre_nuit.sh [heures] (SILLAGE_REPRISE=1).
+# Reprise après une coupure : ./scripts/reprendre_nuit.sh [heures] (SILLAGE_REPRISE=1).
 #
-# Sur une autre machine : docs/CAMPAGNE_24H.md. Au démarrage, preparer_campagne.sh vérifie la machine (SILLAGE_FORCE=1
+# Sur une autre machine : docs/CAMPAGNE_24H.md. Au démarrage, scripts/preparer_campagne.sh vérifie la machine (SILLAGE_FORCE=1
 # pour passer outre). Toutes les minutes, la température, la charge et la mémoire vont dans resultats/nuit/sante.csv ;
 # au-delà de SILLAGE_TEMP_MAX °C (100 par défaut) pendant 5 relevés, la campagne s'arrête proprement et peut reprendre.
 # À la fin ou à l'arrêt : resultats/campagne_<date>.tar.gz, à transmettre, chemins personnels retirés.
 set -u
-cd "$(dirname "$(readlink -f "$0")")"
+cd "$(dirname "$(readlink -f "$0")")/.."   # racine du dépôt
 
 if [ -z "${SILLAGE_NUIT_INHIBE:-}" ] && command -v systemd-inhibit >/dev/null 2>&1 \
    && systemd-inhibit --what=sleep:idle --who=SILLAGE --why=essai true >/dev/null 2>&1; then
@@ -50,7 +50,7 @@ if [ -z "${SILLAGE_NUIT_INHIBE:-}" ] && command -v systemd-inhibit >/dev/null 2>
 fi
 
 [ -x .venv/bin/python3 ] && export PATH="$PWD/.venv/bin:$PATH"
-if [ -z "${SILLAGE_FORCE:-}" ] && ! PREPARATION=$(./preparer_campagne.sh 2>&1); then
+if [ -z "${SILLAGE_FORCE:-}" ] && ! PREPARATION=$(./scripts/preparer_campagne.sh 2>&1); then
     printf '%s\n' "$PREPARATION" >&2
     echo "Machine pas prête (SILLAGE_FORCE=1 pour passer outre)." >&2
     exit 1
@@ -59,7 +59,7 @@ fi
 # Une seule campagne à la fois sur ce dossier : deux campagnes se fausseraient et écriraient les mêmes résultats
 mkdir -p resultats/nuit tests/c/build
 exec 9>resultats/nuit/verrou
-flock -n 9 || { echo "une campagne tourne déjà dans ce dossier (./runlong --statut)" >&2; exit 1; }
+flock -n 9 || { echo "une campagne tourne déjà dans ce dossier (./scripts/runlong --statut)" >&2; exit 1; }
 ulimit -c 0        # pas de fichier core : un plantage du fuzzing ne doit pas remplir le disque
 echo $$ > resultats/nuit/run.pid
 
@@ -172,7 +172,7 @@ sante() {
         if [ "$mem" -lt 1024 ] && [ "$alerte_mem" = 0 ]; then journal "attention : moins de 1 Gio de mémoire disponible"; alerte_mem=1; fi
         if [ -n "$t" ] && [ "$t" -ge "$TEMP_MAX" ]; then chauds=$((chauds + 1)); else chauds=0; fi
         if [ "$chauds" -ge 5 ]; then
-            journal "ARRÊT DE SÉCURITÉ : $t °C pendant 5 relevés (seuil $TEMP_MAX °C) ; aérer, puis ./reprendre_nuit.sh"
+            journal "ARRÊT DE SÉCURITÉ : $t °C pendant 5 relevés (seuil $TEMP_MAX °C) ; aérer, puis ./scripts/reprendre_nuit.sh"
             kill -TERM "$principal" 2>/dev/null                # noté d'abord : bash le traite dès que l'enfant meurt
             for d in $(descendants "$principal"); do [ "$d" != "$BASHPID" ] && kill -TERM "$d" 2>/dev/null; done
             return
@@ -431,14 +431,14 @@ for e in $OPS; do
         journal "dudect $op : $n mesures, t = $t (indicatif)"
         continue
     fi
-    # dépassement : une seconde mesure tranche (11 tests à |t| < 4,5 par nuit)
+    # dépassement : une seconde mesure est notée, mais ne blanchit pas la première. Elle retire ses valeurs
+    # fixes et sa disposition mémoire, et |t| > 4,5 n'arrive pas par hasard (≈ 7·10⁻⁶) : voir ./scripts/runspecial
     t2=""
     case $op in *_ref|kem_temoin) ;; *)
         if [ "$ok" = false ] && [ "$est" -le "$(( $(reste) - MARGE ))" ]; then
             ligne=$($PIN tests/c/build/temps "$op" "$n" 2>>"$LOG")
             echo "$ligne" >> resultats/nuit/temps.jsonl
             t2=$(echo "$ligne" | sed -n 's/.*"t_welch": \([-0-9.]*\).*/\1/p')
-            ok=$(awk -v t="$t2" 'BEGIN { print (t == t && t < 4.5 && t > -4.5) ? "true" : "false" }')
         fi ;;
     esac
     nomc=$(case $op in *_ref|kem_temoin) echo "temoin_${op}_fuite_detectee" ;; *) echo "${op}_sans_fuite_detectee" ;; esac)

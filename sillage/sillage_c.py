@@ -252,24 +252,37 @@ def kem_keygen(niveau):
     return pk.raw[:t["pk"]], sk.raw[:t["sk"]]
 
 
+def _taille(b, n, nom):
+    """Le C lit pk, sk, ct à leur taille attendue : un tampon plus court serait lu hors limites."""
+    if len(b) != n:
+        raise ValueError(f"{nom} : {len(b)} octets, {n} attendus")
+
+
 def kem_encaps(niveau, pk, mu=None):
     t = kem_tailles(niveau)
+    _taille(pk, t["pk"], "pk")
     ct, ss = _buf(t["ct"]), _buf(t["ss"])
     if mu is None:
         _ok(lib().sl_kem_encaps(NIVEAUX_KEM[niveau], pk, ct, ss))
     else:
-        lib().sl_kem_encaps_det(NIVEAUX_KEM[niveau], pk, mu, ct, ss)
+        _taille(mu, {"Sillage-128": 16, "Sillage-256": 32}[niveau], "mu")   # k / 8 octets
+        _ok(lib().sl_kem_encaps_det(NIVEAUX_KEM[niveau], pk, mu, ct, ss))
     return ct.raw[:t["ct"]], ss.raw[:t["ss"]]
 
 
 def kem_decaps(niveau, sk, ct):
     t = kem_tailles(niveau)
+    _taille(sk, t["sk"], "sk")
+    _taille(ct, t["ct"], "ct")
     ss = _buf(t["ss"])
     lib().sl_kem_decaps(NIVEAUX_KEM[niveau], sk, ct, ss)
     return ss.raw[:t["ss"]]
 
 
 def kem_borne(niveau, x: bytes, y: bytes) -> float:
+    nb = (kem_tailles(niveau)["sk"] - 64) // 3
+    _taille(x, nb, "x")
+    _taille(y, nb, "y")
     return lib().sl_kem_borne(NIVEAUX_KEM[niveau], x, y)
 
 
@@ -305,6 +318,8 @@ def sig_sign_sel(niveau, sk, pk, msg, sel):
 
 
 def sig_verify(niveau, pk, msg, sig) -> bool:
+    if len(pk) != sig_tailles(niveau)["pk"]:
+        return False
     return lib().sl_sig_verify(NIVEAUX_SIG[niveau], pk, msg, _sz(len(msg)), sig, _sz(len(sig))) == 1
 
 
