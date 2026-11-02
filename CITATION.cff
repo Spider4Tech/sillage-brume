@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you refer to this work, please cite it as below. It is an experimental research prototype, not a vetted standard."
+title: "SILLAGE / BRUME: an experimental code-based cryptographic suite"
+version: 0.4.0
+date-released: 2026-11-02
+type: software
+authors:
+  - alias: Spider4Tech
+license: AGPL-3.0-only
+repository-code: "https://github.com/Spider4Tech/sillage-brume"
+keywords:
+  - post-quantum cryptography
+  - code-based cryptography
+  - key encapsulation
+  - MPC-in-the-Head
+  - permutation
+  - cryptanalysis

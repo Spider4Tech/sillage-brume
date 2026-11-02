@@ -1,12 +1,18 @@
 # SILLAGE / BRUME
 
+[![C/C++ CI](https://github.com/Spider4Tech/sillage-brume/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/Spider4Tech/sillage-brume/actions/workflows/c-cpp.yml)
+[![CodeQL](https://github.com/Spider4Tech/sillage-brume/actions/workflows/codeql.yml/badge.svg)](https://github.com/Spider4Tech/sillage-brume/actions/workflows/codeql.yml)
+[![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](LICENSE)
+
 **Experimental cryptographic research project — version 0.4.0**
 
 SILLAGE is a research suite built around code-based constructions and noisy decoding. The repository contains a key-encapsulation mechanism, a binary-syndrome-decoding signature scheme, the BRUME-512 permutation, authenticated-encryption modes, hash functions, C implementations, and a collection of tests and cryptanalysis tools.
 
 > **Research prototype — not for production use.** The parameters and constructions are experimental. The v0.4.0 designs have not received a complete independent cryptanalysis. The reductions and computational estimates documented here are conditional on the assumptions and models stated in [`docs/PROOFS.md`](docs/PROOFS.md). Passing the test suite is not evidence that a construction is secure.
 
-The measurements and test totals below refer to dated runs committed with the project; they are not live CI results. The design notes, proofs, comments and test names are primarily in French; the C implementation and Python package are under `sillage/`.
+The measurements and test totals below refer to dated runs committed with the project; they are not live CI results. The proofs are available in English ([`docs/PROOFS.md`](docs/PROOFS.md)); the other design notes, code comments and test names are in French, and [`docs/README.md`](docs/README.md) summarises each document in English. The C implementation and Python package are under `sillage/`.
+
+**Reviewers and cryptanalysts:** results are welcome, including on reduced rounds or reduced sizes. See [`SECURITY.md`](SECURITY.md) for where to report them and [`CONTRIBUTING.md`](CONTRIBUTING.md) for how to build and test.
 
 ---
 
@@ -29,6 +35,7 @@ The measurements and test totals below refer to dated runs committed with the pr
 - [Development roadmap](#development-roadmap)
 - [Design history](#design-history)
 - [Continuous integration](#continuous-integration)
+- [Reporting, contributing and citing](#reporting-contributing-and-citing)
 - [Further reading](#further-reading)
 
 ---
@@ -84,13 +91,13 @@ The full test suite also uses additional packages, including NetworkX, OR-Tools 
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install numpy
+python -m pip install -r requirements.txt        # NumPy
 ```
 
 For the full test and cryptanalysis suite:
 
 ```bash
-python -m pip install networkx ortools python-sat matplotlib
+python -m pip install -r requirements-tests.txt  # NetworkX, OR-Tools, python-sat, Matplotlib
 ```
 
 Some tests require a working C toolchain and OpenMP even when the Python package is available.
@@ -606,13 +613,22 @@ Do not use this code to protect real data, production services, credentials, com
 ```text
 sillage-brume/
 ├── README.md
-├── LICENSE
+├── LICENSE                  AGPL-3.0-only
+├── SECURITY.md              Where to report attacks and vulnerabilities
+├── CONTRIBUTING.md          Build, test and change rules
+├── CITATION.cff             How to cite the project
+├── requirements.txt         Python runtime dependency (NumPy)
+├── requirements-tests.txt   Dependencies of the full test suite
 ├── docs/
+│   ├── README.md            Index of the documents, in English
 │   ├── guide.md             Original design note
 │   ├── RAPPORT_AUDIT.md     Development audit history and corrected issues
 │   ├── PROOFS.md            Proofs, assumptions and parameter derivations (English)
 │   ├── PREUVES.md           Same document, French source
-│   └── PISTES.md            Measured optimisations and research leads
+│   ├── PISTES.md            Measured optimisations and research leads
+│   ├── CAMPAGNE_24H.md      Running the long campaigns on another machine
+│   ├── PLAN_CRYPTANALYSE_GPU.md GPU cryptanalysis plan
+│   └── REVUE_CODE_VOLE.md   Review of the VOLE-in-the-Head prototype
 ├── sillage/
 │   ├── sillage_common.py    Rings, sparse vectors, SHAKE helpers and estimators
 │   ├── sillage_kem.py       Sillage-KEM reference implementation
@@ -638,7 +654,8 @@ sillage-brume/
 │   ├── run_all.py           Test orchestrator
 │   ├── test_*.py            Functional, proof-model and cryptanalysis tests
 │   ├── nuit_brume.py        Extended BRUME campaign
-│   └── c/                   C/OpenMP cryptanalysis, validation and size-study programs
+│   ├── c/                   C/OpenMP cryptanalysis, validation and size-study programs
+│   └── gpu/                 CUDA cryptanalysis campaigns (byte-for-byte conformant to the C code)
 ├── resultats/
 │   ├── SYNTHESE.md          Latest committed test summary
 │   ├── BENCH_C.md           C benchmark report
@@ -699,18 +716,29 @@ The full issue history, including detection methods and fixes, is maintained in 
 
 ## Continuous integration
 
-The current C/C++ GitHub Actions workflow builds the C library with:
+On every push and pull request, the C/C++ workflow:
 
-```bash
-make -C sillage/c
-```
+- builds the C library, the benchmark and the native test programs;
+- runs the C review checks (`tests/c/revue_c.c`), the exact-spectrum checks of Lemma 0 (`tests/c/h1p_fourier.c`) and the VOLE prototype's known-answer tests;
+- fuzzes the VOLE verifier briefly under AddressSanitizer and UndefinedBehaviorSanitizer;
+- checks that the generated C tables match their Python generator;
+- runs three quick Python tests: known-answer tests, the TE mode, and byte-for-byte conformance between C and Python.
 
-A CodeQL workflow is also configured for the C/C++ and Python code. The C/C++ build workflow does **not** run the full cryptographic test suite; run `python3 -m tests.run_all` locally to execute it.
+A CodeQL workflow analyses the C and Python code. The CI does **not** run the full cryptographic test suite (about one hour on 12 cores), nor the timing, Valgrind or long cryptanalysis campaigns: run `python3 -m tests.run_all` and the scripts in `scripts/` locally for those.
+
+---
+
+## Reporting, contributing and citing
+
+- **Attacks and proof flaws:** open a public issue with the *Cryptanalysis result* template. **Implementation vulnerabilities** (memory safety, side channels): report them privately. Details in [`SECURITY.md`](SECURITY.md).
+- **Contributing:** build and test instructions, and the rules a change must follow (frozen outputs, C ≡ Python, constant time, a status for every claim), are in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+- **Citing:** metadata are in [`CITATION.cff`](CITATION.cff); GitHub shows it as *Cite this repository*.
 
 ---
 
 ## Further reading
 
+- [`docs/README.md`](docs/README.md) — index of all documents, with their language and status.
 - [`docs/guide.md`](docs/guide.md) — original design direction and component concepts.
 - [`docs/PROOFS.md`](docs/PROOFS.md) — formal statements, assumptions, reductions, parameter bounds and open proof obligations.
 - [`docs/PISTES.md`](docs/PISTES.md) — measured performance work, optimisations and research leads not adopted into the construction.

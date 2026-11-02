@@ -1,6 +1,6 @@
 # Plan de cryptanalyse sur GPU — SILLAGE v0.4
 
-Rédigé le 2026-11-02. Matériel : RTX 4070 Ti (12 Gio, pilote 615), Ryzen 5 5600G. Statut : **plan, rien n'est lancé**.
+Rédigé le 2026-11-02. Matériel : RTX 4070 Ti (12 Gio, pilote 615), Ryzen 5 5600G. Statut : **plan** ; la campagne n° 1 (différentielle-linéaire, `tests/gpu/campagne_dl.cu`) a démarré le 2026-11-02, interrompue par une instabilité matérielle du GPU.
 
 ## 0. Objectif et règles du jeu
 

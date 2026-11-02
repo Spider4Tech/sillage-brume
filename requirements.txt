@@ -1,0 +1,2 @@
+# Runtime dependency of the Python reference package (sillage/)
+numpy>=1.24

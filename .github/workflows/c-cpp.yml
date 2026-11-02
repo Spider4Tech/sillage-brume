@@ -11,18 +11,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: make
+    - name: Build the C library and benchmark
       run: make -C sillage/c
-    - name: tests C natifs (construction)
+    - name: Build the native test programs
       run: make -C tests/c all compression
-    - name: contrôles de la revue C
+    - name: C review checks
       run: mkdir -p resultats && tests/c/build/revue_c
-    - name: KAT du prototype VOLE
+    - name: Exact spectrum of H1-P / H2-P (Lemma 0)
+      run: tests/c/build/h1p_fourier
+    - name: VOLE prototype known-answer tests
       run: tests/c/build/vole_proto --kat
-    - name: fuzzing court du vérifieur sous ASan et UBSan
+    - name: Short verifier fuzzing under ASan and UBSan
       run: |
         gcc -O1 -g -march=native -fopenmp -fsanitize=address,undefined -fno-sanitize-recover=all -I sillage/c -I tests/c \
             -o tests/c/build/vole_asan tests/c/vole_proto.c sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c -lm
         OMP_NUM_THREADS=1 tests/c/build/vole_asan --fuzz 300 1
-    - name: tables générées à jour
-      run: python3 -m pip install numpy && make -C sillage/c tables && git diff --exit-code sillage/c/brume512_tables.h sillage/c/brume512_simd.h
+    - name: Install the Python dependency
+      run: python3 -m pip install -r requirements.txt
+    - name: Generated tables are up to date
+      run: make -C sillage/c tables && git diff --exit-code sillage/c/brume512_tables.h sillage/c/brume512_simd.h
+    - name: Quick tests (KATs, TE mode, C and Python byte-for-byte conformance)
+      run: |
+        python3 -m tests.test_fonctionnel
+        python3 -m tests.test_te
+        python3 -m tests.test_c_impl
+    - name: Fail if any quick-test check failed
+      run: |
+        # the tests record their checks in resultats/<name>.json and always exit 0
+        if grep -H ': false' resultats/fonctionnel.json resultats/te.json resultats/c_impl.json; then exit 1; fi
