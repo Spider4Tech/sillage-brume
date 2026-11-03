@@ -657,7 +657,8 @@ sillage-brume/
 │   └── gpu/                 CUDA cryptanalysis campaigns (byte-for-byte conformant to the C code)
 ├── prototypes/              Measured prototypes that are not part of the suite
 │   ├── vole/                VOLE-in-the-Head signature over regular SD (docs/LEADS.md, lead 9)
-│   └── brume_bitslice/      Bitsliced 256-state BRUME-512 kernel (docs/LEADS.md, lead 10)
+│   ├── brume_bitslice/      Bitsliced 256-state BRUME-512 kernel (docs/LEADS.md, lead 10)
+│   └── brume_sbox8/         Idea note: BRUME with 8-bit S-boxes (not implemented)
 ├── resultats/
 │   ├── SYNTHESE.md          Latest committed test summary
 │   ├── BENCH_C.md           C benchmark report
