@@ -235,6 +235,84 @@ The generalised birthday attack has no lists large enough: the instance has a un
 beyond 2^−(λ+8)), the gain ranges from 0 to 0.6 % depending on the run, since keys are drawn at random. Accepting up to 10 % rejections at the 2^−λ threshold: about 9 710 B (−1.3 %, D = 12, θ = 0.8) and 34 800 B (−2 %, D = 22 to 24), but n and hence pk increase
 (about 6 670 and 23 500 B). Lowering D forces n up: the current parameters are already in the right place. Not adopted; only lead 8 can change the order of magnitude.
 
+## Lead 10 — BRUME-512 kernels: performance assessment and next steps (2026-11-03)
+
+Measured on a Ryzen 5 5600G (Zen 3), one core, gcc 13.3 `-O3 -march=native`, with hardware counters (`perf_event_open`,
+actual core cycles). All of BRUME rests on two kernels: the sequential modes (AEAD, hashing, TE: 87 MB/s) cost nothing
+beyond the single-state permutation; the batch modes (multi-message, tree, parallel duplex: 125 to 160 MB/s per core) are
+limited by the batch kernel.
+
+| Kernel | Measurement | Limit |
+|---|---|---|
+| `br_tours_avx2` (one state, 32 rounds) | 1 623 cycles, 50.7 per round, 6 269 instructions, IPC 3.86 | FP ports: ≈ 176 vector operations per round against a floor of 168, i.e. 42 cycles at 4 per cycle |
+| `br_permuter_lot` (32 states) | 849 cycles per state, 26.5 per state and per round, IPC 3.53 | loads: ≈ 1 250 per round (897 `vpshufb` with a memory operand, `TG` tables reloaded), 2 per cycle |
+
+Measured throughput of this core: `vpaddb`, `vpminub`, `vpxor` 4 per cycle; `vpshufb`, `vpalignr` 2; `vperm2i128` 1;
+256-bit load 2. No GFNI or AVX-512 on Zen 3.
+
+**One state: nothing to gain with AVX2.** Each edge and register needs a rotation, `add`, `sub`, `min`, `vpshufb` and
+`xor`. The reduction modulo 15 (`sub` and `min`, a third of the operations) cannot be removed: a sum of two logarithms
+covers [0, 28], which no 16-entry table read by `vpshufb` can reduce in one instruction. Tried without gain:
+- clang 18: +2 % (one state), +26 % (batches);
+- accumulation grouped by destination register: 10 % fewer instructions, same duration (IPC 3.4);
+- the constant 15 hidden from the compiler, which was folding it into a second constant read from memory;
+- explicit sharing of the `vperm2i128`; `-fno-schedule-insns`;
+- two interleaved states: only −3 % (1 569 cycles), which confirms that the kernel is throughput-bound, not
+  latency-bound.
+
+**One state with GFNI (Zen 4, Intel Ice Lake and later): about ×2, to be measured.** GF(16) (polynomial 0x13) is a
+subfield of GF(2⁸) (polynomial 0x11B of `gf2p8mulb`). The embedding φ is GF(2)-linear and preserves products:
+- the S-box can output φ(S(x ⊕ rc)) directly through `vpshufb`;
+- each edge becomes a rotation, a `gf2p8mulb` by φ(c) and an `xor` (3 operations instead of 6);
+- φ⁻¹ takes one `gf2p8affineqb` per register and per round.
+
+Estimate: ≈ 88 operations per round instead of 168. With AVX-512 VBMI, half a state fits in one register and each
+rotation becomes a `vpermb`: ≈ 46 operations. Not measurable on this machine; conformance could be checked under an
+emulator (Intel SDE). See also lead 4.
+
+**Batches: a bitsliced prototype on 256 states, conformant, −26 %.** One register holds one bit of the state for 256
+states (plane p = 4·nibble + bit, 16 KiB per batch state). Multiplication by a GF(16) constant becomes a 4 × 4 binary
+matrix, i.e. a few XORs, with no table. In total, 7 146 XORs per round.
+- **S-box in 25 operations** (Shannon decomposition on x₃, `vpandn`), checked on its 16 inputs. The circuit returns
+  S(x) ⊕ 8. The complement of bit 3 is absorbed into the constants of the next round, since M·(y ⊕ e) = M·y ⊕ M·e, and
+  compensated at the output of the last round.
+- **Round generated in assembly**, with explicit register allocation. Each source plane is loaded only once: as a memory
+  operand if it is used once, in a register otherwise. Result: 4 096 loads, ≈ 10 900 vector operations and
+  14 500 instructions per round.
+- **Measurement:** outputs identical to `sl_brume_permute` on 256 random states; **630 cycles per state instead of 849**.
+  The transposition to and from planes is not counted (estimated at 5 to 10 % more).
+
+Prototype steps, in cycles per state:
+
+| Step | Cycles per state |
+|---|---|
+| Naive ANF, unrolled C code | 924 |
+| Barrier per nibble (gcc was reordering the blocks: 680 spills, 18 KB of stack) | 680 |
+| 25-operation S-box | 651 |
+| Generated assembly | 630 |
+
+Tried without gain:
+- two or three accumulators per plane: +4 to +6 %, so latency is not the limit;
+- smaller source footprint: −2 %, so the L1D is not the limit;
+- each block replayed on two groups of 256 states: +7 %, the data (64 KiB) overflows the L1D.
+
+**Current limit: the front end.** An unrolled round is ≈ 95 KB of code, more than the L1i (32 KiB) and the op cache. The
+same number of instructions replayed from a small block runs in 3 145 cycles per round instead of 6 300 (IPC 4.6
+instead of 2.9).
+
+Possible next steps:
+- **fewer XORs** (Paar's algorithm, local to each nibble: 4 rows over 28 planes), estimated gain 15 to 20 %;
+- **shorter encodings** (one pointer per generator, 8-bit displacements): only ≈ −11 % of code.
+
+**Conditions for adoption:**
+- **useful only from about 180 states per core.** A 1 MiB tree has only 128 leaves and would be slower with it. The
+  old kernel would remain for small batches;
+- **no output changes**: the format does not fix the batch width of the tree or of the parallel duplex;
+- **constant-time by construction** (Boolean operations only), but dudect has to be run again;
+- **95 KB of generated code** to maintain: the C generator would be the only source.
+
+The prototype (generator `gen_asm.c`, S-box `sbox2.h`, measurement bench) is not under version control.
+
 ## Tried and rejected
 
 - **BLAKE3 instead of SHAKE256 in the KEM and the signature:** measured on a copy (BLAKE3 1.5.5, AVX2). In an isolated call it is 3 times faster on 64 B, but the signature hashes in batches of four (SHAKE: 97 ns per hash, BLAKE3: 83 ns), and it slows down: signing 42.3 against 34.4 ms at 128 bits (8 internal lanes not tested, the public API does not expose them). KEM: a gain of about 8 to 10 % at 128 bits, decapsulation 0.28 against 0.32 ms. Its ×7 gain only applies to large messages, which the KEM and the signature do not hash. Security: a 128-bit level at most, hence incompatible with the 2λ-bit hashes of the 256 profile; 7 rounds and less scrutiny than SHAKE; breaks every KAT. Not adopted.
@@ -250,4 +328,5 @@ beyond 2^−(λ+8)), the gain ranges from 0 to 0.6 % depending on the run, since
   the asymmetry of the weighted graph (128 Weisfeiler–Lehman colours), which
   is at the heart of the concept, as well as B = 8.
 - **Changing the S-box for speed:** in vector code, any 4-bit S-box
-  costs a single instruction.
+  costs a single instruction. Bitsliced (lead 10), this one costs 25 operations over 4 planes,
+  about 20 % of a round: a shorter circuit is to be searched for with the S-box fixed, without touching the KATs.

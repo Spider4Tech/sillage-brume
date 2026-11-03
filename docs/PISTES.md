@@ -233,6 +233,85 @@ L'anniversaire généralisé n'a pas de listes assez grandes : l'instance a une 
 au plus au-delà de 2^−(λ+8)), le gain va de 0 à 0,6 % selon l'exécution, car les clés sont tirées au hasard. En acceptant jusqu'à 10 % de rejets au seuil 2^−λ : environ 9 710 o (−1,3 %, D = 12, θ = 0,8) et 34 800 o (−2 %, D = 22 à 24), mais n et donc pk augmentent
 (environ 6 670 et 23 500 o). Baisser D oblige à monter n : les paramètres actuels sont déjà au bon endroit. Non adopté ; seule la piste 8 peut changer l'ordre de grandeur.
 
+## Piste 10 — Noyaux de BRUME-512 : bilan de performance et suites (2026-11-03)
+
+Mesures sur Ryzen 5 5600G (Zen 3), un cœur, gcc 13.3 `-O3 -march=native`, compteurs matériels (`perf_event_open`, cycles
+cœur réels). Tout BRUME repose sur deux noyaux : les modes séquentiels (AEAD, hachage, TE : 87 Mo/s) ne coûtent rien de plus que
+la permutation d'un état ; les modes par lots (multi-messages, arbre, duplex parallèle : 125 à 160 Mo/s par cœur) sont
+limités par le noyau de lots.
+
+| Noyau | Mesure | Limite |
+|---|---|---|
+| `br_tours_avx2` (un état, 32 tours) | 1 623 cycles, 50,7 par tour, 6 269 instructions, IPC 3,86 | ports FP : ≈ 176 opérations vectorielles par tour pour un plancher de 168, soit 42 cycles à 4 par cycle |
+| `br_permuter_lot` (32 états) | 849 cycles par état, 26,5 par état et par tour, IPC 3,53 | chargements : ≈ 1 250 par tour (897 `vpshufb` à opérande mémoire, tables `TG` rechargées), 2 par cycle |
+
+Débits de ce cœur, mesurés : `vpaddb`, `vpminub`, `vpxor` 4 par cycle ; `vpshufb`, `vpalignr` 2 ; `vperm2i128` 1 ;
+chargement de 256 bits 2. Pas de GFNI ni d'AVX-512 sur Zen 3.
+
+**Un état : rien à gagner en AVX2.** Par arête et par registre, il faut une rotation, `add`, `sub`, `min`, `vpshufb` et
+`xor`. La réduction modulo 15 (`sub` et `min`, un tiers des opérations) ne se supprime pas : une somme de deux logarithmes
+couvre [0, 28], qu'aucune table de 16 entrées lue par `vpshufb` ne sait réduire en une instruction. Essayés sans gain :
+- clang 18 : +2 % (un état), +26 % (lots) ;
+- accumulation regroupée par registre de destination : 10 % d'instructions en moins, même durée (IPC 3,4) ;
+- constante 15 masquée au compilateur, qui la repliait en une seconde constante lue en mémoire ;
+- partage explicite des `vperm2i128` ; `-fno-schedule-insns` ;
+- deux états entrelacés : −3 % seulement (1 569 cycles), ce qui confirme que le noyau est limité par le débit, pas par
+  la latence.
+
+**Un état avec GFNI (Zen 4, Intel Ice Lake et suivants) : environ ×2, à mesurer.** GF(16) (polynôme 0x13) est un
+sous-corps de GF(2⁸) (polynôme 0x11B de `gf2p8mulb`). Le plongement φ est linéaire sur GF(2) et respecte le produit :
+- la S-box peut sortir directement φ(S(x ⊕ rc)) par `vpshufb` ;
+- chaque arête devient rotation, `gf2p8mulb` par φ(c) et `xor` (3 opérations au lieu de 6) ;
+- φ⁻¹ se fait par un `gf2p8affineqb` par registre et par tour.
+
+Estimation : ≈ 88 opérations par tour au lieu de 168. Avec AVX-512 VBMI, une moitié d'état tient dans un registre et
+chaque rotation devient un `vpermb` : ≈ 46 opérations. Non mesurable sur cette machine ; la conformité pourrait se vérifier
+sous émulateur (Intel SDE). Voir aussi la piste 4.
+
+**Lots : prototype bitslicé sur 256 états, conforme, −26 %.** Un registre porte un bit de l'état pour 256 états
+(plan p = 4·nibble + bit, 16 Kio par état de lot). La multiplication par une constante de GF(16) devient une matrice
+binaire 4 × 4, soit quelques XOR, sans table. Au total, 7 146 XOR par tour.
+- **S-box en 25 opérations** (décomposition de Shannon sur x₃, `vpandn`), vérifiée sur ses 16 entrées. Le circuit rend
+  S(x) ⊕ 8. Le complément du bit 3 est absorbé dans les constantes du tour suivant, puisque M·(y ⊕ e) = M·y ⊕ M·e, et
+  compensé en sortie du dernier tour.
+- **Tour généré en assembleur**, allocation de registres explicite. Un plan source n'est chargé qu'une fois : opérande
+  mémoire s'il sert une fois, registre sinon. Résultat : 4 096 chargements, ≈ 10 900 opérations vectorielles et
+  14 500 instructions par tour.
+- **Mesure :** sorties identiques à `sl_brume_permute` sur 256 états aléatoires ; **630 cycles par état au lieu de 849**.
+  La transposition vers et depuis les plans n'est pas comptée (estimée à 5 à 10 % de plus).
+
+Étapes du prototype, en cycles par état :
+
+| Étape | Cycles par état |
+|---|---|
+| ANF naïve, code C déroulé | 924 |
+| Barrière par nibble (gcc réordonnait les blocs : 680 débordements, 18 Ko de pile) | 680 |
+| S-box à 25 opérations | 651 |
+| Assembleur généré | 630 |
+
+Essayés sans gain :
+- deux ou trois accumulateurs par plan : +4 à +6 %, ce n'est pas la latence ;
+- empreinte des sources réduite : −2 %, ce n'est pas la L1D ;
+- chaque bloc rejoué sur deux groupes de 256 états : +7 %, les données (64 Kio) débordent de la L1D.
+
+**Limite actuelle : le frontal.** Un tour déroulé fait ≈ 95 Ko de code, plus que la L1i (32 Kio) et le cache
+d'opérations. Le même nombre d'instructions rejouées depuis un petit bloc passe en 3 145 cycles par tour au lieu de 6 300
+(IPC 4,6 au lieu de 2,9).
+
+Suites possibles :
+- **réduire le nombre de XOR** (algorithme de Paar, local à chaque nibble : 4 lignes sur 28 plans), gain estimé de 15 à
+  20 % ;
+- **encodages plus courts** (pointeurs par générateur, déplacements sur 8 bits) : ≈ −11 % de code seulement.
+
+**Conditions d'adoption :**
+- **utile seulement à partir d'environ 180 états par cœur.** Un arbre de 1 Mio n'a que 128 feuilles et y serait plus
+  lent. L'ancien noyau resterait pour les petits lots ;
+- **aucune sortie ne change** : le format ne fixe pas la largeur des lots de l'arbre ni du duplex parallèle ;
+- **temps constant par construction** (opérations booléennes seulement), mais dudect est à refaire ;
+- **95 Ko de code généré** à maintenir : le générateur en C serait le seul source.
+
+Le prototype (générateur `gen_asm.c`, S-box `sbox2.h`, banc de mesure) n'est pas versionné.
+
 ## Essayé et écarté
 
 - **BLAKE3 à la place de SHAKE256 dans le KEM et la SIG :** mesuré sur une copie (BLAKE3 1.5.5, AVX2). En appel isolé il est 3 fois plus rapide sur 64 o, mais la SIG hache par lots de quatre (SHAKE : 97 ns par haché, BLAKE3 : 83 ns), et elle ralentit : signature 42,3 contre 34,4 ms à 128 bits (8 voies internes non testées, l'API publique ne les expose pas). KEM : gain d'environ 8 à 10 % à 128 bits, décapsulation 0,28 contre 0,32 ms. Son gain de ×7 ne vaut que sur les gros messages, que le KEM et la SIG ne hachent pas. Sécurité : niveau de 128 bits au plus, donc incompatible avec les hachés de 2λ bits du profil 256 ; 7 tours et moins de recul que SHAKE ; casse tous les KAT. Non adopté.
@@ -248,4 +327,5 @@ au plus au-delà de 2^−(λ+8)), le gain va de 0 à 0,6 % selon l'exécution, c
   l'asymétrie du graphe pondéré (128 couleurs de Weisfeiler–Lehman), qui
   est au cœur du concept, ainsi que B = 8.
 - **Changer de S-box pour gagner en vitesse :** en vectoriel, toute S-box
-  de 4 bits coûte une seule instruction.
+  de 4 bits coûte une seule instruction. En bitslicé (piste 10), celle-ci coûte 25 opérations sur 4 plans,
+  environ 20 % d'un tour : un circuit plus court se cherche à S-box fixée, sans toucher aux KAT.
