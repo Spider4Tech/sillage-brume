@@ -24,7 +24,7 @@ moins de calculs.
 
 Fiat–Shamir en 5 passes : h1 (engagements) → (r, ε) ; h2 (diffusions) → i* ; signature
 = sel ‖ h1 ‖ h2 ‖ (chemin de l'arbre ‖ engagement caché ‖ aux ‖ α ‖ β) par répétition.
-Falsification : Adv ≤ q1·P[Bin(τ, p) ≥ τ1] + q2·N^-(τ-τ1+1) pour tout τ1 (PREUVES § 3).
+Falsification : Adv ≤ q1·P[Bin(τ, p) ≥ τ1] + q2·N^-(τ-τ1+1) pour tout τ1 (PROOFS § 3).
 
 Suite expérimentale de recherche — NE PAS UTILISER EN PRODUCTION.
 """
@@ -437,7 +437,7 @@ class SillageSIG:
             aux = self._aux_lit(auxb)
             cache = ch2[rep]
             if (aux & ~masque) or al_i >> (p["t"] * ep) or be_i >> (p["t"] * ep) or (cache == N - 1 and aux):
-                return False                            # encodage non canonique (SUF-CMA : PREUVES § 3.3)
+                return False                            # encodage non canonique (SUF-CMA : PROOFS § 3.3)
             t = self._noeuds_sauf(salt, rep, chemin, cache)
             rb = rep.to_bytes(4, "big")
             cm, parts = [], []
@@ -476,7 +476,7 @@ class SillageSIG:
         return dict(pk_bytes=32 + self.rb, sk_bytes=self.xb + 2 * self.qb, sig_bytes=self.sig_len())
 
     def faux_positif_log2(self) -> float:
-        """p par répétition : le tricheur passe le MPC sans témoin, ((n + w)/2^ep)^t (PREUVES § 3)."""
+        """p par répétition : le tricheur passe le MPC sans témoin, ((n + w)/2^ep)^t (PROOFS § 3)."""
         p = self.p
         return p["t"] * (math.log2(p["n"] + p["w"]) - p["ep"])
 
@@ -501,7 +501,7 @@ class SillageSIG:
     def security_estimate(self):
         """Classique : ISD sur (n, k, w), falsification 5 passes, graines λ, collisions.
         Quantique : Grover sur la falsification (√N^τ ou √(1/p)) et sur les graines, BHT sur les
-        hachés, ISD accélérés ; portes sous MAXDEPTH. Voir PREUVES § 5 bis."""
+        hachés, ISD accélérés ; portes sous MAXDEPTH. Voir PROOFS § 5 bis."""
         p = self.p
         n, k = p["n"], p["k"]
         est = isd_estimate(n, k, p["w"])

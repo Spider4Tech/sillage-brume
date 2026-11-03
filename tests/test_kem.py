@@ -42,7 +42,7 @@ def run():
             nv = v ^ (ring_mul(sk[0], u, n) & ((1 << n2) - 1))
             flips.append(rm_decode(nv, p)[1])       # bits de bruit sur le pire hyperplan − |S|/2
         c[f"{lvl}_correction"] = ok == essais
-        # Invariant de parité (PREUVES §1, audit externe point 1) : s(1) et u(1)
+        # Invariant de parité (PROOFS §1, audit externe point 1) : s(1) et u(1)
         # sont des fonctions publiques de h(1) et de w mod 2 ; v (tronqué) n'en a pas.
         par = lambda a: a.bit_count() & 1
         ok_s = ok_u = 0
@@ -67,7 +67,7 @@ def run():
                                 "z_modele": round((S / 2 - S * q) / math.sqrt(S * q * (1 - q)), 1)}
         # Décodage sûr si marge < 0 ; la pire de 254 × k/8 valeurs reste loin de 0
         c[f"{lvl}_marge_decodage"] = max(flips) < -2 * math.sqrt(S * q * (1 - q))
-        # δ-correction PROUVÉE (Chernoff, docs/PREUVES.md §2.3)
+        # δ-correction PROUVÉE (Chernoff, docs/PROOFS.md §2.3)
         b_cle = borne_echec_log2(sk[0], sk[1], p)
         echant = sorted(borne_echec_log2(sparse_random(p["w"], n), sparse_random(p["w"], n), p)
                         for _ in range(12 if p["k"] == 128 else 3))

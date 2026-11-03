@@ -1,5 +1,5 @@
 /* BRUME-512 réduit à 2 tours : récupération de toute la capacité (256 bits) par devinette et détermination
- * (plan GPU, attaque B3 ; PREUVES § 4.2 bis, « Algébrique »).
+ * (plan GPU, attaque B3 ; PROOFS § 4.2 bis, « Algébrique »).
  *
  * Modèle d'attaque du duplex : débit connu de part et d'autre d'un appel à la permutation (nibbles 0 à 63 = moitié A du
  * graphe de Cayley, débit de BRUME-512 et du hachage), capacité inconnue (moitié B). Tous les générateurs sont des

@@ -1,4 +1,4 @@
-/* Sillage-KEM : le rejet des clés se voit-il dans la clé publique ? (plan GPU, attaque C4 ; PREUVES § 1, H1-P sur les
+/* Sillage-KEM : le rejet des clés se voit-il dans la clé publique ? (plan GPU, attaque C4 ; PROOFS § 1, H1-P sur les
  * clés acceptées).
  *
  * sl_kem_keygen tire (x, y) de poids w et recommence tant que la borne δ prouvée dépasse 2^-λ (7,1 % et 5,9 % des tirages).

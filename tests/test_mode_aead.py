@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Vérification mécanique du modèle de preuve du mode AEAD (docs/PREUVES.md,
+"""Vérification mécanique du modèle de preuve du mode AEAD (docs/PROOFS.md,
 § 4.3).
 
 La preuve modélise BRUME-AEAD comme un duplex à clé ABSORBANT LE CHIFFRÉ :

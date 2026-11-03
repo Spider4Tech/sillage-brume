@@ -132,7 +132,7 @@ def main():
     for l in c["arbre"]:
         md.append(f"| {_t(l['taille'])} | {l['sequentiel_mo_s']:.0f} Mo/s | {l['arbre_mo_s_1_coeur']:.0f} Mo/s | "
                   f"**{l['arbre_mo_s_tous']:.0f} Mo/s** ({l['threads']} threads) |")
-    md += ["", "Le hachage arborescent (`sl_hash_arbre`, PREUVES § 4.4) est une fonction distincte du "
+    md += ["", "Le hachage arborescent (`sl_hash_arbre`, PROOFS § 4.4) est une fonction distincte du "
                "hachage séquentiel (autres KAT)."]
     md += ["", "## AEAD d'un seul message : séquentiel et duplex parallèle (BRUME-512p)", "",
            "| Taille | Séquentiel (1 cœur) | Parallèle, 1 cœur | Parallèle, tous les cœurs |", "|---|---|---|---|"]

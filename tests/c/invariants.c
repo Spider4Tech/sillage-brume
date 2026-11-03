@@ -1,4 +1,4 @@
-/* Invariants non linéaires de BRUME-512 avec ses vraies constantes (plan GPU, attaque A6 ; PREUVES § 4.2 bis).
+/* Invariants non linéaires de BRUME-512 avec ses vraies constantes (plan GPU, attaque A6 ; PROOFS § 4.2 bis).
  *
  * Critère de Beierle, Canteaut, Leander et Rotella (CRYPTO 2017, « Proving resistance against invariant attacks: how
  * to choose the round constants ») : pour un chiffrement Add(c_t) ∘ L ∘ S ∘ … ∘ Add(c_1) ∘ L ∘ S, un invariant g commun à

@@ -6,7 +6,7 @@
 #   .\scripts\rundenuit.cmd -Arreter         arrêt propre, reprise possible
 #
 # Garder la fenêtre ouverte : la fermer arrête la campagne. Ctrl-C arrête proprement et écrit l'archive.
-# Windows ne se met pas en veille tant que la fenêtre est ouverte. Guide : docs/CAMPAGNE_24H.md
+# Windows ne se met pas en veille tant que la fenêtre est ouverte. Guide : docs/CAMPAIGN_24H.md
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)][double]$Heures = 8,

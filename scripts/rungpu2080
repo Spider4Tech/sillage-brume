@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Campagne GPU n° 1 sur une carte plus lente qui peut tourner plus longtemps (RTX 2080 : Turing, sm_75, 46 SM, 8 Go) :
-# plan étendu (docs/PLAN_CRYPTANALYSE_GPU.md), budget de 72 h par défaut, reprise automatique comme scripts/rungpu.
+# plan étendu (docs/GPU_CRYPTANALYSIS_PLAN.md), budget de 72 h par défaut, reprise automatique comme scripts/rungpu.
 #
 #   ./scripts/rungpu2080 [heures]     contrôle de conformité et débit de la carte, durée estimée, puis lancement
 #   ./scripts/rungpu2080 --statut     où on en est        ./scripts/rungpu2080 --arreter   arrêt propre

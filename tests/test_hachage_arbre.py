@@ -2,7 +2,7 @@
 """Hachage arborescent BRUME-512 (piste 5) : conformité, conditions de la
 preuve, séparation des domaines, altérations structurelles.
 
-La preuve (docs/PREUVES.md § 4.4) repose sur trois conditions du mode,
+La preuve (docs/PROOFS.md § 4.4) repose sur trois conditions du mode,
 au sens de Bertoni–Daemen–Peeters–Van Assche (« Sufficient conditions for
 sound tree and sequential hashing modes », 2014). Ce test les vérifie
 mécaniquement sur un modèle écrit SANS brume512.py (le mode n'y est décrit

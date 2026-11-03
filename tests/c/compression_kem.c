@@ -1,5 +1,5 @@
 /* Plus petit chiffré du KEM à garantie égale : pour (D, w, θ), plus petit n d'Artin tel que
- *   - tous les coûts d'attaque restent au moins ceux de la v0.3 (PREUVES § 5, mêmes formules que security_estimate) ;
+ *   - tous les coûts d'attaque restent au moins ceux de la v0.3 (PROOFS § 5, mêmes formules que security_estimate) ;
  *   - la borne δ PROUVÉE (kem.c, sur de vraies clés) respecte le critère :
  *       A : au plus 5 % des clés au-delà de 2^-(λ+8) (critère de choix actuel, test_isd_parametres) ;
  *       B : au plus 10 % des clés rejetées par keygen, seuil 2^-λ (δ reste prouvé clé par clé).

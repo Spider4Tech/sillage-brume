@@ -212,7 +212,7 @@ def run():
     c["encodage_non_canonique_rejete"] = not sig.verify(pk, b"ordre", bytes(b))
     # le témoin n'apparaît pas tel quel
     c["temoin_absent"] = sk[:ref.xb] not in s and sk[ref.xb:ref.xb + ref.qb] not in s
-    # Clés du Python et du C : témoin conforme à la définition (PREUVES § 3.1)
+    # Clés du Python et du C : témoin conforme à la définition (PROOFS § 3.1)
     pkp, skp = ref.keygen()
     c["temoin_python_bien_forme"] = _temoin_bien_forme(ref, pkp, skp)
     c["temoin_c_bien_forme"] = _temoin_bien_forme(ref, pk, sk)

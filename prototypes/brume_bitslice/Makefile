@@ -1,4 +1,4 @@
-# Prototype hors suite (docs/PISTES.md, piste 10) : BRUME-512 bitslicé sur 256 états, AVX2.
+# Prototype hors suite (docs/LEADS.md, piste 10) : BRUME-512 bitslicé sur 256 états, AVX2.
 #   make -C prototypes/brume_bitslice        → build/banc (contrôles, puis cycles ; lancer sur un cœur au repos :
 #                                             taskset -c 2 prototypes/brume_bitslice/build/banc)
 CC     ?= gcc

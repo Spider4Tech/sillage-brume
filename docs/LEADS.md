@@ -1,6 +1,6 @@
 # Leads for later — performance and hardening
 
-*English translation of [`PISTES.md`](PISTES.md), which remains the reference version (the code cites its “pistes”, here “leads”, by number).*
+*The code cites the leads by number (“piste n” in its French comments).*
 
 This document lists what was **measured but not adopted**, and under which
 security conditions each lead could be. Rule: no lead
@@ -22,17 +22,17 @@ that justifies it.
 | C KEM in dense representation: bits written by masked sweep, Karatsuba product + `PCLMULQDQ` | decapsulation ×2 (measured in v0.3: 0.96 ms and 5.3 ms); 0.31 and 1.84 ms in v0.4 | **C KEM constant-time** with respect to the secret key and the decrypted μ (dudect) |
 | 4-way Keccak-f[1600] (gcc vectors, AVX2) for the SHAKE integer stream (4 blocks at a time) | faster KEM sampling and SIG GGM trees (v0.3: SIG-128 verified in 12 ms instead of 20) | identical outputs (C/Python conformance) |
 | **Constant-time C signature** (lead 3, v0.3 under Stern, redone for MPC-in-the-Head in v0.4): XOR, masks and carry-less products, masked H·x | SIG-128 / 256 sign in 38.5 / 139 ms on one core | dudect: round t = −0.62, signature t = 0.12; control t = −2 039; Valgrind, `sig_flux` |
-| **Tree hashing** (lead 5, `brume512_hash_arbre`, `sl_hash_arbre`): 8 KiB leaves in batches of 32, root over the CVs | 16 MiB: 160 MB/s on one core (86 sequentially), **785 to 850 MB/s** on 12 threads | new function, new KATs; proof PREUVES § 4.4 (Theorem 16); sequential hash unchanged |
+| **Tree hashing** (lead 5, `brume512_hash_arbre`, `sl_hash_arbre`): 8 KiB leaves in batches of 32, root over the CVs | 16 MiB: 160 MB/s on one core (86 sequentially), **785 to 850 MB/s** on 12 threads | new function, new KATs; proof PROOFS § 4.4 (Theorem 16); sequential hash unchanged |
 | Bit writing and masked sweeps in AVX2, branch-free rejection, δ bound by a table read with `vpshufb`, public API served by the C code (`sillage/rapide.py`) | KEM-128 keygen / encaps: 5.98 / 0.20 ms; KEM-256: 28.3 / 1.17 ms (v0.4: bound over 254 hyperplanes) | dudect and Valgrind; C/Python conformance |
 | Signing and verification with OpenMP (static scheduling), H cached per thread | SIG-128 sign / verify: 38.5 / 38.4 ms on one core, 5.9 / 5.9 ms on 12 threads; SIG-256: 139 / 138 ms, 21.1 / 20.7 ms | dudect on 1 core and on all; identical outputs |
-| **v0.4 sizes** (changes the formats): KEM with a spread RM(1,7) code, MPC-in-the-Head SIG, 24-byte nonce | ct 9 837 / 35 587 B (17 004 / 61 002); signature 8 522 / 34 867 B (133 917 / 536 326) | v0.3 levels kept, δ proved; PREUVES § 2.3 and § 3; KEM keygen ×16 and SIG verification ×8 on one core |
+| **v0.4 sizes** (changes the formats): KEM with a spread RM(1,7) code, MPC-in-the-Head SIG, 24-byte nonce | ct 9 837 / 35 587 B (17 004 / 61 002); signature 8 522 / 34 867 B (133 917 / 536 326) | v0.3 levels kept, δ proved; PROOFS § 2.3 and § 3; KEM keygen ×16 and SIG verification ×8 on one core |
 
 ## Lead 1 — Parallel duplex: DONE
 
 Profiles `BRUME-512p` and `BRUME-512-256p` (`Brume512P`, `sl_aead_p_encrypt`), next to the sequential profiles, which are unchanged.
 The message is split into 4 KiB leaves rather than block by block over 32 lanes. Splitting into leaves scales
 to all cores, like tree hashing, which 32 fixed lanes did not allow; the price is that a batch is only full
-from 128 KiB on. Proof: PREUVES § 4.5 (Theorem 14-p), 128 and 256 bits kept for σ ≤ 2⁶⁴, i.e. about 3 % less data.
+from 128 KiB on. Proof: PROOFS § 4.5 (Theorem 14-p), 128 and 256 bits kept for σ ≤ 2⁶⁴, i.e. about 3 % less data.
 Tests: `tests/test_aead_parallele.py`, including the cross-leaf alterations this lead required, and a reduced model.
 Leaves of 2, 4 and 8 KiB measured: 4 KiB gives the best trade-off (16 MiB: 150 MB/s on one core, 777 MB/s on 12 threads).
 The sequential mode remains preferable below 16 KiB.
@@ -101,7 +101,7 @@ What remains, with no leak of a secret:
 `brume512_hash_arbre` (Python) and `sl_hash_arbre` (C). 8 KiB leaves
 hashed in batches of 32 on all cores, root over the chaining
 values, domains separated in the capacity (LEAF, ROOT, SINGLE;
-domain 0 = sequential hash, unchanged). Proof: PREUVES § 4.4
+domain 0 = sequential hash, unchanged). Proof: PROOFS § 4.4
 (decodable, complete, final-node separable → indifferentiable, 128 bits).
 Test: `tests/test_hachage_arbre.py` (14 checks). Throughput on 16 MiB:
 160 MB/s on one core, 785 to 850 MB/s on 12 threads.
@@ -112,7 +112,7 @@ the encoding allows it without ambiguity).
 
 ## Lead 6 — Exact division property, valid for all cubes: DONE
 
-**Result** (`docs/PREUVES.md`, Theorem 12 sexies). The reach of the
+**Result** (`docs/PROOFS.md`, Theorem 12 sexies). The reach of the
 division property is **exactly 10 rounds per direction, and 20 rounds
 inside-out, for every cube**. It was bracketed by 10 ≤ reach ≤ 14
 (forward) / ≤ 11 (backward), and these upper bounds were only established
@@ -144,11 +144,11 @@ Empirically, cubes stop at 4 rounds forward and 3 backward.
 
 ## Lead 7 — Sillage-SIG at a quantum level (parameters)
 
-**Finding** (PREUVES § 5 bis). Grover on forgery costs √(2^{128}): SIG-128 only offers
+**Finding** (PROOFS § 5 bis). Grover on forgery costs √(2^{128}): SIG-128 only offers
 about 64 bits against a quantum adversary, and SIG-256 about 132.
 
 **Option.** New profiles, which require **more than doubling τ**
-(check: PREUVES § 5 bis, `sig_niveau_quantique`): for 128 quantum
+(check: PROOFS § 5 bis, `sig_niveau_quantique`): for 128 quantum
 bits, N^τ ≥ 2^{256}, 32-byte seeds and w = 204 (n = 4 080, Prange–Grover), or
 w = 278 (n = 5 560) if quantum walks with free QRAM are counted; 48-byte hashes
 if BHT with QRAM is counted. The QROM proof (loss in q²) would need instantiating. These are new
@@ -156,7 +156,7 @@ parameters. The current profiles remain, named after their classical level.
 
 ## Lead 8 — KEM in the HQC regime (4.4 KB)
 
-**Finding.** The proof of δ (PREUVES § 2.3) bounds the noise on S by `T1 + T2 + Te`, ignoring XOR
+**Finding.** The proof of δ (PROOFS § 2.3) bounds the noise on S by `T1 + T2 + Te`, ignoring XOR
 cancellations. It therefore requires `2w²/n < 1/2`. With a spread RM(1,7) code, the proved minimum is 9.8 KB.
 Under the assumption of independent positions, the same code would suffice around n ≈ 28 000, i.e. ≈ 6.5 KB (estimate, without
 an outer code), and HQC goes down to 4.4 KB with an outer Reed–Solomon code.
@@ -204,15 +204,15 @@ Averages over 5 keys × 8 messages; medians, p90, keygen and a 1 MiB message in 
 The specification stores the leaves at `e·N + i`: with this layout, paths never merge and T_open is never reached. The prototype interleaves (`i·τ + e`), which recovers the stated probability (0.19 for 0.2).
 
 **Conditions before adoption** (none is met):
-- **An EUF-CMA theorem** to be written for this protocol, with its own terms; nothing from § 3 of PREUVES carries over. Human review is indispensable.
+- **An EUF-CMA theorem** to be written for this protocol, with its own terms; nothing from § 3 of PROOFS carries over. Human review is indispensable.
 - **Forgery cost.** The γ term is q/2^λ, and cannot be tuned by grinding. With the current grinding, the cost is 2^127; one more bit gives 2^127.4. Getting past 2^128 requires a larger field or two draws of γ, to be costed.
-- **Regular SD.** § 3 of PREUVES currently excludes restricted errors, and the reduction contains a heuristic step (unique solution). Direct attacks: see the table below. They do not threaten these parameters in our models, but these models still need to be checked against the full papers.
+- **Regular SD.** § 3 of PROOFS currently excludes restricted errors, and the reduction contains a heuristic step (unique solution). Direct attacks: see the table below. They do not threaten these parameters in our models, but these models still need to be checked against the full papers.
 - **Rules of the current signature**: seeds of λ + 8 bits, 32-byte salt. The prototype follows SDitH (λ bits). Aligning with them gives about 4 235 and 16 122 B.
 - **Constant time**: `keygen` and the witness now walk through every block under a mask. ctgrind detects nothing on the reduced model only (μ = 2, so without pair constraints); its branching control is detected. Neither the full profile, nor dudect, nor the machine code of other compilers is checked.
 - **Production implementation**: errors propagated instead of `abort` (memory, randomness), injection of those failures, dudect, an independent reference. **QROM**: not analysed.
 - **Parameters**: this is the best point of a grid (d = 4, n ≤ 40 000), not a global optimum; monotonicity is only sampled. Refining around the minimum only gains 0.3 % (4 101 B, w = 75): parameters unchanged.
 
-*Code review (`docs/REVUE_CODE_VOLE.md`).* Addressed: V-01 (93-byte public key now exact: λ-bit seed and canonical encoding), V-02 and V-06 (a single grammar, little-endian integers, H4 equal to four scalar calls), V-03 (`siglen`), V-05 (secret paths above), V-07 (cached H bound to its seed), V-08 (erasures), V-09 (exit code: 1 if a check fails, 2 if the results are not written), V-10 (see below), V-11, V-12, V-14. Partial: V-04 and V-13, allocations checked with a hard stop, without error propagation or failure injection. The file remains in one piece.
+*Code review (`docs/VOLE_CODE_REVIEW.md`).* Addressed: V-01 (93-byte public key now exact: λ-bit seed and canonical encoding), V-02 and V-06 (a single grammar, little-endian integers, H4 equal to four scalar calls), V-03 (`siglen`), V-05 (secret paths above), V-07 (cached H bound to its seed), V-08 (erasures), V-09 (exit code: 1 if a check fails, 2 if the results are not written), V-10 (see below), V-11, V-12, V-14. Partial: V-04 and V-13, allocations checked with a hard stop, without error propagation or failure injection. The file remains in one piece.
 Checks added: `fmul` against a bit-by-bit reference, exhaustive reduced trees, signer and verifier constraints equal on valid and invalid witnesses, every field boundary, invalid lengths, identical KATs on x86-64 and ARM64 (qemu), fuzzing under ASan and UBSan (`--fuzz`).
 
 **Direct attacks on regular SD** (`tests/c/rsd_attaques.c`, log₂ of operations, free memory):

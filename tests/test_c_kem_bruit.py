@@ -2,7 +2,7 @@
 """Sillage-KEM — validation empirique de la borne δ (noyau C).
 
 La δ-correction est PROUVÉE par une borne de Chernoff certifiée clé par clé
-(borne_echec_log2, docs/PREUVES.md §2.3). Au seuil réel (32·D) elle vaut
+(borne_echec_log2, docs/PROOFS.md §2.3). Au seuil réel (32·D) elle vaut
 ≈ 2^-150 : inobservable. On vérifie donc la borne là où on peut la mesurer :
 pour une clé validée par keygen, le noyau C simule des dizaines de millions
 de bruits de décodage r1·y ⊕ r2·x ⊕ e1 ⊕ π(e2) ; pour chaque seuil t où

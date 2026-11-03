@@ -1,7 +1,5 @@
 # Running the 24-hour campaign
 
-*English translation of [`CAMPAGNE_24H.md`](CAMPAGNE_24H.md), which remains the reference version.*
-
 This program keeps every core of the machine busy for 24 hours to test an experimental cryptography suite. It only touches its own folder, sends nothing over the network during the computation and needs no administrator rights (except to install system packages). This is research code: do not use it to protect real data.
 
 ## 1. Install

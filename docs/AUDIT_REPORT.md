@@ -1,6 +1,6 @@
 # SILLAGE audit report — v0.2 → v0.3
 
-*English translation of [`RAPPORT_AUDIT.md`](RAPPORT_AUDIT.md), which remains the reference version. Test names (`test_…`), check names and result files are identifiers in the code and are kept as they are.*
+*Test names (`test_…`), check names and result files are identifiers in the code and are kept as they are.*
 
 Scope: KEM, BRUME-512 (permutation, AEAD, TE, hashing), SIG.
 Method: the `tests/` suite (39 tests, 290 checks — **290/290 passed** on 2026-10-30 —
@@ -100,7 +100,7 @@ cube.*
 | Point | Finding | Fix | Test |
 |---|---|---|---|
 | KEM δ-correctness | the Gaussian argument announced 2⁻¹⁹²; the rigorous bound (Hoeffding, sampling without replacement) only gave 2⁻⁶⁰ to 2⁻⁷⁵ | Chernoff bound certified **key by key** (`borne_echec_log2`), keygen rejects keys > 2^−λ, n resized to 68 059 / 244 043 | `test_kem`, `test_isd_parametres` |
-| Formal proofs | missing | `docs/PREUVES.md`: IND-CPA, IND-CCA (FO ⊥̸), Stern (completeness, 3-soundness, HVZK), EUF-CMA, wide trail, Park, duplex | — |
+| Formal proofs | missing | `docs/PROOFS.md`: IND-CPA, IND-CCA (FO ⊥̸), Stern (completeness, 3-soundness, HVZK), EUF-CMA, wide trail, Park, duplex | — |
 | Linear hull | not measured | proved MEDP₂ / MELP₂ bounds, measurement of aggregation | `test_hull` |
 | Division property | not done (SAT too slow: > 40 min without an answer at 11 rounds) | monomial trails built (minimum-cost flow + beam) then **re-checked** step by step, extended bit by bit by induction | `test_division_property` |
 | “Strengthened” wide-trail bounds | invalid (B ≥ 13 not established) | removed | `test_banc_cryptanalyse` |
@@ -187,14 +187,14 @@ without any loss of security.
 
 Leads measured but **not adopted**, because they change the algorithm
 (parallel duplex, fewer rounds in the data phase), and low-priority residual
-leaks (SIG): `docs/PISTES.md`, with the
+leaks (SIG): `docs/LEADS.md`, with the
 security conditions of each.
 
 ## 8. Sixth pass: proof of the mode, exact division property, memory safety
 
 | Item | Result |
 |---|---|
-| **Proof of the AEAD mode** (`docs/PREUVES.md` § 4.3, Theorem 14) | Lemma 1: replacing the rate with the plaintext amounts to absorbing the ciphertext by XOR; the mode is a standard keyed duplex, without an overwrite flag. Lemma 2: injective, prefix-free encoding. Lemma 3: key absorption in N/2ᵏ + 2N/2ᵇ + N/2ᶜ. Lemma 4: capacity collisions. AE bound: σ²/2^{c+1} + 2σN/2ᶜ + N/2ᶜ + N/2ᵏ + q_d/2^τ, i.e. 128 and 256 bits for σ ≤ 2⁶⁴ |
+| **Proof of the AEAD mode** (`docs/PROOFS.md` § 4.3, Theorem 14) | Lemma 1: replacing the rate with the plaintext amounts to absorbing the ciphertext by XOR; the mode is a standard keyed duplex, without an overwrite flag. Lemma 2: injective, prefix-free encoding. Lemma 3: key absorption in N/2ᵏ + 2N/2ᵇ + N/2ᶜ. Lemma 4: capacity collisions. AE bound: σ²/2^{c+1} + 2σN/2ᶜ + N/2ᶜ + N/2ᵏ + q_d/2^τ, i.e. 128 and 256 bits for σ ≤ 2⁶⁴ |
 | `test_mode_aead` (9 checks) | the abstract duplex of the proof, written without brume512.py, reproduces ciphertexts and tags exactly (two profiles); injective, prefix-free encoding on 441 boundary paths per profile; no plaintext released on rejection |
 | **Exact division property** (`tests/dp_cpsat.py`, `tests/dp_sat.py`) | exact model (same rules as the checker, inactive bit free), correct weight windows (including Boura–Canteaut on F⁻¹), infeasible for R ≤ 10; at R = 12, one trail re-checked in 18 min; at 11 rounds, targeted UNSAT queries do not conclude in 25 min → **exact value not reached** (lead 6) |
 | **Scope correction** | the upper bounds of the division property (14 / 11 / 25) only hold for the cube with bit 0 inactive; the documentation presented them as general. Only the lower bound (10 per direction) holds for every cube |
@@ -206,7 +206,7 @@ security conditions of each.
 
 | Item | Result |
 |---|---|
-| **Splicing** (`test_dp_tous_cubes`, PREUVES Lemma 12 ter, Corollary 12 quater) | the first linear layer moves inactive bits freely; a matching (Hopcroft–Karp) in the bipartite graph of L carries each trail of cube 0 to the 511 other cubes. 27 trails × 512 cubes = 13 824 splicings, **all re-checked**, no failure. The bounds 14 / 11 / 25 hold for **all** cubes |
+| **Splicing** (`test_dp_tous_cubes`, PROOFS Lemma 12 ter, Corollary 12 quater) | the first linear layer moves inactive bits freely; a matching (Hopcroft–Karp) in the bipartite graph of L carries each trail of cube 0 to the 511 other cubes. 27 trails × 512 cubes = 13 824 splicings, **all re-checked**, no failure. The bounds 14 / 11 / 25 hold for **all** cubes |
 | **Decomposition** (`tests/dp_queue.py`, Lemma 12 quinquies) | prefix of a verified trail + exact suffix by CP-SAT towards a given bit, on a model reduced to the reachable and co-reachable bits (about 1 s per query, against more than 25 min without a conclusion for the full model) |
 | **Exact reach** (`test_dp_exact`, Theorem 12 sexies) | 18 forward trails of 11 rounds obtained from prefixes of 12- and 13-round trails, then a verified trail to **each of the 512 bits at 11 rounds, in each direction** (1 024 trails, 12 min). Reach of the division property: **exactly 10 rounds per direction, 20 inside-out, for every cube** (instead of 10 ≤ · ≤ 14 / 11 / 25 for a single cube) |
 | Per-nibble cuts (`test_dp_modele`) | wt(u) ≤ 3·[v ≠ 0] + [v = F] and cw(v) ≤ 3·[u ≠ F] + [u = 0], checked on the 3 194 transitions of all exact tables; they did not suffice for the full model to conclude (UNSAT at 11 rounds stopped: the targeted bit does in fact have a trail) |
@@ -221,7 +221,7 @@ security conditions of each.
 | Measured constant time | signer round with given swaps: t ≈ 0.4 to 1.8; full signature, fixed key against random keys: t ≈ −0.6 to −1.5 (threshold 4.5) |
 | Drawing the swaps | variable duration depending on rejections, which only concern the rejected values of the stream (independent of π); fresh λ-bit seed σ_π, not enumerable |
 | 4-way Keccak-f (AVX2, gcc vectors) | SHAKE stream of the draws 4 blocks at a time, identical outputs: SIG-128 signs in 29 ms (31 before, not constant-time), verifies in 12 ms (20); SIG-256: 166 / 50 ms (130 / 86) |
-| **Tree hashing** (`brume512_hash_arbre`, `sl_hash_arbre`) | 8 KiB leaves in batches of 32 on all cores, root CV ‖ k ‖ B, LEAF / ROOT / SINGLE domains in the capacity. Proof: PREUVES § 4.4 (Theorem 16, BDPV 2014 conditions). 16 MiB: 160 MB/s on one core, 785 to 850 MB/s on 12 threads (86 sequentially) |
+| **Tree hashing** (`brume512_hash_arbre`, `sl_hash_arbre`) | 8 KiB leaves in batches of 32 on all cores, root CV ‖ k ‖ B, LEAF / ROOT / SINGLE domains in the capacity. Proof: PROOFS § 4.4 (Theorem 16, BDPV 2014 conditions). 16 MiB: 160 MB/s on one core, 785 to 850 MB/s on 12 threads (86 sequentially) |
 | `test_hachage_arbre` (14 checks) | model of the mode ≡ Python ≡ C on 13 boundary lengths; decodability, completeness, separability checked; structural alterations; multi-thread determinism; frozen KATs |
 | `test_c_fuzz` | extended to tree hashing (60 lengths up to 5 leaves, batched path compared with a leaf-by-leaf recomputation, under guard pages): no fault |
 
@@ -237,7 +237,7 @@ point-by-point answer (not published).
 | AEAD ideal game | ambiguous wording | standard restriction (no decryption of an output of Enc) made explicit |
 | SIG: q_H factor | a real factor, t justified in the cost/advantage sense | budget term by term; programming term tightened to q_S(q_S + q_H)/2³⁸⁴ |
 | KEM quantum level | wording | profiles named after the classical level; no quantum level claimed |
-| Overall security of BRUME, DP, constant time, multi-user | wording | made precise (README, PREUVES § 4.3 remarks 4 and 5) |
+| Overall security of BRUME, DP, constant time, multi-user | wording | made precise (README, PROOFS § 4.3 remarks 4 and 5) |
 | C signature not constant-time | already fixed (eighth pass) | — |
 | Reproducibility | addition | `tests/empreintes.py` → `resultats/EMPREINTES.md` |
 
@@ -252,9 +252,9 @@ reference (KATs). The native C tests write their own
 |---|---|
 | **H1-P / H2-P / H3: real ISD** (`tests/c/isd_reel.c`) | Prange on reduced instances with the same structure. The measured cost follows the estimator's formula, with ratios from 0.93 to 1.02 on three quasi-cyclic sizes (n an Artin prime) and two random codes. Quasi-cyclic gain (n shifted syndromes) measured at ×163 for n = 149: it equals the estimator's log₂ n credit. Rank of the differences of s equal to n − 1 on 6 Artin primes: **parity is the only linear invariant** |
 | **Impossible differentials / zero correlations** (`tests/c/structure_miss.c`) | miss-in-the-middle at the nibble level, patterns of weight ≤ 2: **5 rounds** at most in both cases (a margin of 27 rounds). The propagation rules are validated on 1.4·10⁶ predictions confronted with real differences (0 violations). Support density: M 5.5 %, M⁻¹ 94 % |
-| **Multi-user AEAD** (PREUVES Theorem 14-mu) | proof written in full: Lemma 3 terms multiplied by μ, plus μ²/2^{k+1}; 128 / 256 bits for μ ≤ 2⁶⁴ and σ ≤ 2⁶⁴ in total |
+| **Multi-user AEAD** (PROOFS Theorem 14-mu) | proof written in full: Lemma 3 terms multiplied by μ, plus μ²/2^{k+1}; 128 / 256 bits for μ ≤ 2⁶⁴ and σ ≤ 2⁶⁴ in total |
 | **Lemma 15 written in full** | simulator and bad event. **Correction**: the term is 7q²/2^{c+1}, not q²/2^{c+1}, since with domains in the capacity, two capacities that differ by a value of D ⊕ D make a call ambiguous. The level is not affected |
-| **Quantum adversary** (PREUVES § 5 bis) | **SIG: only ≈ 64 / 128 bits**, since Grover applies to Fiat–Shamir in √((3/2)^t); KEM ≈ 91 / 158; hash collisions ≈ 2⁸⁵ (BHT); AEAD: key at 2²⁵⁶. The profiles are classical; quantum SIG profiles are noted (lead 7) |
+| **Quantum adversary** (PROOFS § 5 bis) | **SIG: only ≈ 64 / 128 bits**, since Grover applies to Fiat–Shamir in √((3/2)^t); KEM ≈ 91 / 158; hash collisions ≈ 2⁸⁵ (BHT); AEAD: key at 2²⁵⁶. The profiles are classical; quantum SIG profiles are noted (lead 7) |
 
 ## 13. Eleventh pass: external audit, second pass
 
@@ -262,7 +262,7 @@ Report and detailed answer not published.
 
 | Point | Verdict | Fix |
 |---|---|---|
-| Diffusion support “128 in 3 rounds” | **confirmed**: an error in the artifact (the test suite measured 5 rounds) | `diffusion_support` (C): exact supports 7, 37, 94, 127, 128 (combinatorial = actual dependency through the permutation), dihedral-group bounds recomputed, M⁻¹ complete in 2 rounds; density 15/16 of the linear powers over GF(16); bipartite graph, λ* = 3.5076 recomputed excluding ±6. PREUVES Proposition 10 bis |
+| Diffusion support “128 in 3 rounds” | **confirmed**: an error in the artifact (the test suite measured 5 rounds) | `diffusion_support` (C): exact supports 7, 37, 94, 127, 128 (combinatorial = actual dependency through the permutation), dihedral-group bounds recomputed, M⁻¹ complete in 2 rounds; density 15/16 of the linear powers over GF(16); bipartite graph, λ* = 3.5076 recomputed excluding ±6. PROOFS Proposition 10 bis |
 | D ⊕ D in Lemma 15 | **partly**: 7 is correct for D = {0, 8, 9, 10} (F_0 included), but D was not defined in the artifact | definition and the {8, 9, 10} case (factor 4) made explicit; tree hashing moved back to “under validation” |
 | Model of the 2⁻²⁵⁶ / 2⁻¹²⁸ bounds | **confirmed** | Corollary 11: certified activity, probabilities under the Markov model (an assumption); summary qualified |
 | H1-P / H2-P | **confirmed**: remains an assumption | `kem_distributions` (C): parity of u is the only linear invariant of H2-P (5 reduced instances); no bias or u / v / s correlation at full sizes (11 checks) |
@@ -381,7 +381,7 @@ tool targets.
 **What would increase confidence the most:**
 1. third-party cryptanalysis;
 2. a review of Lemma 15 and Theorem 16 (tree hashing);
-3. a third-party review of the proof of the AEAD mode (§ 4.3 of PREUVES.md,
+3. a third-party review of the proof of the AEAD mode (§ 4.3 of PROOFS.md,
    written) and of Theorem 12 sexies.
 
 ## 16. Accepted limitations
@@ -400,7 +400,7 @@ tool targets.
   not. The signature's Fisher–Yates sampling keeps a variable duration,
   independent of π. The effect of repeating a public ciphertext on
   decapsulation (≈ 200 cycles out of 2.5 M, § 14) is not explained.
-- Quantum levels below the nominal levels (PREUVES § 5 bis),
+- Quantum levels below the nominal levels (PROOFS § 5 bis),
   in particular for the signature (≈ λ/2); QROM reductions cited, not
   instantiated.
 
@@ -409,7 +409,7 @@ tool targets.
 ## Errata of 2026-10-30 (review of Sillage-SIG, ISD, Theorem 16)
 
 These points correct values quoted above, which are left as they are as a record.
-Details: `docs/PREUVES.md` § 3, § 4.4, § 5 and § 5 bis; history in the `README`.
+Details: `docs/PROOFS.md` § 3, § 4.4, § 5 and § 5 bis; history in the `README`.
 
 - **SIG-256 was worth ≈ 128 bits, not 256**: σ_π of 128 bits and 256-bit hashes. Fixed,
   and the format changed. SIG-128 keeps its sizes.
@@ -468,7 +468,7 @@ a factor `1/(1 − ε_rej)` on the advantage of H1-P. This factor holds for a se
 for a distinguishing advantage: acceptance depends on (x, y), which (h, s) determines, and the correct
 bound keeps an additive term ε_rej (5 and 8 %). H1-P is now stated on the actual distribution of accepted
 keys. The search version, for its part, does transfer, with a loss of at most 0.13 bit: ISD
-costs are unchanged. The scheme, the KATs and the levels are unchanged (`docs/PREUVES.md` § 1 and § 2.1).
+costs are unchanged. The scheme, the KATs and the levels are unchanged (`docs/PROOFS.md` § 1 and § 2.1).
 
 **Lemma 0 (new, proved): exact linear spectrum of H1-P and H2-P.** Every linear bias is
 a product of Krawtchouk polynomials. Corollary: the parity of s (resp. of u) is the only linear
@@ -515,7 +515,7 @@ Checks: `tests/c/revue_c.c` (6/6); `test_api_c`, `test_c_impl`, `test_te`, `test
 **KEM key rejection rates: the values quoted were wrong.** PROOFS § 1 and § 2.3 (and the previous errata) gave
 “5 % and 8 %” for Sillage-128 and Sillage-256. Measured on 32 768 and 8 192 keys drawn as by `KeyGen` (`tests/c/kem_rejet.c`):
 **7.1 % ± 0.14 and 5.9 % ± 0.26**, in the opposite order. No consequence for the statements: the loss on ISD costs for accepted keys is
-log₂(1/(1 − ε_rej)) ≤ 0.11 bit (0.13 stated). Values corrected in PREUVES, PROOFS and the cryptanalysis plan.
+log₂(1/(1 − ε_rej)) ≤ 0.11 bit (0.13 stated). Values corrected in PROOFS and the cryptanalysis plan.
 
 **Rejection and the public key (attack C4 of the plan): no trace.** Five non-linear statistics of s (weight, transitions at steps 1 and 2,
 triples of ones, `wt(s ∧ z⁷s)`) do not separate accepted from rejected keys: |z| ≤ 1.79 against a threshold of 4.5 (detectable shift: 0.10 and

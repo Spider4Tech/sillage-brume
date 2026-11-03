@@ -24,7 +24,7 @@ def taux_depassement(n, k, D, w, we, theta, seuil, essais=12):
                for _ in range(essais)) / essais
 
 
-# CryptographicEstimators, SDEstimator (temps, log2, 2026-10-30) ; régénérer : voir PREUVES § 5
+# CryptographicEstimators, SDEstimator (temps, log2, 2026-10-30) ; régénérer : voir PROOFS § 5
 CE_FIGEES = {(3488, 2720, 64): dict(prange=173.4, stern=151.4, dumer=151.4, bjmm=141.9),
              (2048, 1434, 103): dict(prange=217.1, stern=193.6, dumer=193.2, bjmm=177.6),
              (4096, 2867, 206): dict(prange=408.1, stern=373.8, dumer=373.0, bjmm=342.5),

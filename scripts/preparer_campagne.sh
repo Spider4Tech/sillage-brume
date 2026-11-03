@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prépare et vérifie une machine pour ./scripts/rundenuit.sh (guide : docs/CAMPAGNE_24H.md).
+# Prépare et vérifie une machine pour ./scripts/rundenuit.sh (guide : docs/CAMPAIGN_24H.md).
 #
 #   ./scripts/preparer_campagne.sh              vérifie, sans rien installer ni modifier
 #   ./scripts/preparer_campagne.sh --installer  crée .venv et y installe les paquets Python

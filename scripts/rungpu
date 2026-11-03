@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Campagnes de cryptanalyse sur GPU (docs/PLAN_CRYPTANALYSE_GPU.md).
+# Campagnes de cryptanalyse sur GPU (docs/GPU_CRYPTANALYSIS_PLAN.md).
 #
 #   ./scripts/rungpu [heures] [--long]   lance en arrière-plan la campagne n° 1 (tests/gpu/campagne_dl.cu), défaut 10 h ;
 #                         reprend la dernière campagne si elle n'est pas terminée. --long : plan étendu (4 cibles de plus,

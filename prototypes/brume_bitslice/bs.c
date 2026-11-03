@@ -1,4 +1,4 @@
-/* Prototype hors suite (docs/PISTES.md, piste 10) : BRUME-512 bitslicé sur 256 états. Les 31 premiers tours et le
+/* Prototype hors suite (docs/LEADS.md, piste 10) : BRUME-512 bitslicé sur 256 états. Les 31 premiers tours et le
  * dernier viennent de l'assembleur généré (gen_asm.c → bs_tour.S) ; la S-box du tour 0 est ici, en intrinsèques.
  * P : 512 plans (plan p = 4·nibble + bit, bit s = état s), état x en entrée et en sortie ; T : tampon de 512 plans.
  * Constant-time par construction : opérations booléennes et accès mémoire à adresses fixes. */

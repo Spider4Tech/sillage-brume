@@ -4,7 +4,7 @@ Contributions are welcome, and **cryptanalysis is the most useful one**: attacks
 
 ## Languages
 
-The README and this file are in English. Every document in `docs/` exists in English and in French ([`docs/README.md`](docs/README.md)); code comments, test names and result files are in French. Issues and pull requests may be written in English or French.
+The README and this file are in English. The documents in `docs/` are in English ([`docs/README.md`](docs/README.md)), except a few external review reports kept in their original French; code comments, test names and result files are in French. Issues and pull requests may be written in English or French.
 
 ## Build and test
 
@@ -27,8 +27,8 @@ python -m tests.run_all                            # the full suite: about one h
 2. **C and Python agree byte for byte.** `tests.test_c_impl` and `tests.test_api_c` must pass.
 3. **Constant time.** No branch or memory index may depend on a secret in the C code. Changes to secret-handling code should pass `tests.test_c_temps` and the Valgrind tests (`tests.test_c_kem_valgrind`, `tests.test_c_sig_valgrind`).
 4. **Every claim has a status.** A new statement says whether it is proved (and in which model), certified by an exhaustive computation, measured, or assumed, and which test checks it. Measurements are not presented as proofs.
-5. **English and French documents stay in sync.** The French version of each document in `docs/` is the reference text, cited by the code; a change there is mirrored in its English version (listed in [`docs/README.md`](docs/README.md)), with the same section numbers.
-6. **Record corrections.** A flaw found and fixed is added to `docs/RAPPORT_AUDIT.md` and its English version [`docs/AUDIT_REPORT.md`](docs/AUDIT_REPORT.md), with how it was found.
+5. **Section numbers are stable.** The code and the test names cite the documents in `docs/` by section (for example “PROOFS § 4.4” or “lead 8”, written “piste 8” in French comments); a change keeps the existing numbers.
+6. **Record corrections.** A flaw found and fixed is added to [`docs/AUDIT_REPORT.md`](docs/AUDIT_REPORT.md), with how it was found.
 
 ## Pull requests
 

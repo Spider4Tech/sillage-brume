@@ -1,4 +1,4 @@
-/* Contrôles des corrections de la revue C (suivi : docs/RAPPORT_AUDIT.md, errata du 2026-11-02) :
+/* Contrôles des corrections de la revue C (suivi : docs/AUDIT_REPORT.md, errata du 2026-11-02) :
  *   C-07 : sl_te_decrypt ne modifie pas ct quand un bloc est incorrigible ;
  *   C-15 : sl_kem_encaps_det refuse une clé publique non canonique (bits de bourrage de s) ;
  *   C-14 : sl_kem_borne ne certifie rien hors du domaine (poids ≠ w).

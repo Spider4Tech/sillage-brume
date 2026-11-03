@@ -1,7 +1,5 @@
 # GPU cryptanalysis plan — SILLAGE v0.4
 
-*English translation of [`PLAN_CRYPTANALYSE_GPU.md`](PLAN_CRYPTANALYSE_GPU.md), which remains the reference version.*
-
 Written on 2026-11-02. Hardware: RTX 4070 Ti (12 GiB, driver 615), Ryzen 5 5600G. Status: **plan**; campaign no. 1 (differential-linear, `tests/gpu/campagne_dl.cu`) started on 2026-11-02 and was interrupted by a GPU hardware instability.
 
 ## 0. Goal and ground rules
@@ -36,7 +34,7 @@ Rules:
 | F6 | AEAD | **Overwrite** duplex, c = 256 in BRUME-512 | The nonce is separated from the first keystream by 2 full permutations, so the initialisation is out of reach. In the data phase, rate input and output are known on either side of a single permutation, which is the state-recovery setting (1 round already broken). |
 | F7 | KEM | Quasi-cyclic, very sparse (w = 75, n = 50 021), cascaded noise e1 ⊕ π(e2), truncated v | The QC credit and the estimator are only validated up to n = 149. BJMM is never measured at a size where it beats Dumer. |
 | F8 | KEM | δ proved by a Chernoff bound at fixed θ, keys rejected (7.1 % and 5.9 %, measured) depending on the secret | If the bound or its implementation (rounding to 2^12, threshold c > 15) were wrong, failure attacks (GJS, failure boosting) would again become threat no. 1, as for HQC. |
-| F9 | SIG | MPCitH over binary SD of rate 0.7, five-pass Fiat–Shamir | The Kales–Zaverucha bound is only tested on a toy model (N = 4, τ = 3). The binary instance has never been analysed by a third party (PREUVES § 6). |
+| F9 | SIG | MPCitH over binary SD of rate 0.7, five-pass Fiat–Shamir | The Kales–Zaverucha bound is only tested on a toy model (N = 4, τ = 3). The binary instance has never been analysed by a third party (PROOFS § 6). |
 
 ## 2. Phase 0 — Infrastructure (1 session, prerequisite for everything else)
 
@@ -116,8 +114,8 @@ strength of the design and no time is spent on it.
 
 | Attack | What is done | Why |
 |---|---|---|
-| **D1. Kales–Zaverucha forgery at an intermediate scale**: N = 2^8, τ = 4, K = GF(2^16) to GF(2^20), t = 1 to 2; grinding h1 then h2 on GPU, with the real C verifier | Forgery cost measured at 2^35 to 2^42, against Theorem 8 | Today, the bound is only tested at N = 4. This is the attack that sets τ |
-| **D2. ISD on binary SD of rate 0.7 near GV**, n from 256 to 640, BJMM included | Measure BJMM where it overtakes Dumer | PREUVES § 5: “the advantage of BJMM at large sizes rests on the model, not on a measurement”. The GPU can measure it |
+| **D1. Kales–Zaverucha forgery at an intermediate scale**: N = 2^8, τ = 4, K = GF(2^16) to GF(2^20), t = 1 to 2; grinding h1 then h2 on GPU, with the real C verifier | Forgery cost measured at 2^35 to 2^42, against Theorem 8 | This is the attack that sets τ. **First step done on 2026-11-03** (`./runtestg-gpu.sh`): N = 2^8, τ = 4, K = GF(2^12), t = 1, h1 and h2 grinding on GPU, real C verifier; 2,202 / 100,000 against an exact prediction of 0.0223 and a bound of 0.0486. Still to do: a larger K (GF(2^18), since e \| ep) and the cost at 2^35 |
+| **D2. ISD on binary SD of rate 0.7 near GV**, n from 256 to 640, BJMM included | Measure BJMM where it overtakes Dumer | PROOFS § 5: “the advantage of BJMM at large sizes rests on the model, not on a measurement”. The GPU can measure it |
 | **D3. Algebraic false witnesses**: look for (Q, P) with S·Q = P·F for an S of weight > w, over GF(2^8) to GF(2^11) | Exhaustive, then random search | A direct check of Lemma A at the size of the real F_poly (checked today over GF(8)) |
 
 ## 7. Order and schedule
@@ -131,7 +129,7 @@ strength of the design and no time is spent on it.
 | 4 | C2, D1, C3, C4 | ≈ 1 night | maintainer |
 | 5 | B2, B3, B4 | depending on the results of steps 1 and 2 | maintainer |
 
-After each step: results in `resultats/gpu/`, a section in `docs/RAPPORT_AUDIT.md`, an update of the SILLAGE dossier, and
+After each step: results in `resultats/gpu/`, a section in `docs/AUDIT_REPORT.md`, an update of the SILLAGE dossier, and
 a proposed fix if a weakness is found.
 
 ## 8. What will not run on the GPU

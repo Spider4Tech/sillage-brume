@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Duplex parallèle BRUME-512p (docs/PREUVES.md § 4.5).
+"""Duplex parallèle BRUME-512p (docs/PROOFS.md § 4.5).
   1. Le modèle de la preuve, écrit ici à partir du seul codage, redonne les chiffrés et tags de la référence, et du C.
   2. Lemme 5 : les chemins sont injectifs et aucun n'est préfixe d'un autre (feuilles et racine).
   3. Altérations entre feuilles : échange, troncature, ajout, greffe depuis un autre message, nonce ou AAD changé.

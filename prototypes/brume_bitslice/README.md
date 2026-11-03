@@ -1,7 +1,7 @@
 # Bitsliced BRUME-512 (prototype, not part of the suite)
 
 A 256-state bitsliced implementation of the BRUME-512 permutation for AVX2, measured in
-[`docs/LEADS.md`](../../docs/LEADS.md), lead 10 (French reference: [`docs/PISTES.md`](../../docs/PISTES.md), piste 10).
+[`docs/LEADS.md`](../../docs/LEADS.md), lead 10.
 Its outputs are identical to `sl_brume_permute`; it is not used by the library.
 
 ```bash

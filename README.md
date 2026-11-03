@@ -10,7 +10,7 @@ SILLAGE is a research suite built around code-based constructions and noisy deco
 
 > **Research prototype — not for production use.** The parameters and constructions are experimental. The v0.4.0 designs have not received a complete independent cryptanalysis. The reductions and computational estimates documented here are conditional on the assumptions and models stated in [`docs/PROOFS.md`](docs/PROOFS.md). Passing the test suite is not evidence that a construction is secure.
 
-The measurements and test totals below refer to dated runs committed with the project; they are not live CI results. All documents in `docs/` are available in English ([`docs/README.md`](docs/README.md) lists them); their French versions are the reference texts. Code comments, test names and result files are in French. The C implementation and Python package are under `sillage/`.
+The measurements and test totals below refer to dated runs committed with the project; they are not live CI results. The documents in `docs/` are in English ([`docs/README.md`](docs/README.md) lists them); a few external review reports are kept in their original French. Code comments, test names and result files are in French. The C implementation and Python package are under `sillage/`.
 
 **Reviewers and cryptanalysts:** results are welcome, including on reduced rounds or reduced sizes. See [`SECURITY.md`](SECURITY.md) for where to report them and [`CONTRIBUTING.md`](CONTRIBUTING.md) for how to build and test.
 
@@ -473,7 +473,7 @@ To resume a campaign using the repository's resume script:
 ./scripts/reprendre_nuit.sh 10
 ```
 
-For a long run on any machine, `./scripts/runlong [hours]` checks it, starts the campaign in the background, monitors temperature and stuck campaigns, resumes after an interruption, and writes a results archive; see [`docs/CAMPAGNE_24H.md`](docs/CAMPAGNE_24H.md).
+For a long run on any machine, `./scripts/runlong [hours]` checks it, starts the campaign in the background, monitors temperature and stuck campaigns, resumes after an interruption, and writes a results archive; see [`docs/CAMPAIGN_24H.md`](docs/CAMPAIGN_24H.md).
 
 On Windows, `scripts/rundenuit.cmd [hours]` runs the same campaign inside WSL 2, blocks sleep, and copies the results archive back to Windows; see the same guide.
 
@@ -491,7 +491,7 @@ The 51 tests in `tests/run_all.py` cover the following areas. Individual test mo
 | Integral and algebraic analysis | Degree bounds, cube sums, division-property trails, forward/inverse reach, reduced-state models | `test_integral_degre`, `test_division_property`, `test_dp_modele`, `test_dp_tous_cubes`, `test_dp_exact`, `test_dp_validation`, `test_c_integral`, `test_c_degre`, `test_c_cube_init`, `mini_brume` |
 | AEAD and hash modes | Padding and domain separation, model-to-implementation comparison, tamper rejection, tree-hash conditions, parallel-leaf alterations | `test_mode_aead`, `test_aead_modele`, `test_aead_parallele`, `test_hachage`, `test_hachage_arbre`, `test_indiff_arbre` |
 | KEM assumptions and estimators | Error distributions, δ-bound experiments, reduced-instance ISD, estimator consistency, parity and correlation checks | `test_isd_parametres`, `test_c_kem_bruit`, `isd_reel`, `isd_comparaison`, `kem_distributions` |
-| Signature protocol | Reduced-model checks, challenge distribution, false-positive/hidden-party analysis, malformed signatures, witness-hiding tests | `test_sig_modele`, `sig_flux` |
+| Signature protocol | Reduced-model checks, intermediate-scale Kales–Zaverucha attack against the C verifier, challenge distribution, false-positive/hidden-party analysis, malformed signatures, witness-hiding tests | `test_sig_modele`, `sig_kz`, `sig_flux` |
 | C implementation | Byte-for-byte conformance, SIMD output comparison, API interoperability, fuzzing, guard pages, UBSan, Valgrind/ctgrind and dudect-style timing tests | `test_c_impl`, `test_api_c`, `test_c_simd`, `test_c_fuzz`, `test_c_kem_valgrind`, `test_c_sig_valgrind`, `test_c_temps` |
 | Statistical tests | Avalanche/SAC measurements and statistical batteries on generated streams and hash outputs | `test_diffusion_stats`, `test_c_sac`, `test_c_statistiques` |
 
@@ -620,15 +620,15 @@ sillage-brume/
 ├── requirements.txt         Python runtime dependency (NumPy)
 ├── requirements-tests.txt   Dependencies of the full test suite
 ├── docs/
-│   ├── README.md            Index of the documents (each in English and French)
+│   ├── README.md            Index of the documents
 │   ├── SPEC.md              Normative specification (English)
-│   ├── PROOFS.md            Proofs, assumptions and parameter derivations   (PREUVES.md)
-│   ├── AUDIT_REPORT.md      Development audit history and corrected issues  (RAPPORT_AUDIT.md)
-│   ├── LEADS.md             Measured optimisations and research leads       (PISTES.md)
-│   ├── DESIGN_NOTE.md       Original design note                            (guide.md)
-│   ├── CAMPAIGN_24H.md      Running the long campaigns on another machine   (CAMPAGNE_24H.md)
-│   ├── GPU_CRYPTANALYSIS_PLAN.md  GPU cryptanalysis plan                    (PLAN_CRYPTANALYSE_GPU.md)
-│   └── VOLE_CODE_REVIEW.md  Review of the VOLE-in-the-Head prototype        (REVUE_CODE_VOLE.md)
+│   ├── PROOFS.md            Proofs, assumptions and parameter derivations
+│   ├── AUDIT_REPORT.md      Development audit history and corrected issues
+│   ├── LEADS.md             Measured optimisations and research leads
+│   ├── DESIGN_NOTE.md       Original design note
+│   ├── CAMPAIGN_24H.md      Running the long campaigns on another machine
+│   ├── GPU_CRYPTANALYSIS_PLAN.md  GPU cryptanalysis plan
+│   └── VOLE_CODE_REVIEW.md  Review of the VOLE-in-the-Head prototype
 ├── sillage/
 │   ├── sillage_common.py    Rings, sparse vectors, SHAKE helpers and estimators
 │   ├── sillage_kem.py       Sillage-KEM reference implementation

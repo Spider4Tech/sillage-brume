@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Campagne GPU n° 1 sur une machine louée (une ou plusieurs cartes), en temps borné (docs/CAMPAGNE_24H.md, § 8).
+# Campagne GPU n° 1 sur une machine louée (une ou plusieurs cartes), en temps borné (docs/CAMPAIGN_24H.md, § 8).
 #
 #   ./scripts/rungpu_cloud [heures] [--long|--base]   défaut 10 h ; le plan étendu si le débit mesuré le fait tenir, sinon le plan de base
 #   ./scripts/rungpu_cloud --statut                   où en est chaque carte

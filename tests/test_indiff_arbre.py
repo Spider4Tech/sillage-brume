@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Validation mécanique du Lemme 15 et du Théorème 16 (PREUVES § 4.4).
+"""Validation mécanique du Lemme 15 et du Théorème 16 (PROOFS § 4.4).
 
 1. Conditions de Bertoni–Daemen–Peeters–Van Assche (IJIS 2014), définitions 5 à
    7 : un décodeur Adecode classe des instances d'arbre (compliante, sous-arbre

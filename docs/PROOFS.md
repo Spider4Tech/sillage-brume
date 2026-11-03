@@ -1,6 +1,6 @@
 # Security proofs — SILLAGE v0.4
 
-*English translation of [`PREUVES.md`](PREUVES.md), which remains the reference text; section numbers are identical, so “PREUVES § n” references in the code apply here too.*
+*Section numbers are stable: the “PROOFS § n” references in the code point to this text.*
 
 This document collects the statements and proofs behind the suite's claims.
 Each statement gives its model (standard model, random oracle model ROM,
@@ -258,7 +258,7 @@ an outer Reed–Solomon code, and its failure rate relies on an assumption of in
 the one removed from v0.2. A martingale bound that accounts for cancellations
 (`W = Σ_S (−1)^{N_i}`, exact contraction, Bennett's inequality) was evaluated: it only gains for
 small S and does not improve these parameters. An outer code would need a joint bound over several blocks,
-which the per-key computation does not provide. See `docs/PISTES.md`, lead 8.
+which the per-key computation does not provide. See `docs/LEADS.md`, lead 8.
 
 ### 2.4 Several keys and several ciphertexts
 
@@ -446,6 +446,31 @@ exhaustively over GF(8) (w = 1, 2, 3: for every x and every Q, `F | S·Q` if and
 0.996 times the bound. The real verifier, with a forced challenge, only accepts the leaf predicted by Proposition 6, and every leaf
 in case of a false positive. The polynomials of `F_poly` and `K` are irreducible (Rabin), and φ is a morphism, as Lemma 6
 assumes.
+
+*Intermediate scale, real C code* (`tests/c/sig_kz.c`, n = 64, k = 45, w = 3, GF(2^6) ⊂ GF(2^12), N = 2^8, τ = 4): the
+attack is replayed against `sl_sig_verify` with no model. With a real witness, the verifier's recomputed view is compared
+with the honest diffusion leaf by leaf (all N leaves of every repetition) and the signature is accepted. False positives are
+detected by the exact condition ε·T(r) = 0 of Lemma 6, identical to `Rep.faux_positif` in the model. Every retained forgery
+is accepted by the real verifier. The cheater enumerates the h2 targets without repetition (at most min(q_2, N^(τ−k))
+distinct queries with k false positives): this is the optimal attacker of this family for a given q_2. A low-bound strategy
+(q_1 = 25, q_2 = 2N² = 131072, threshold 2) has a Theorem 8 bound of ≈ 0.049; over 10,000 trials, 227 forgeries (frequency
+0.0227, exact 95% CI [0.020, 0.026]): the bound holds and is loose only by a factor ≈ 2.2. The frequency also matches the
+EXACT success probability of the strategy, 0.0222, computed from the false-positive rate measured over the campaign (0.0156
+over 1.25 M repetitions, Lemma 6 bound: 0.0164): h1 stage 0.0348 measured vs 0.0352 predicted, h2 stage 0.652 vs
+1 − e^{-1} ≈ 0.632. The two other strategies agree as well (three independent seeds: 171/900 vs 0.199; 288/450 vs 0.630).
+This agreement check (99.9% CI) is what guarantees the harness is not weakened: a missed forgery would pass under the bound
+unnoticed. Randomness is reproducible (`SIG_KZ_GRAINE`) and the strategies use independent streams. Quantitative measurement of
+the D1 plan (N = 2^12, 2^35 to 2^42 trials) remains beyond CPU reach.
+
+*GPU version* (`tests/gpu/sig_kz_gpu.{c,cu}`, launcher `./runtestg-gpu.sh`): same instance, same keys and same fake witness
+(`tests/c/sig_kz_commun.h`). The GPU performs the full commitment of each h1 attempt (GGM tree, 4 × 256 leaves, aux,
+commitments, challenges) and enumerates the h2 targets; the host recomputes every retained h1 in C, replays every success
+and submits it to `sl_sig_verify`. The false-positive rate is exact there: T has 63 roots in K = GF(2^12), hence 0.015621
+per repetition, which the campaign recovers (0.015598 over 10.7 M repetitions). The verifier's view for leaf c is derived,
+axis by axis, from the views of leaves 0 and N − 1 (the simulated side depends only on bit d of c), which is checked leaf by
+leaf. Over 100,000 low-bound trials: 2,202 forgeries, frequency 0.0220, exact 95% CI [0.0211, 0.0229], against an exact
+prediction of 0.0223 and a bound of 0.0486. GPU = C conformance: h1 and false positives on 256 salts, h2 challenges on 256
+targets. Throughput: 4.9·10^5 h1 attempts per second (RTX 4070 Ti), about 300 times one CPU core.
 
 **Proposition 9 (unique encoding, SUF-CMA).** With `aux = 0` required when `i* = N − 1`, for every F as in Theorem 8,
 

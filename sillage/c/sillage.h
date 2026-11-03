@@ -24,7 +24,7 @@
 #include <arm_neon.h>
 #endif
 _Static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, "formats et états sérialisés depuis la mémoire : petit-boutiste uniquement");
-#define SL_NONCE 24                /* comme XChaCha20 : tirable au hasard (PREUVES § 4.3) */
+#define SL_NONCE 24                /* comme XChaCha20 : tirable au hasard (PROOFS § 4.3) */
 #ifdef SL_VALGRIND                 /* tests/test_c_*_valgrind.py : valeur déclarée publique */
 #include <valgrind/memcheck.h>
 #define SL_PUBLIC(p, n) VALGRIND_MAKE_MEM_DEFINED(p, n)
@@ -41,7 +41,7 @@ void sl_brume_permute(uint8_t etat[64]);      /* état empaqueté (128 nibbles) 
 void sl_brume_permute_ref(uint8_t etat[64]);  /* référence par tables (non constant-time) */
 void sl_brume_permute_lot(uint8_t etats[32][64]);   /* 32 états, constant-time (AVX2) */
 void sl_hash(const uint8_t *m, size_t len, uint8_t *out, size_t outlen);
-/* Hachage arborescent (docs/PREUVES.md § 4.4) : feuilles de 8 Kio hachées en
+/* Hachage arborescent (docs/PROOFS.md § 4.4) : feuilles de 8 Kio hachées en
  * parallèle (lots de 32 états, tous les cœurs), racine sur les CV. Sortie
  * différente de sl_hash (autre fonction, domaines séparés). */
 void sl_hash_arbre(const uint8_t *m, size_t len, uint8_t *out, size_t outlen);
@@ -63,7 +63,7 @@ int sl_aead_encrypt_ctx(const sl_aead_cle_t *c, const uint8_t nonce[SL_NONCE], c
 int sl_aead_decrypt_ctx(const sl_aead_cle_t *c, const uint8_t nonce[SL_NONCE], const uint8_t *aad,
                         size_t aadlen, const uint8_t *ct, size_t len, const uint8_t *tag, uint8_t *pt);
 void sl_effacer(void *p, size_t n);
-/* AEAD parallèle (docs/PREUVES.md § 4.5) : profil 0 = BRUME-512p, 1 = BRUME-512-256p. Le message est coupé en
+/* AEAD parallèle (docs/PROOFS.md § 4.5) : profil 0 = BRUME-512p, 1 = BRUME-512-256p. Le message est coupé en
  * feuilles de SL_AEADP_FEUILLE octets, chacune suivie par son duplex à clé, sur tous les cœurs et par lots de
  * 32 états. Autre fonction que sl_aead_encrypt : autres chiffrés, autres tags. ct peut valoir pt. */
 #define SL_AEADP_LOG_FEUILLE 12

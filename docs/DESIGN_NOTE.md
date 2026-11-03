@@ -1,6 +1,6 @@
 # The proposed paradigm: “cryptography by decoding” (working name: SILLAGE)
 
-*English translation of [`guide.md`](guide.md), the original design note. It is kept for its history: the constructions described in [`PROOFS.md`](PROOFS.md) and the README have since departed from it in several places (the KEM is quasi-cyclic rather than an Alekhnovich-style LPN scheme, and the signature is a hypercube MPC-in-the-Head over plain binary syndrome decoding, without the tensor twist). The broken mathematical layout of the original has been restored.*
+*English translation of the original French design note (`guide.md`, removed on 2026-11-03 and kept in the git history). It is kept for its history: the constructions described in [`PROOFS.md`](PROOFS.md) and the README have since departed from it in several places (the KEM is quasi-cyclic rather than an Alekhnovich-style LPN scheme, and the signature is a hypercube MPC-in-the-Head over plain binary syndrome decoding, without the tensor twist). The broken mathematical layout of the original has been restored.*
 
 A single unifying principle for the whole suite:
 

@@ -1,6 +1,6 @@
 # C code review — SILLAGE-VOLE prototype
 
-*English translation of [`REVUE_CODE_VOLE.md`](REVUE_CODE_VOLE.md). The review describes the code at the commit it examined; how each finding was handled since is recorded in [`LEADS.md`](LEADS.md), lead 9 (“Code review”).*
+*The review describes the code at the commit it examined; how each finding was handled since is recorded in [`LEADS.md`](LEADS.md), lead 9 (“Code review”).*
 
 **Code commit reviewed:** `59672814ed8a70b27464cdae8a95cbc5b398e351`  
 **Repository:** `Spider4Tech/sillage-brume`  
@@ -44,13 +44,13 @@ A P1 level marks a point to fix before exposure in an API or integration into th
 - `tests/c/resultat.h`: recording of the checks and exit code.
 - `sillage/c/commun.c` and `sillage/c/sillage.h`: SHAKE, parallel H4, system randomness and carry-less multiplication.
 - `sillage/c/isd.c`: estimators used by `vole_params`.
-- `docs/PISTES.md`: description of the measurements and adoption conditions.
+- `docs/LEADS.md`: description of the measurements and adoption conditions.
 
 ### 2.2 Code anchoring
 
 The review of the C code covers the content at commit `59672814ed8a70b27464cdae8a95cbc5b398e351`.
 
-At the time this review was published, `main` also includes the later commit `9a7ae4675313062359f2b0822c1396169a00950f`, which adds `tests/c/rsd_attaques.c` and updates `docs/PISTES.md` and `tests/c/Makefile`. Comparing the commits shows that this later change modifies neither `vole_proto.c` nor `vole_params.c`. The new `rsd_attaques.c` tool is not audited in this report; the RSD figures published in the recent documentation are therefore not validated by this review.
+At the time this review was published, `main` also includes the later commit `9a7ae4675313062359f2b0822c1396169a00950f`, which adds `tests/c/rsd_attaques.c` and updates `docs/LEADS.md` and `tests/c/Makefile`. Comparing the commits shows that this later change modifies neither `vole_proto.c` nor `vole_params.c`. The new `rsd_attaques.c` tool is not audited in this report; the RSD figures published in the recent documentation are therefore not validated by this review.
 
 ### 2.3 What was checked and what was not
 
@@ -74,7 +74,7 @@ However, `signer()` and `verifier()` hash the whole structure with `H('m', pk, s
 
 The display computes `c.Bl + c.cB`. For VOLE-128, `c.Bl` is 16 and `c.cB` is 77: the report shows 93 bytes. Yet, with the current behaviour, 32 bytes of `seed` and 77 bytes of `y` must be kept, i.e. **109 bytes**. For VOLE-256, 32 + 153 = 185 bytes, which matches the current display.
 
-**Consequence:** the VOLE-128 public-key size comparison in `docs/PISTES.md` is underestimated by 16 bytes, unless the protocol is changed so that the 16 surplus seed bytes are no longer generated or hashed.
+**Consequence:** the VOLE-128 public-key size comparison in `docs/LEADS.md` is underestimated by 16 bytes, unless the protocol is changed so that the 16 surplus seed bytes are no longer generated or hashed.
 
 **Fix:** choose one of the two behaviours explicitly:
 - keep a 32-byte seed, use and hash all of it, and state 109 bytes for VOLE-128;

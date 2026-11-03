@@ -1,6 +1,6 @@
 /* Piste 9 : prototype de signature VOLE-in-the-Head sur SD régulier, à la SDitH v2.0 (PIOP de degré d, arbre GGM unique,
  * rejet d'ouverture, grinding). Sert à mesurer tailles et temps et à exécuter l'attaque de la borne : ce n'est PAS un
- * format de SILLAGE, ni un clone interopérable de SDitH. Paramètres : vole_params.c. Revue : docs/REVUE_CODE_VOLE.md.
+ * format de SILLAGE, ni un clone interopérable de SDitH. Paramètres : vole_params.c. Revue : docs/VOLE_CODE_REVIEW.md.
  *
  * Témoin : pour chaque bloc, d vecteurs élémentaires de tailles μ_t ; leur produit tensoriel donne le bloc de x. Polynômes
  * p_j(X) = w_j X + V_j, évalués par le vérifieur en Δ. Contraintes homogénéisées de degré d, mêlées par γ : leur terme en X^d

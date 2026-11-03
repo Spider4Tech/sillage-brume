@@ -51,7 +51,7 @@ from .sillage_common import (
 # (borne_echec_log2, Chernoff rigoureux) d'une clé typique soit ≤ 2^-(λ+8) ;
 # keygen rejette toute clé au-delà de 2^-λ (contrôle : tests/test_kem.py).
 # v0.4 : le code à répétition [k·d, k, d] (taux 1/531) devient RM(1,7) dupliqué
-# (taux 1/96 et 1/176) : mêmes w, même preuve, chiffré ÷ 1,8 (PREUVES § 2.3).
+# (taux 1/96 et 1/176) : mêmes w, même preuve, chiffré ÷ 1,8 (PROOFS § 2.3).
 
 PARAMS = {
     "Sillage-128": dict(
@@ -283,7 +283,7 @@ class SillageKEM:
         sigma_h = random_bytes(32)
         sigma_rej = random_bytes(32)
         # validation de clé : échec de décodage PROUVÉ ≤ 2^-λ (δ-correction
-        # requise par la transformée FO, cf. docs/PREUVES.md)
+        # requise par la transformée FO, cf. docs/PROOFS.md)
         while True:
             x = sparse_random(p["w"], p["n"])
             y = sparse_random(p["w"], p["n"])

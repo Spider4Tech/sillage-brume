@@ -97,7 +97,7 @@ void sl_brume_permute(uint8_t etat[64])
 #define OCT(w) ((uint8_t *)(w))
 
 /* Tout état w sur la pile est aligné sur 64 octets : non aligné, le temps de l'AEAD dépendait
- * de la clé selon sa position dans la ligne de cache (dudect, RAPPORT_AUDIT, errata du 2026-11-02). Mécanisme non
+ * de la clé selon sa position dans la ligne de cache (dudect, AUDIT_REPORT, errata du 2026-11-02). Mécanisme non
  * identifié ; l'alignement supprime l'écart dans tous les cas mesurés. Sorties inchangées. */
 /* ------------------------------------------------------------- hachage */
 /* Éponge à domaine (dernier nibble de la capacité, octet 63 haut, XORé avant

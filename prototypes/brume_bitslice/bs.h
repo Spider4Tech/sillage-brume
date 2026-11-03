@@ -1,4 +1,4 @@
-/* Prototype hors suite (docs/PISTES.md, piste 10) : BRUME-512 bitslicé sur 256 états. */
+/* Prototype hors suite (docs/LEADS.md, piste 10) : BRUME-512 bitslicé sur 256 états. */
 #ifndef BS_H
 #define BS_H
 #include <immintrin.h>

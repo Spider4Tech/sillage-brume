@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Lance une longue campagne SILLAGE en arrière-plan ; guide : docs/CAMPAGNE_24H.md
+# Lance une longue campagne SILLAGE en arrière-plan ; guide : docs/CAMPAIGN_24H.md
 #
 #   ./scripts/runlong [heures]     lance (défaut : 24 h) ; si une campagne est restée inachevée, la reprend
 #   ./scripts/runlong --neuf [h]   repart de zéro (la campagne précédente est archivée)

@@ -36,7 +36,7 @@
 #
 # Reprise après une coupure : ./scripts/reprendre_nuit.sh [heures] (SILLAGE_REPRISE=1).
 #
-# Sur une autre machine : docs/CAMPAGNE_24H.md. Au démarrage, scripts/preparer_campagne.sh vérifie la machine (SILLAGE_FORCE=1
+# Sur une autre machine : docs/CAMPAIGN_24H.md. Au démarrage, scripts/preparer_campagne.sh vérifie la machine (SILLAGE_FORCE=1
 # pour passer outre). Toutes les minutes, la température, la charge et la mémoire vont dans resultats/nuit/sante.csv ;
 # au-delà de SILLAGE_TEMP_MAX °C (100 par défaut) pendant 5 relevés, la campagne s'arrête proprement et peut reprendre.
 # À la fin ou à l'arrêt : resultats/campagne_<date>.tar.gz, à transmettre, chemins personnels retirés.

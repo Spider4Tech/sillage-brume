@@ -1,4 +1,4 @@
-/* Prototype hors suite (docs/PISTES.md, piste 10) : contrôles et mesures du noyau bitslicé.
+/* Prototype hors suite (docs/LEADS.md, piste 10) : contrôles et mesures du noyau bitslicé.
  *   1. S-box bitslicée contre BR_SBOX, sur les 16 entrées ;
  *   2. 256 états aléatoires : bs_permuter contre sl_brume_permute, octet pour octet ;
  *   3. cycles cœur réels (perf_event_open) : br_tours_avx2 (un état), br_permuter_lot (32 états), bs_permuter (256 états).

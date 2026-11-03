@@ -1,5 +1,5 @@
 /* BRUME-512 : nombre minimal de S-box actives d'une caractéristique différentielle ou d'un trail linéaire sur R tours,
- * avec la VRAIE couche linéaire (bit à bit) et la vraie DDT / LAT de la S-box (PREUVES § 4.2, Proposition 10).
+ * avec la VRAIE couche linéaire (bit à bit) et la vraie DDT / LAT de la S-box (PROOFS § 4.2, Proposition 10).
  *
  * Le modèle tronqué (CP-SAT, Proposition 10) admet toute annulation et ne dépasse pas 4 S-box par tour. Ici, méthode de
  * Sun, Wang et Wang (ToSC 2021, « Accelerating the search of differential and linear characteristics with the SAT

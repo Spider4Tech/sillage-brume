@@ -1,4 +1,4 @@
-/* Prototype hors suite (docs/PISTES.md, piste 10). Génère bs_tour.S : un tour de BRUME-512 bitslicé sur 256 états,
+/* Prototype hors suite (docs/LEADS.md, piste 10). Génère bs_tour.S : un tour de BRUME-512 bitslicé sur 256 états,
  * en assembleur AVX2, avec une allocation de registres explicite (gcc, sur le même code déroulé en C, débordait vers la pile).
  *     gen_asm [G [NACC]] > bs_tour.S
  * G : chaque bloc rejoué sur G groupes de 256 états (expérience sur le frontal, défaut 1) ;

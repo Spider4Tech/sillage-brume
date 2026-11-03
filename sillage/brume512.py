@@ -352,7 +352,7 @@ def brume512_hash_arbre(msg: bytes, out_len: int = 32) -> bytes:
     """Hachage arborescent BRUME-512 (un niveau de feuilles, à la
     KangarooTwelve) : les feuilles de ARBRE_BLOC octets se hachent en
     parallèle. Message ≤ ARBRE_BLOC : un seul nœud (domaine SEUL).
-    Preuve : docs/PREUVES.md § 4.4."""
+    Preuve : docs/PROOFS.md § 4.4."""
     if len(msg) <= ARBRE_BLOC:
         return _eponge(msg, _DOM_SEUL, out_len)
     cvs = b"".join(_eponge(msg[i:i + ARBRE_BLOC], _DOM_FEUILLE, ARBRE_CV)
@@ -611,7 +611,7 @@ class Brume512:
 
 
 # ---------------------------------------------------------------------------
-# AEAD parallèle (docs/PREUVES.md § 4.5)
+# AEAD parallèle (docs/PROOFS.md § 4.5)
 # ---------------------------------------------------------------------------
 
 BRUME512P_PROFILES = {"BRUME-512p": BRUME512_PROFILES["BRUME-512"],

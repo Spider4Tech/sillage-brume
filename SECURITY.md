@@ -20,7 +20,7 @@ If the private reporting form is unavailable, open a public issue that only says
 
 ## What to expect
 
-This is a personal research project with no bug bounty. Reports are answered on a best-effort basis. Confirmed results are credited (unless you prefer otherwise) and recorded with their fix in [`docs/AUDIT_REPORT.md`](docs/AUDIT_REPORT.md) (French: `RAPPORT_AUDIT.md`), the project's issue history, and in the relevant section of [`docs/PROOFS.md`](docs/PROOFS.md).
+This is a personal research project with no bug bounty. Reports are answered on a best-effort basis. Confirmed results are credited (unless you prefer otherwise) and recorded with their fix in [`docs/AUDIT_REPORT.md`](docs/AUDIT_REPORT.md), the project's issue history, and in the relevant section of [`docs/PROOFS.md`](docs/PROOFS.md).
 
 ## Known limitations
 

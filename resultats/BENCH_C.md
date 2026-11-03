@@ -64,7 +64,7 @@ Tailles : Sillage-128 pk 6,285 o / ct 9,837 o, Sillage-256 pk 21,283 o / ct 35,5
 | 1 Mio | 78 Mo/s | 150 Mo/s | **496 Mo/s** (12 threads) |
 | 16 Mio | 86 Mo/s | 161 Mo/s | **793 Mo/s** (12 threads) |
 
-Le hachage arborescent (`sl_hash_arbre`, PREUVES § 4.4) est une fonction distincte du hachage séquentiel (autres KAT).
+Le hachage arborescent (`sl_hash_arbre`, PROOFS § 4.4) est une fonction distincte du hachage séquentiel (autres KAT).
 
 ## AEAD d'un seul message : séquentiel et duplex parallèle (BRUME-512p)
 

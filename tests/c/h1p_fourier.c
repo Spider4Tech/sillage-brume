@@ -1,4 +1,4 @@
-/* Lemme 0 (PREUVES § 1) : spectre de Fourier exact des distributions réelles de (H1-P) et (H2-P).
+/* Lemme 0 (PROOFS § 1) : spectre de Fourier exact des distributions réelles de (H1-P) et (H2-P).
  *
  *   (H1-P)  E[(-1)^<a,s>]           = κ_w(|a|) · κ_w(|a·h̄|)
  *   (H2-P)  E[(-1)^<a,u> + <b,v'>]  = κ_w(|a|) · κ_w(|a·h̄ ⊕ b̃·s̄|) · κ_we^{n2}(|b|)²

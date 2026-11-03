@@ -1,5 +1,5 @@
 /* SILLAGE C — Sillage-SIG : MPC-in-the-Head à hypercube sur le décodage de syndrome binaire
- * (miroir exact de sillage/sillage_sig.py, voir sa description et PREUVES § 3).
+ * (miroir exact de sillage/sillage_sig.py, voir sa description et PROOFS § 3).
  * H' (k colonnes de r bits, dérivées de seed_H) est mise en cache, une entrée par niveau et par
  * thread. Les répétitions sont réparties sur les cœurs (OpenMP, répartition statique : le
  * découpage ne dépend d'aucune donnée).
