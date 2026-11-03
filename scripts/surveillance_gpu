@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Surveillance du GPU pendant une campagne (scripts/rungpu) : au moindre décrochage du bus PCIe (Xid 79, « fallen off the
+# bus », pciehp « Link Down »), ou si nvidia-smi ne répond plus deux fois de suite à 30 s d'intervalle, l'incident est
+# journalisé (resultats/gpu/incidents.log) puis l'HÔTE est redémarré.
+#
+#   ./scripts/surveillance_gpu             lance la surveillance en arrière-plan
+#   ./scripts/surveillance_gpu --statut    état et derniers incidents       ./scripts/surveillance_gpu --arreter
+#
+# S'arrête seule quand la campagne se termine ou n'est plus lancée sans panne. Au plus 3 redémarrages par 24 h : au-delà,
+# l'incident est journalisé mais l'hôte n'est plus redémarré (boucle de redémarrages). Après un redémarrage, le plafond de
+# puissance est perdu (sudo nvidia-smi -pl 200 sur l'hôte) et la campagne ne repart pas seule : ./scripts/rungpu reprend.
+# Réglages : SILLAGE_REDEMARRAGE (commande de redémarrage, défaut « distrobox-host-exec systemctl reboot »),
+# SILLAGE_INTERVALLE (secondes, défaut 30), SILLAGE_GPU_DIR (défaut resultats/gpu).
+set -u
+export LC_ALL=C
+cd "$(dirname "$(readlink -f "$0")")/.."   # racine du dépôt
+R=${SILLAGE_GPU_DIR:-resultats/gpu}
+PID=$R/surveillance.pid LOG=$R/incidents.log REB=$R/redemarrages.log
+REDEMARRER=${SILLAGE_REDEMARRAGE:-distrobox-host-exec systemctl reboot}
+DT=${SILLAGE_INTERVALLE:-30} MAX=3
+mkdir -p "$R"
+vivant() { [ -s "$PID" ] && kill -0 "$(cat "$PID")" 2>/dev/null; }
+journal() { echo "$(date '+%F %T') $*" >>"$LOG"; }
+
+case "${1:-}" in
+    --arreter) if vivant; then kill "$(cat "$PID")" && echo "surveillance arrêtée"; else echo "rien ne tourne"; fi; exit 0 ;;
+    --statut)  if vivant; then echo "surveillance en cours (pid $(cat "$PID"))"; else echo "surveillance arrêtée"; fi
+               tail -6 "$LOG" 2>/dev/null; exit 0 ;;
+    --boucle)  ;;
+    *) vivant && { echo "déjà en cours (--statut)"; exit 1; }
+       nohup setsid "$0" --boucle >>"$R/surveillance.log" 2>&1 &
+       sleep 1; vivant && echo "surveillance lancée (pid $(cat "$PID")), journal : $LOG" || { echo "échec du lancement"; exit 1; }
+       exit 0 ;;
+esac
+
+echo $$ >"$PID"
+DEBUT=$(date '+%F %T')
+SIGNES='fallen off the bus|Xid \(PCI:[^)]*\): 79|pciehp.*(Link Down|Card not present)'
+journal "surveillance démarrée (redémarrage : $REDEMARRER)"
+while :; do
+    sleep "$DT"
+    raison=
+    sig=$(journalctl -k --since "$DEBUT" --no-pager 2>/dev/null | grep -E "$SIGNES" | tail -3)
+    if [ -n "$sig" ]; then raison="journal du noyau : $(echo "$sig" | tail -1 | cut -c1-160)"
+    elif ! timeout 20 nvidia-smi -L >/dev/null 2>&1; then
+        sleep "$DT"
+        timeout 20 nvidia-smi -L >/dev/null 2>&1 || raison="nvidia-smi ne répond plus (deux essais)"
+    fi
+    if [ -z "$raison" ]; then
+        D=$(cat "$R/dossier" 2>/dev/null)
+        if grep -q 'campagne terminée' "$D/journal.log" 2>/dev/null; then journal "campagne terminée : surveillance arrêtée"; exit 0; fi
+        if ! { [ -s "$R/run.pid" ] && kill -0 "$(cat "$R/run.pid")" 2>/dev/null; }; then
+            journal "campagne arrêtée, GPU en bon état : surveillance arrêtée"; exit 0
+        fi
+        continue
+    fi
+    journal "PANNE : $raison"
+    recents=$(awk -v lim=$(( $(date +%s) - 86400 )) '$1 > lim' "$REB" 2>/dev/null | wc -l)
+    if [ "$recents" -ge "$MAX" ]; then
+        journal "$recents redémarrages en 24 h (limite $MAX) : pas de redémarrage, intervention nécessaire"; exit 1
+    fi
+    echo "$(date +%s) $raison" >>"$REB"
+    sync
+    journal "redémarrage de l'hôte ($((recents + 1)) sur $MAX en 24 h)"
+    $REDEMARRER >>"$LOG" 2>&1 || { journal "ÉCHEC de la commande de redémarrage"; exit 1; }
+    sleep 600
+done

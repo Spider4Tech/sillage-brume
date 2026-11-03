@@ -672,6 +672,7 @@ sillage-brume/
     ├── preparer_campagne.sh Machine check and Python environment setup
     ├── runspecial           Targeted dudect measurements (timing investigations)
     ├── rungpu               GPU cryptanalysis campaigns (tests/gpu)
+    ├── surveillance_gpu     Watches the GPU during a campaign; reboots the host if the card drops off the bus
     ├── rungpu2080           The same on a slower card (e.g. RTX 2080): extended plan, 72 h
     ├── rungpu_cloud         The same on a rented multi-GPU machine, time-bounded (10 h)
     ├── rundenuit.cmd, .ps1  Windows launcher (runs the campaign in WSL 2)
