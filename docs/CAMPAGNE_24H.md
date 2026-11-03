@@ -70,3 +70,23 @@ Il contient les résultats, les journaux et une fiche de la machine (processeur,
 ## 6. Dudect ciblé : `./scripts/runspecial`
 
 `aead` et `kem_decaps` ont dépassé |t| = 4,5 à la première mesure de la campagne du 2026-10-31, puis sont passés à la seconde, qui avait retiré ses valeurs fixes. `./scripts/runspecial` en cherche l'origine : balayage des adresses, clé et clair séparés, préparation identique des deux classes, A/A sans ASLR. Compter ≈ 5 h 45, machine au repos, avec le compilateur de la campagne (`--bloc aead` : ≈ 2 h 10). Options : `./scripts/runspecial --help`. Résultat : `resultats/special/<date>/BILAN.md`.
+
+## 7. Campagne GPU sur une autre carte : `./scripts/rungpu2080`
+
+La campagne GPU n° 1 (`tests/gpu/campagne_dl.cu`, voir `PLAN_CRYPTANALYSE_GPU.md`) tourne aussi sur une carte plus lente, par exemple une
+RTX 2080 (Turing). Le binaire est compilé pour sm_75 et sm_89, et du PTX couvre les cartes plus récentes ; chaque lancement de noyau dure
+moins de 0,5 s, sous le délai de garde de Windows (TDR, 2 s) quand la carte affiche aussi l'écran ou tourne sous WSL.
+
+- **Prérequis :** pilote NVIDIA et `nvcc` (CUDA 12 ou plus) dans `/usr/local/cuda/bin`, sinon `NVCC=/chemin/nvcc`. Sous WSL 2, installer le
+  paquet CUDA « WSL-Ubuntu » de NVIDIA, jamais un pilote Linux dans WSL : c'est celui de Windows qui sert.
+- **Lancer :** `./scripts/rungpu2080`. Le script vérifie la conformité du GPU au C, mesure son débit, annonce la durée estimée, puis lance
+  le **plan étendu** (les 9 expériences du plan de base et 4 cibles de plus) pour 72 h au plus : `./scripts/rungpu2080 100` pour 100 h.
+  Le plan étendu demande ≈ 26 h sur une RTX 4070 Ti ; une 2080 est environ deux à trois fois plus lente.
+- **Suivre, arrêter, reprendre :** `./scripts/rungpu2080 --statut`, `--arreter`, puis relancer : la campagne reprend au dernier point de
+  reprise (toutes les 10 min). Une campagne du plan de base, même terminée, est complétée par les cibles du plan étendu.
+- **Alimentation :** la carte tire sa pleine puissance pendant des heures. Si l'alimentation est juste, plafonner la puissance sur l'hôte
+  (`sudo nvidia-smi -pl 180`, par exemple), et vérifier les câbles PCIe.
+- **Pas en même temps que dudect** (`runspecial`, `rundenuit.sh`) : la charge du GPU fausserait les mesures de temps ; `rungpu` refuse de
+  partir dans ce cas.
+- **Résultats :** `resultats/gpu_dl.{json,md}` ; journal, relevés du GPU et reprise : `resultats/gpu/<date>/`. Renvoyer ce dossier et
+  les deux fichiers.

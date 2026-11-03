@@ -72,3 +72,23 @@ It contains the results, the logs and a machine sheet (processor, memory, softwa
 ## 6. Targeted dudect: `./scripts/runspecial`
 
 `aead` and `kem_decaps` exceeded |t| = 4.5 at the first measurement of the 2026-10-31 campaign, then passed at the second one, which had dropped its fixed values. `./scripts/runspecial` looks for the origin: address sweep, key and plaintext separated, identical preparation of both classes, A/A without ASLR. Allow ≈ 5 h 45, on an idle machine, with the campaign's compiler (`--bloc aead`: ≈ 2 h 10). Options: `./scripts/runspecial --help`. Result: `resultats/special/<date>/BILAN.md`.
+
+## 7. GPU campaign on another card: `./scripts/rungpu2080`
+
+GPU campaign no. 1 (`tests/gpu/campagne_dl.cu`, see `GPU_CRYPTANALYSIS_PLAN.md`) also runs on a slower card, for example an
+RTX 2080 (Turing). The binary is compiled for sm_75 and sm_89, and PTX covers newer cards; each kernel launch lasts
+less than 0.5 s, below the Windows watchdog (TDR, 2 s) when the card also drives the display or runs under WSL.
+
+- **Prerequisites:** an NVIDIA driver and `nvcc` (CUDA 12 or later) in `/usr/local/cuda/bin`, otherwise `NVCC=/path/nvcc`. Under WSL 2, install NVIDIA's
+  “WSL-Ubuntu” CUDA package, never a Linux driver inside WSL: the Windows driver is the one used.
+- **Run:** `./scripts/rungpu2080`. The script checks the GPU's conformance to the C code, measures its throughput, announces the estimated duration, then starts
+  the **extended plan** (the 9 experiments of the base plan and 4 more targets) for at most 72 h: `./scripts/rungpu2080 100` for 100 h.
+  The extended plan takes ≈ 26 h on an RTX 4070 Ti; a 2080 is about two to three times slower.
+- **Follow, stop, resume:** `./scripts/rungpu2080 --statut`, `--arreter`, then run it again: the campaign resumes from the last
+  checkpoint (every 10 min). A base-plan campaign, even finished, is completed with the targets of the extended plan.
+- **Power:** the card draws full power for hours. If the power supply is tight, cap the power on the host
+  (`sudo nvidia-smi -pl 180`, for example), and check the PCIe cables.
+- **Not at the same time as dudect** (`runspecial`, `rundenuit.sh`): the GPU load would distort the timing measurements; `rungpu` refuses to
+  start in that case.
+- **Results:** `resultats/gpu_dl.{json,md}`; log, GPU readings and checkpoint: `resultats/gpu/<date>/`. Send back that folder and
+  the two files.

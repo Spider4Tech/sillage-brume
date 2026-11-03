@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Campagnes de cryptanalyse sur GPU (docs/PLAN_CRYPTANALYSE_GPU.md).
 #
-#   ./scripts/rungpu [heures]     lance en arrière-plan la campagne n° 1 (tests/gpu/campagne_dl.cu), défaut 10 h ;
-#                         reprend la dernière campagne si elle n'est pas terminée
+#   ./scripts/rungpu [heures] [--long]   lance en arrière-plan la campagne n° 1 (tests/gpu/campagne_dl.cu), défaut 10 h ;
+#                         reprend la dernière campagne si elle n'est pas terminée. --long : plan étendu (4 cibles de plus,
+#                         plusieurs jours sur une RTX 2080) ; reprend aussi une campagne du plan de base déjà terminée
 #   ./scripts/rungpu --statut     où on en est (journal, température et puissance du GPU)
 #   ./scripts/rungpu --arreter    arrêt propre : un point de reprise est écrit, ./scripts/rungpu reprendra
+#   Variante pour une carte plus lente qui peut tourner plus longtemps : ./scripts/rungpu2080.
 #
 # Résultats : resultats/gpu_dl.{json,md} ; journal, capteurs et reprise : resultats/gpu/<date>/.
 # Refuse de partir pendant une mesure de temps (scripts/runspecial, scripts/rundenuit.sh) : le GPU fausserait dudect.
@@ -26,9 +28,15 @@ case "${1:-}" in
         if en_cours; then kill -TERM "$(cat "$PID")" && echo "arrêt demandé : point de reprise en cours d'écriture"
         else echo "rien ne tourne"; fi
         exit 0 ;;
-    ''|*[!0-9.]*) [ -z "${1:-}" ] || { sed -n '2,11p' "$0" | cut -c3-; exit 1; } ;;
 esac
-H=${1:-10}
+H=10 PLAN=
+for a in "$@"; do
+    case $a in
+        --long) PLAN=--long ;;
+        ''|*[!0-9.]*) sed -n '2,13p' "$0" | cut -c3-; exit 1 ;;
+        *) H=$a ;;
+    esac
+done
 
 en_cours && { echo "une campagne GPU tourne déjà (./scripts/rungpu --statut)"; exit 1; }
 if [ -s resultats/special/run.pid ] && kill -0 "$(cat resultats/special/run.pid)" 2>/dev/null; then
@@ -40,8 +48,9 @@ command -v nvidia-smi >/dev/null || { echo "nvidia-smi introuvable"; exit 1; }
 make -s -C tests/gpu >/dev/null || { echo "échec de compilation (make -C tests/gpu)"; exit 1; }
 
 D=$(cat "$R/dossier" 2>/dev/null)
-if [ -n "$D" ] && [ -s "$D/reprise.bin" ] && ! grep -q 'campagne terminée' "$D/journal.log" 2>/dev/null; then
-    echo "reprise de $D"
+FIN=$(grep 'campagne terminée' "$D/journal.log" 2>/dev/null | tail -1)
+if [ -n "$D" ] && [ -s "$D/reprise.bin" ] && { [ -z "$FIN" ] || { [ -n "$PLAN" ] && [ "${FIN#*plan étendu}" = "$FIN" ]; }; }; then
+    echo "reprise de $D${PLAN:+ (plan étendu)}"
 else
     D=$R/$(date +%Y%m%d_%H%M%S)
     mkdir -p "$D"
@@ -50,21 +59,22 @@ fi
 {
     echo "date : $(date '+%F %T %z')"
     echo "commit : $(git rev-parse --short HEAD 2>/dev/null)$(git diff --quiet 2>/dev/null || echo ' (modifié)')"
+    echo "plan : ${PLAN:-base}, budget $H h"
     nvidia-smi --query-gpu=name,driver_version,power.limit --format=csv,noheader
     /usr/local/cuda/bin/nvcc --version | tail -1
 } >>"$D/fiche.txt"
 
 S=$(awk -v h="$H" 'BEGIN { printf "%d", h * 3600 }')
 nohup setsid bash -c '
-    tests/gpu/build/campagne_dl "$0" "$1" >>"$0/journal.log" 2>&1 &
+    tests/gpu/build/campagne_dl "$0" "$1" ${3:+--long} >>"$0/journal.log" 2>&1 &
     p=$!; echo "$p" >"$2"
     while kill -0 "$p" 2>/dev/null; do
         nvidia-smi --query-gpu=timestamp,temperature.gpu,power.draw,utilization.gpu --format=csv,noheader >>"$0/gpu.log"
         sleep 60
     done
-' "$D" "$S" "$PID" >/dev/null 2>&1 &
+' "$D" "$S" "$PID" "$PLAN" >/dev/null 2>&1 &
 for _ in 1 2 3 4 5 6 7 8 9 10; do en_cours && break; sleep 0.5; done
 en_cours || { echo "échec du lancement (voir $D/journal.log)"; exit 1; }
-echo "lancé en arrière-plan pour $H h au plus (pid $(cat "$PID")), dossier $D"
+echo "lancé en arrière-plan pour $H h au plus (pid $(cat "$PID")), dossier $D, plan ${PLAN:-base}"
 echo "  ./scripts/rungpu --statut    où on en est"
 echo "  ./scripts/rungpu --arreter   arrêt propre, reprise par ./scripts/rungpu"

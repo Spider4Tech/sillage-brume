@@ -69,6 +69,8 @@ histogram of aligned differences, 128 nibbles × 16 values, giving the χ² per 
   deterministic structures at 5 rounds forward and 2 backward, which only check the alignment.
 - **Targets:** 6 rounds forward at 2^40 pairs (nibbles 0 and 77), 3 rounds backward at 2^39, 6 rounds at 2^42, 7 rounds at 2^40.
 - **Sensitivity:** at 2^40 pairs, the campaign sees biases of about 2^−19 per cell.
+- **Extended plan** (`--long`, `./scripts/rungpu2080`, 2026-11-03): 7 rounds at 2^42, backward 3 rounds on nibble 77, backward 4 rounds at 2^40,
+  6 rounds at 2^44 (≈ 2^−21 per cell); full extended plan ≈ 26 h on the 4070 Ti, two to three times more on an RTX 2080. Binary for sm_75 and sm_89.
 
 **A finding that reorders A1.** A plain cube gains no round from the GPU. With the first round free (whole nibbles), a zero
 sum requires a degree below the cube dimension. But the degree is 27 after 3 rounds, which 2^28 inputs already cover, and 81 after 4.

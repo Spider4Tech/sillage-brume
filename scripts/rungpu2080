@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Campagne GPU n° 1 sur une carte plus lente qui peut tourner plus longtemps (RTX 2080 : Turing, sm_75, 46 SM, 8 Go) :
+# plan étendu (docs/PLAN_CRYPTANALYSE_GPU.md), budget de 72 h par défaut, reprise automatique comme scripts/rungpu.
+#
+#   ./scripts/rungpu2080 [heures]     contrôle de conformité et débit de la carte, durée estimée, puis lancement
+#   ./scripts/rungpu2080 --statut     où on en est        ./scripts/rungpu2080 --arreter   arrêt propre
+#
+# Le plan étendu complet demande ≈ 26 h sur une RTX 4070 Ti ; la durée estimée ici en est l'extrapolation au débit mesuré.
+# Si le budget s'épuise, relancer : la campagne reprend. Une campagne du plan de base, même terminée, est complétée.
+set -u
+export LC_ALL=C
+cd "$(dirname "$(readlink -f "$0")")/.."   # racine du dépôt
+case "${1:-}" in
+    --statut|--arreter) exec ./scripts/rungpu "$1" ;;
+    ''|*[!0-9.]*) [ -z "${1:-}" ] || { sed -n '2,9p' "$0" | cut -c3-; exit 1; } ;;
+esac
+H=${1:-72}
+command -v nvidia-smi >/dev/null || { echo "nvidia-smi introuvable"; exit 1; }
+make -s -C tests/gpu >/dev/null || { echo "échec de compilation (make -C tests/gpu ; nvcc attendu dans /usr/local/cuda/bin, sinon NVCC=…)"; exit 1; }
+nvidia-smi --query-gpu=name,power.limit,power.max_limit --format=csv,noheader
+mkdir -p resultats
+SORTIE=$(tests/gpu/build/brume_gpu 2>&1) || { echo "$SORTIE" | tail -8; echo "contrôle de conformité GPU en échec : rien n'est lancé"; exit 1; }
+DEBIT=$(echo "$SORTIE" | grep 'débit')
+echo "$DEBIT"
+# débit à 5 tours en sens direct, 2^29,95/s sur la 4070 Ti, où le plan étendu demande ≈ 26 h
+echo "$DEBIT" | awk '{ for (i = 1; i <= NF; i++) if ($i == "5" && $(i+1) == "tours" && $(i-1) != "inverse") { split($(i+2), a, "^"); e = a[2] + 0; } }
+    END { if (e) printf "durée estimée du plan étendu complet : %.0f h (%.2f fois la 4070 Ti)\n", 26 * 2 ^ (29.95 - e), 2 ^ (e - 29.95) }'
+echo "conseil : plafonner la puissance si l'alimentation est juste (sudo nvidia-smi -pl <W>, sur l'hôte)"
+exec ./scripts/rungpu "$H" --long

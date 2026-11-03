@@ -67,6 +67,8 @@ histogramme des différences alignées, 128 nibbles × 16 valeurs, d'où le χ²
   structures déterministes à 5 tours en direct et 2 en inverse, qui ne contrôlent que l'alignement.
 - **Cibles :** 6 tours en direct à 2^40 paires (nibbles 0 et 77), 3 tours en inverse à 2^39, 6 tours à 2^42, 7 tours à 2^40.
 - **Sensibilité :** à 2^40 paires, la campagne voit des biais d'environ 2^−19 par case.
+- **Plan étendu** (`--long`, `./scripts/rungpu2080`, 2026-11-03) : 7 tours à 2^42, inverse 3 tours sur le nibble 77, inverse 4 tours à 2^40,
+  6 tours à 2^44 (≈ 2^−21 par case) ; plan étendu complet ≈ 26 h sur la 4070 Ti, deux à trois fois plus sur une RTX 2080. Binaire sm_75 et sm_89.
 
 **Constat qui réordonne A1.** Un cube simple ne gagne aucun tour grâce au GPU. Avec le premier tour gratuit (nibbles entiers), une somme
 nulle demande un degré inférieur à la dimension du cube. Or le degré vaut 27 après 3 tours, ce que 2^28 entrées couvrent déjà, et 81 après 4.

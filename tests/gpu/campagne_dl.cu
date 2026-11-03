@@ -11,8 +11,12 @@
  * connue, doivent être détectés) ; 32 tours (H0, ne doit pas l'être). Voir PLAN ci-dessous.
  *
  * Reprise : <dossier>/reprise.bin est réécrit toutes les 10 min, à chaque fin d'expérience et à l'arrêt
- * (SIGTERM). Relancer avec le même dossier reprend là où l'on s'était arrêté.
- *     tests/gpu/build/campagne_dl <dossier> <budget_s> [échelle]   (depuis la racine)
+ * (SIGTERM). Relancer avec le même dossier reprend là où l'on s'était arrêté ; un fichier du plan de base (format 01)
+ * se reprend aussi avec --long, les cibles ajoutées partant de zéro.
+ * Portable : compilé pour sm_75 (Turing, RTX 20xx) et sm_89 (Ada) ; 8 blocs par SM ; lancements de moins de 0,5 s
+ * (chien de garde de l'affichage, TDR de Windows sous WSL).
+ *     tests/gpu/build/campagne_dl <dossier> <budget_s> [échelle] [--long]   (depuis la racine)
+ *     --long : plan étendu (cibles ci-dessous après les 9 du plan de base), pour une carte qui peut tourner plus longtemps
  *     → resultats/gpu_dl.json et resultats/gpu_dl.md */
 #include <math.h>
 #include <signal.h>
@@ -48,8 +52,16 @@ static const exp_t PLAN[] = {
     {"cible", 1, 3, 0, 0, 39, 0},
     {"cible", 0, 6, 0, 0, 42, 0},
     {"cible", 0, 7, 0, 0, 40, 0},
+    /* plan étendu (--long), après le plan de base : 7 tours avec 4 fois plus de paires, l'inverse sur un autre nibble
+     * et sur 4 tours, puis 6 tours à 2^44 (sensibilité ≈ 2^−21 par case), le plus long */
+    {"cible", 0, 7, 0, 0, 42, 0},
+    {"cible", 1, 3, 77, 0, 39, 0},
+    {"cible", 1, 4, 0, 0, 40, 0},
+    {"cible", 0, 6, 0, 0, 44, 0},
 };
-#define NEXP ((int)(sizeof PLAN / sizeof PLAN[0]))
+#define NEXP_MAX ((int)(sizeof PLAN / sizeof PLAN[0]))
+#define NEXP_BASE 9
+static int NEXP = NEXP_BASE;                    /* NEXP_MAX avec --long */
 #define NH (BR_N * 16)
 
 typedef struct {
@@ -159,10 +171,23 @@ static int charger(const char *f, etat_t *E)
     FILE *p = fopen(f, "rb");
     if (!p)
         return 0;
+    /* format 01 : 9 états (plan de base) ; format 02 : nombre d'états, puis les états */
     char m[8];
-    int ok = fread(m, 1, 8, p) == 8 && !memcmp(m, "BRGPDL01", 8) && fread(E, sizeof(etat_t), NEXP, p) == (size_t)NEXP;
+    int n = 0, ok = fread(m, 1, 8, p) == 8;
+    if (ok && !memcmp(m, "BRGPDL01", 8)) n = NEXP_BASE;
+    else if (ok && !memcmp(m, "BRGPDL02", 8)) ok = fread(&n, sizeof n, 1, p) == 1;
+    else ok = 0;
+    if (ok && n > NEXP && n <= NEXP_MAX) {      /* fichier du plan étendu repris sans --long : on le garde étendu */
+        fprintf(stderr, "reprise d'un plan de %d expériences : plan étendu conservé\n", n);
+        NEXP = n;
+    }
+    ok = ok && n >= 1 && n <= NEXP && fread(E, sizeof(etat_t), (size_t)n, p) == (size_t)n;
     fclose(p);
-    return ok;
+    for (int q = n; ok && q < NEXP; q++) {      /* cibles du plan étendu absentes du fichier : à zéro */
+        memset(&E[q], 0, sizeof E[q]);
+        E[q].cible = 0;                          /* fixée par main */
+    }
+    return ok ? n : 0;
 }
 static void sauver(const char *f, const etat_t *E)
 {
@@ -170,8 +195,9 @@ static void sauver(const char *f, const etat_t *E)
     snprintf(t, sizeof t, "%s.tmp", f);
     FILE *p = fopen(t, "wb");
     if (!p) { perror(t); return; }
-    fwrite("BRGPDL01", 1, 8, p);
-    fwrite(E, sizeof(etat_t), NEXP, p);
+    fwrite("BRGPDL02", 1, 8, p);
+    fwrite(&NEXP, sizeof NEXP, 1, p);
+    fwrite(E, sizeof(etat_t), (size_t)NEXP, p);
     if (fclose(p) == 0)
         rename(t, f);
 }
@@ -246,11 +272,15 @@ static int conforme(const uint32_t *d_mi)
 int main(int argc, char **argv)
 {
     if (argc < 3) {
-        fprintf(stderr, "usage : %s <dossier> <budget_s> [échelle]\n", argv[0]);
+        fprintf(stderr, "usage : %s <dossier> <budget_s> [échelle] [--long]\n", argv[0]);
         return 2;
     }
     const char *dos = argv[1];
-    double budget = atof(argv[2]), echelle = argc > 3 ? atof(argv[3]) : 1.0;
+    double budget = atof(argv[2]), echelle = 1.0;
+    for (int i = 3; i < argc; i++) {
+        if (!strcmp(argv[i], "--long")) NEXP = NEXP_MAX;
+        else echelle = atof(argv[i]);
+    }
     char frep[512];
     snprintf(frep, sizeof frep, "%s/reprise.bin", dos);
     signal(SIGTERM, sur_signal);
@@ -284,18 +314,20 @@ int main(int argc, char **argv)
             if (c1 > best[1]) { best[1] = c1; dmax[1] = a; }
         }
 
-    static etat_t E[NEXP];
-    if (!charger(frep, E)) {
-        memset(E, 0, sizeof E);
-        for (int q = 0; q < NEXP; q++) {
-            double n = ldexp(echelle, PLAN[q].log2N);
-            E[q].cible = (uint64_t)fmax(n, 1 << 20);
-        }
-        fprintf(stderr, "nouvelle campagne dans %s\n", dos);
-    } else
-        fprintf(stderr, "reprise dans %s\n", dos);
+    static etat_t E[NEXP_MAX];
+    int lus = charger(frep, E);
+    if (!lus) memset(E, 0, sizeof E);
+    for (int q = lus; q < NEXP; q++) {
+        double n = ldexp(echelle, PLAN[q].log2N);
+        E[q].cible = (uint64_t)fmax(n, 1 << 20);
+    }
+    if (!lus) fprintf(stderr, "nouvelle campagne dans %s (%d expériences)\n", dos, NEXP);
+    else fprintf(stderr, "reprise dans %s (%d expériences reprises sur %d)\n", dos, lus, NEXP);
 
-    const int blocs = 480, fils = 256;
+    cudaDeviceProp prop;
+    CK(cudaGetDeviceProperties(&prop, 0));
+    res_mesure(&res, "gpu", "\"%s, sm_%d%d, %d SM\"", prop.name, prop.major, prop.minor, prop.multiProcessorCount);
+    const int blocs = 8 * prop.multiProcessorCount, fils = 256;   /* 480 sur la 4070 Ti (60 SM), 368 sur la 2080 (46) */
     const double t0 = maintenant();
     double dern_sauv = t0;
     int temoins = 1, h0 = 1, structure = 1, nt = 0, nh = 0, ns = 0;
@@ -325,7 +357,7 @@ int main(int argc, char **argv)
             double dt = maintenant() - a;
             e->fait += par * (uint64_t)it;
             e->duree += dt;
-            if (dt < 0.5 && it == iters)               /* lancements d'environ 1 s */
+            if (dt < 0.25 && it == iters)              /* lancements de 0,25 à 0,5 s : sous le TDR de Windows (2 s) */
                 iters *= 2;
             if (maintenant() - dern_sauv > 600) {
                 CK(cudaMemcpy(e->n, d_n, sizeof e->n, cudaMemcpyDeviceToHost));
@@ -366,6 +398,7 @@ int main(int argc, char **argv)
     if (ns == 2)
         res_controle(&res, "alignement_structure_5_tours_direct_2_inverse_detectee", structure);
     res_mesure(&res, "etat", "\"%s\"", complet ? "terminé" : arret ? "arrêté (reprise possible)" : "budget épuisé (reprise possible)");
-    fprintf(stderr, "campagne %s\n", complet ? "terminée" : "interrompue, reprise possible");
+    fprintf(stderr, "campagne %s, %s\n", complet ? "terminée" : "interrompue, reprise possible",
+            NEXP == NEXP_MAX ? "plan étendu" : "plan de base");
     return res_ecrire(&res);
 }

@@ -672,6 +672,7 @@ sillage-brume/
     ├── preparer_campagne.sh Machine check and Python environment setup
     ├── runspecial           Targeted dudect measurements (timing investigations)
     ├── rungpu               GPU cryptanalysis campaigns (tests/gpu)
+    ├── rungpu2080           The same on a slower card (e.g. RTX 2080): extended plan, 72 h
     ├── rundenuit.cmd, .ps1  Windows launcher (runs the campaign in WSL 2)
     └── rundenuit_wsl.sh     Linux side of the Windows launcher
 ```
