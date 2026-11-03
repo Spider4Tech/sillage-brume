@@ -10,7 +10,7 @@ SILLAGE is a research suite built around code-based constructions and noisy deco
 
 > **Research prototype — not for production use.** The parameters and constructions are experimental. The v0.4.0 designs have not received a complete independent cryptanalysis. The reductions and computational estimates documented here are conditional on the assumptions and models stated in [`docs/PROOFS.md`](docs/PROOFS.md). Passing the test suite is not evidence that a construction is secure.
 
-The measurements and test totals below refer to dated runs committed with the project; they are not live CI results. The proofs are available in English ([`docs/PROOFS.md`](docs/PROOFS.md)); the other design notes, code comments and test names are in French, and [`docs/README.md`](docs/README.md) summarises each document in English. The C implementation and Python package are under `sillage/`.
+The measurements and test totals below refer to dated runs committed with the project; they are not live CI results. All documents in `docs/` are available in English ([`docs/README.md`](docs/README.md) lists them); their French versions are the reference texts. Code comments, test names and result files are in French. The C implementation and Python package are under `sillage/`.
 
 **Reviewers and cryptanalysts:** results are welcome, including on reduced rounds or reduced sizes. See [`SECURITY.md`](SECURITY.md) for where to report them and [`CONTRIBUTING.md`](CONTRIBUTING.md) for how to build and test.
 
@@ -433,7 +433,7 @@ The multi-message API groups independent states into batches and distributes bat
 
 ### Side-channel testing
 
-The C paths have been tested with dudect-style timing experiments and, for KEM and SIG, Valgrind/ctgrind checks and control-flow instrumentation. The current results did not detect secret-dependent timing or control-flow differences in the tested builds and inputs. These are empirical checks, not a proof of constant-time execution. A key-dependent timing difference in the AEAD, tied to where the 64-byte duplex state fell within a cache line, was found and fixed on 2026-11-02 by aligning that state to 64 bytes (`docs/RAPPORT_AUDIT.md`, errata of 2026-11-02). Results depend on compiler, flags, CPU, operating system and test methodology.
+The C paths have been tested with dudect-style timing experiments and, for KEM and SIG, Valgrind/ctgrind checks and control-flow instrumentation. The current results did not detect secret-dependent timing or control-flow differences in the tested builds and inputs. These are empirical checks, not a proof of constant-time execution. A key-dependent timing difference in the AEAD, tied to where the 64-byte duplex state fell within a cache line, was found and fixed on 2026-11-02 by aligning that state to 64 bytes (`docs/AUDIT_REPORT.md`, errata of 2026-11-02). Results depend on compiler, flags, CPU, operating system and test methodology.
 
 The Python reference implementation is not constant-time. The generic table-based BRUME reference path is also not intended as a constant-time implementation. NEON output conformance under QEMU does not establish native timing behaviour.
 
@@ -620,15 +620,14 @@ sillage-brume/
 ├── requirements.txt         Python runtime dependency (NumPy)
 ├── requirements-tests.txt   Dependencies of the full test suite
 ├── docs/
-│   ├── README.md            Index of the documents, in English
-│   ├── guide.md             Original design note
-│   ├── RAPPORT_AUDIT.md     Development audit history and corrected issues
-│   ├── PROOFS.md            Proofs, assumptions and parameter derivations (English)
-│   ├── PREUVES.md           Same document, French source
-│   ├── PISTES.md            Measured optimisations and research leads
-│   ├── CAMPAGNE_24H.md      Running the long campaigns on another machine
-│   ├── PLAN_CRYPTANALYSE_GPU.md GPU cryptanalysis plan
-│   └── REVUE_CODE_VOLE.md   Review of the VOLE-in-the-Head prototype
+│   ├── README.md            Index of the documents (each in English and French)
+│   ├── PROOFS.md            Proofs, assumptions and parameter derivations   (PREUVES.md)
+│   ├── AUDIT_REPORT.md      Development audit history and corrected issues  (RAPPORT_AUDIT.md)
+│   ├── LEADS.md             Measured optimisations and research leads       (PISTES.md)
+│   ├── DESIGN_NOTE.md       Original design note                            (guide.md)
+│   ├── CAMPAIGN_24H.md      Running the long campaigns on another machine   (CAMPAGNE_24H.md)
+│   ├── GPU_CRYPTANALYSIS_PLAN.md  GPU cryptanalysis plan                    (PLAN_CRYPTANALYSE_GPU.md)
+│   └── VOLE_CODE_REVIEW.md  Review of the VOLE-in-the-Head prototype        (REVUE_CODE_VOLE.md)
 ├── sillage/
 │   ├── sillage_common.py    Rings, sparse vectors, SHAKE helpers and estimators
 │   ├── sillage_kem.py       Sillage-KEM reference implementation
@@ -685,8 +684,8 @@ Copyright (C) 2026 Spider4Tech. This project is free software, released under th
 The current research priorities recorded in the project are:
 
 1. **BRUME cryptanalysis:** improve the analysis of aggregated trails, the actual integral reach, boomerang behaviour and attacks against the keyed modes. The exact division-property reach is established as a method result; the real integral distinguisher remains open.
-2. **Sillage-KEM:** seek a tighter correctness bound that accounts for XOR cancellations without adding an unsupported independence assumption (a parameter search at equal guarantees gains only about 1 and 2 %, [`docs/PISTES.md`](docs/PISTES.md), lead 9); continue structured and multi-block decoding attacks; improve the classical and quantum cost models.
-3. **Sillage-SIG:** strengthen the protocol analysis, evaluate VOLE-in-the-Head as the main route to smaller signatures (a prototype in `tests/c/vole_proto.c` measures 4,112 and 15,906 bytes; it is not a format of this suite, and the conditions for adopting it are listed in [`docs/PISTES.md`](docs/PISTES.md), lead 9), and determine what additional work is required for a meaningful QROM security statement.
+2. **Sillage-KEM:** seek a tighter correctness bound that accounts for XOR cancellations without adding an unsupported independence assumption (a parameter search at equal guarantees gains only about 1 and 2 %, [`docs/LEADS.md`](docs/LEADS.md), lead 9); continue structured and multi-block decoding attacks; improve the classical and quantum cost models.
+3. **Sillage-SIG:** strengthen the protocol analysis, evaluate VOLE-in-the-Head as the main route to smaller signatures (a prototype in `tests/c/vole_proto.c` measures 4,112 and 15,906 bytes; it is not a format of this suite, and the conditions for adopting it are listed in [`docs/LEADS.md`](docs/LEADS.md), lead 9), and determine what additional work is required for a meaningful QROM security statement.
 4. **AEAD modes:** continue checking the correspondence between the proof models and the C/Python implementations, including nonce handling, multi-user use and parallel-leaf boundary cases.
 5. **C portability:** measure the NEON implementation on native ARM hardware, improve runtime backend selection, and continue testing across compilers and CPU generations.
 6. **Reproducibility:** retain complete run manifests, compiler/CPU metadata, source fingerprints and raw outputs for long cryptanalysis campaigns.
@@ -710,7 +709,7 @@ The repository records earlier design failures and the changes made in response.
 | C implementation | State-indexed tables and secret-dependent operations produced side-channel concerns | Added AVX2/NEON kernels, masked operations, fixed-work sampling and dedicated timing/control-flow tests |
 | Division property | Earlier upper-bound claims were limited to particular cubes | Extended the trail construction and verification to all 512 bit cubes; exact method reach documented as 10 rounds per direction |
 
-The full issue history, including detection methods and fixes, is maintained in [`docs/RAPPORT_AUDIT.md`](docs/RAPPORT_AUDIT.md).
+The full issue history, including detection methods and fixes, is maintained in [`docs/AUDIT_REPORT.md`](docs/AUDIT_REPORT.md).
 
 ---
 
@@ -739,10 +738,10 @@ A CodeQL workflow analyses the C and Python code. The CI does **not** run the fu
 ## Further reading
 
 - [`docs/README.md`](docs/README.md) — index of all documents, with their language and status.
-- [`docs/guide.md`](docs/guide.md) — original design direction and component concepts.
+- [`docs/DESIGN_NOTE.md`](docs/DESIGN_NOTE.md) — original design direction and component concepts.
 - [`docs/PROOFS.md`](docs/PROOFS.md) — formal statements, assumptions, reductions, parameter bounds and open proof obligations.
-- [`docs/PISTES.md`](docs/PISTES.md) — measured performance work, optimisations and research leads not adopted into the construction.
-- [`docs/RAPPORT_AUDIT.md`](docs/RAPPORT_AUDIT.md) — development audit history, previously identified flaws and their corrections.
+- [`docs/LEADS.md`](docs/LEADS.md) — measured performance work, optimisations and research leads not adopted into the construction.
+- [`docs/AUDIT_REPORT.md`](docs/AUDIT_REPORT.md) — development audit history, previously identified flaws and their corrections.
 - [`resultats/SYNTHESE.md`](resultats/SYNTHESE.md) — committed test-suite snapshot.
 - [`resultats/BENCH_C.md`](resultats/BENCH_C.md) — C performance measurements.
 - [`resultats/BENCH_TAILLES.md`](resultats/BENCH_TAILLES.md) — Python reference throughput and message-size measurements.
