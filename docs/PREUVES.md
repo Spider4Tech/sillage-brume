@@ -258,6 +258,34 @@ celle qu'on a retirée de la v0.2. Une borne par martingale tenant compte des an
 petits S et n'améliore pas ces paramètres. Un code externe demanderait une borne jointe sur plusieurs blocs,
 que le calcul clé par clé ne fournit pas. Voir `docs/PISTES.md`, piste 8.
 
+### 2.4 Plusieurs clés et plusieurs chiffrés
+
+Les théorèmes ci-dessus visent une clé et un chiffré défi. Avec n clés et N chiffrés défis, l'argument hybride standard multiplie
+l'avantage par n·N au plus. Ce qui compte est l'écart réel, terme par terme.
+
+- **Plusieurs clés.** Chaque clé a ses propres `σ_h` (donc h), `σ_rej` et `(x, y)` ; `ρ = G(μ, H(pk))` lie l'aléa à la clé publique.
+  - *ISD :* attaquer n clés à la fois ne coûte pas moins qu'en attaquer une : les codes diffèrent, aucune élimination ne se partage, et
+    réussir sur l'une des n après T itérations en tout revient au cas d'une seule clé. Pas de gain connu.
+  - *Échec de déchiffrement :* δ ≤ `2^{−λ}` vaut pour **chaque** clé acceptée (§ 2.3) ; le terme `q·δ` devient au pire `q·δ` en tout, les
+    requêtes se répartissant entre les clés.
+- **Plusieurs chiffrés sous une même clé.** C'est là que se trouve la perte.
+  - *Recherche exhaustive sur μ :* l'encapsulation est déterministe en μ et `|M| = 2^k` avec k = λ. Un attaquant qui détient N chiffrés de
+    la même clé tire μ, recalcule `ct(μ)` et le cherche dans une table des N : coût `2^k/N` en classique, `√(2^k/N)` avec Grover. C'est
+    le terme en `q/|M|` des bornes, multiplié par N. `H(pk)` dans G empêche de mutualiser ce calcul entre clés.
+  - *Décodage :* les N chiffrés partagent le même code (même h) ; « decoding one out of many » (Sendrier) gagne au plus ≈ `√N` sur le coût
+    d'ISD d'un chiffré.
+
+| N chiffrés sous une clé | Sillage-128, classique / quantique | Sillage-256, classique / quantique |
+|---|---|---|
+| 1 | 128 / 64 | 256 / 128 |
+| 2^32 | 96 / 48 | 224 / 112 |
+| 2^64 | 64 / 32 | 192 / 96 |
+
+(log₂ du coût de la recherche sur μ ; le décodage, ≈ 137 − ½·log₂ N bits classiques à 128 bits, reste au-dessus.) Sillage-128 perd donc
+log₂ N bits en multi-chiffré, comme tout KEM obtenu par FO dont l'espace des messages vaut λ bits. Si ce modèle compte, k = 256 rétablit
+le niveau : la partie v du chiffré passerait de `16·128·14` à `32·128·14` bits (≈ +3,6 Ko, chiffré ≈ 13,4 Ko), avec une borne δ à refaire.
+Ce changement n'est pas fait : il modifierait le format.
+
 ---
 
 ## 3. Sillage-SIG
@@ -1399,8 +1427,32 @@ La spreadness est rigoureuse : à `r1` fixé, `u` détermine `r2`, donc tout chi
 Le terme de correction passe par FFP-CCA ≤ COR : avec la clé, le déchiffrement se simule, d'où `8q²δ`, sans facteur `q_D`, δ étant borné pour chaque clé acceptée
 (§ 2.3). C'est une recherche de Grover **avec la clé secrète**, ce qu'un adversaire réel n'a pas ; il ne limite pas ici. `|M| = 2^λ` donne `q/2^{λ/2}`.
 
-*Limite.* Sillage utilise le rejet **implicite**. Les résultats de même forme pour ce cas (Jiang et al. 2018, Bindel et al. 2019, Don et al. 2021) n'ont pas
-pu être relus ici, leurs articles étant inaccessibles depuis cette machine : l'application de la borne ci-dessus reste à vérifier par un relecteur.
+*Rejet implicite et clé H(μ, ct) : la borne s'applique, vérifié le 2026-11-03.* Sillage est `U^⊥̸(T[PKE, G], H)`, clé `H(μ, ct)`,
+rejet `H'(σ_rej, ct)`. Énoncés relus dans Bindel, Hamburg, Hövelmanns, Hülsing et Persichetti (TCC 2019) et dans Hövelmanns, Hülsing et Majenz
+(ASIACRYPT 2022, Remarque 1) :
+- *BHH+19, Théorème 5* : pour un dPKE, dériver la clé de `(μ, ct)` ou de `μ` seul donne exactement le même avantage IND-CCA, en rejet
+  explicite comme implicite (argument d'indifférentiabilité : H n'est appelé sur `(μ, ct)` que si `ct = Enc(pk, μ)`) ;
+- *BHH+19, Théorème 3* : l'avantage contre le rejet implicite est **égal** à celui contre le rejet explicite (la réduction tire elle-même la
+  clé de rejet ; ici `H'` est un oracle séparé par domaine, que la réduction simule) ;
+- la borne de HHM22 ci-dessus, prouvée pour le rejet explicite et la clé `H(μ)`, vaut donc **sans perte** pour Sillage.
+
+Borne directe pour le rejet implicite (BHH+19, Théorèmes 1 et 2 et Lemme 6), qui suppose le chiffrement dérandomisé ε-injectif :
+```
+Adv^{IND-CCA} ≤ 2·√((d + 2)·Adv^{IND-CPA} + 8(q + 1)/|M|)  +  ((4d + 1)·δ + √(3ε))·(q + q_D) + ε  +  4·√(d·q/2^{256})  +  ε
+```
+*ε-injectivité.* Deux messages distincts ne donnent le même chiffré qu'avec une probabilité ≤ `2^{−γ}` (spreadness ci-dessus), d'où, sur les
+`2^{2k}` paires, `ε ≤ 2^{2k−γ}` = `2^{−551}` et `2^{−1119}` : négligeable. Le dernier terme est la clé de rejet de 256 bits.
+
+| Terme (borne = 1, d = q) | Sillage-128 | Sillage-256 |
+|---|---|---|
+| IND-CPA, b = Prange–Grover | 60,5 | 105,0 |
+| `8(q + 1)/|M|` sous la racine | 123 | 251 |
+| `(4d + 1)·δ·(q + q_D)`, q_D ≤ q, δ ≤ `2^{−λ}` | 62,5 | 126,5 |
+| clé de rejet, `4√(dq/2^{256})` | 126 | 126 |
+| **Prouvé** | **≈ 60** | **≈ 105** |
+
+Le terme en |M| devient négligeable (123 bits au lieu de 61) ; les niveaux prouvés restent fixés par IND-CPA, comme avec HHM22. Articles :
+BHH+19 lu depuis le dépôt de CASA (Bochum), HHM22 depuis arXiv 2203.10182 ; l'ePrint de l'IACR refuse les téléchargements automatiques.
 
 *SIG.* Don–Fehr–Majenz (CRYPTO 2020), Corollaire 13, pour une preuve à 2n + 1 passes, ici n = 2 :
 
@@ -1486,9 +1538,11 @@ profondeur 48 ; oracle de graine d'un Keccak ; profondeur totale limitée à MAX
   (`tests/c/brume_attaques.c`) ; ce n'est pas une borne pour des motifs plus lourds, ni pour des ensembles corrélés entre nibbles.
 - Boomerang (3 tours mesurés), intégrales, algébrique, structure du graphe (§ 4.2 bis) : des attaques cherchées, sans borne générale.
   Exclus en revanche, par calcul : les invariants non linéaires communs à tous les tours (critère BCLR, dim W_M(D) = 512, § 4.2 bis).
-- QROM : réductions instanciées au § 5 bis, sous réserve : rejet implicite du KEM à vérifier, collapsing de `H_c` et preuve de connaissance
-  quantique de la SIG non établis. Elles prouvent nettement moins que les niveaux des attaques connues (≈ 60 / 104 bits pour le KEM,
-  ≈ 32 / 68 bits pour la SIG), eux-mêmes inférieurs aux niveaux nominaux. KEM multi-utilisateur non instancié.
+- QROM : réductions instanciées au § 5 bis ; le rejet implicite du KEM est couvert (BHH+19, Théorèmes 3 et 5) ; collapsing de `H_c` et
+  preuve de connaissance quantique de la SIG non établis. Elles prouvent nettement moins que les niveaux des attaques connues (≈ 60 / 105 bits
+  pour le KEM, ≈ 32 / 68 bits pour la SIG), eux-mêmes inférieurs aux niveaux nominaux.
+- Plusieurs chiffrés sous une clé (§ 2.4) : Sillage-128 perd log₂ N bits par recherche exhaustive sur μ (k = λ) ; aucun gain connu en
+  plusieurs clés.
 - Mode AEAD : preuves rédigées (Théorèmes 14 et 14-mu) dans le modèle de
   la permutation aléatoire, et reliées au code par
   `tests/test_mode_aead.py`. Chaque terme est confronté à une attaque exécutée sur duplex réduit

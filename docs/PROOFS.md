@@ -260,6 +260,34 @@ the one removed from v0.2. A martingale bound that accounts for cancellations
 small S and does not improve these parameters. An outer code would need a joint bound over several blocks,
 which the per-key computation does not provide. See `docs/PISTES.md`, lead 8.
 
+### 2.4 Several keys and several ciphertexts
+
+The theorems above target one key and one challenge ciphertext. With n keys and N challenge ciphertexts, the standard hybrid argument
+multiplies the advantage by n·N at most. What matters is the actual gap, term by term.
+
+- **Several keys.** Each key has its own `σ_h` (hence h), `σ_rej` and `(x, y)`; `ρ = G(μ, H(pk))` ties the coins to the public key.
+  - *ISD:* attacking n keys at once costs no less than attacking one: the codes differ, no elimination is shared, and
+    succeeding on one of the n after T iterations in total amounts to the single-key case. No known gain.
+  - *Decryption failure:* δ ≤ `2^{−λ}` holds for **each** accepted key (§ 2.3); the term `q·δ` stays at worst `q·δ` in total, the
+    queries being spread over the keys.
+- **Several ciphertexts under one key.** This is where the loss is.
+  - *Exhaustive search on μ:* encapsulation is deterministic in μ and `|M| = 2^k` with k = λ. An attacker holding N ciphertexts of
+    the same key draws μ, recomputes `ct(μ)` and looks it up in a table of the N: cost `2^k/N` classically, `√(2^k/N)` with Grover. This is
+    the `q/|M|` term of the bounds, multiplied by N. `H(pk)` in G prevents sharing this computation across keys.
+  - *Decoding:* the N ciphertexts share the same code (same h); “decoding one out of many” (Sendrier) gains at most ≈ `√N` on the ISD cost
+    of one ciphertext.
+
+| N ciphertexts under one key | Sillage-128, classical / quantum | Sillage-256, classical / quantum |
+|---|---|---|
+| 1 | 128 / 64 | 256 / 128 |
+| 2^32 | 96 / 48 | 224 / 112 |
+| 2^64 | 64 / 32 | 192 / 96 |
+
+(log₂ of the cost of the search on μ; decoding, ≈ 137 − ½·log₂ N classical bits at 128 bits, stays above.) Sillage-128 thus loses
+log₂ N bits in the multi-ciphertext setting, like any FO-derived KEM whose message space has λ bits. If this model matters, k = 256 restores
+the level: the v part of the ciphertext would go from `16·128·14` to `32·128·14` bits (≈ +3.6 KB, ciphertext ≈ 13.4 KB), with the δ bound to be redone.
+This change is not made: it would alter the format.
+
 ---
 
 ## 3. Sillage-SIG
@@ -1401,8 +1429,32 @@ Spreadness is rigorous: for fixed `r1`, `u` determines `r2`, so every ciphertext
 The correctness term goes through FFP-CCA ≤ COR: with the key, decryption can be simulated, hence `8q²δ`, without a `q_D` factor, δ being bounded for each accepted key
 (§ 2.3). This is a Grover search **with the secret key**, which a real adversary does not have; it is not the limiting term here. `|M| = 2^λ` gives `q/2^{λ/2}`.
 
-*Limitation.* Sillage uses **implicit** rejection. The results of the same form for that case (Jiang et al. 2018, Bindel et al. 2019, Don et al. 2021) could not
-be re-read here, their papers being inaccessible from this machine: the application of the bound above remains to be checked by a reviewer.
+*Implicit rejection and the key H(μ, ct): the bound applies, checked on 2026-11-03.* Sillage is `U^⊥̸(T[PKE, G], H)`, key `H(μ, ct)`,
+rejection `H'(σ_rej, ct)`. Statements re-read in Bindel, Hamburg, Hövelmanns, Hülsing and Persichetti (TCC 2019) and in Hövelmanns, Hülsing and Majenz
+(ASIACRYPT 2022, Remark 1):
+- *BHH+19, Theorem 5*: for a dPKE, deriving the key from `(μ, ct)` or from `μ` alone gives exactly the same IND-CCA advantage, with explicit
+  as with implicit rejection (indifferentiability argument: H is only called on `(μ, ct)` when `ct = Enc(pk, μ)`);
+- *BHH+19, Theorem 3*: the advantage against implicit rejection is **equal** to the one against explicit rejection (the reduction draws the
+  rejection key itself; here `H'` is a domain-separated oracle, which the reduction simulates);
+- the HHM22 bound above, proved for explicit rejection and the key `H(μ)`, therefore holds **without loss** for Sillage.
+
+Direct bound for implicit rejection (BHH+19, Theorems 1 and 2 and Lemma 6), which assumes the derandomised encryption to be ε-injective:
+```
+Adv^{IND-CCA} ≤ 2·√((d + 2)·Adv^{IND-CPA} + 8(q + 1)/|M|)  +  ((4d + 1)·δ + √(3ε))·(q + q_D) + ε  +  4·√(d·q/2^{256})  +  ε
+```
+*ε-injectivity.* Two distinct messages give the same ciphertext only with probability ≤ `2^{−γ}` (spreadness above), hence, over the
+`2^{2k}` pairs, `ε ≤ 2^{2k−γ}` = `2^{−551}` and `2^{−1119}`: negligible. The last term is the 256-bit rejection key.
+
+| Term (bound = 1, d = q) | Sillage-128 | Sillage-256 |
+|---|---|---|
+| IND-CPA, b = Prange–Grover | 60.5 | 105.0 |
+| `8(q + 1)/|M|` under the root | 123 | 251 |
+| `(4d + 1)·δ·(q + q_D)`, q_D ≤ q, δ ≤ `2^{−λ}` | 62.5 | 126.5 |
+| rejection key, `4√(dq/2^{256})` | 126 | 126 |
+| **Proved** | **≈ 60** | **≈ 105** |
+
+The |M| term becomes negligible (123 bits instead of 61); the proved levels remain set by IND-CPA, as with HHM22. Papers:
+BHH+19 read from the CASA (Bochum) repository, HHM22 from arXiv 2203.10182; the IACR ePrint refuses automated downloads.
 
 *SIG.* Don–Fehr–Majenz (CRYPTO 2020), Corollary 13, for a proof with 2n + 1 passes, here n = 2:
 
@@ -1488,9 +1540,11 @@ depth 48; a seed oracle of one Keccak; total depth limited to MAXDEPTH via N·g�
   (`tests/c/brume_attaques.c`); this is not a bound for heavier patterns, nor for sets correlated across nibbles.
 - Boomerang (3 rounds measured), integrals, algebraic, graph structure (§ 4.2 bis): attacks that were searched for, without a general bound.
   Excluded, on the other hand, by computation: non-linear invariants common to all rounds (BCLR criterion, dim W_M(D) = 512, § 4.2 bis).
-- QROM: reductions instantiated in § 5 bis, with caveats: implicit rejection of the KEM to be checked, collapsing of `H_c` and quantum
-  proof of knowledge of the signature not established. They prove markedly less than the levels of known attacks (≈ 60 / 104 bits for the KEM,
-  ≈ 32 / 68 bits for the signature), which are themselves below the nominal levels. Multi-user KEM not instantiated.
+- QROM: reductions instantiated in § 5 bis; the KEM's implicit rejection is covered (BHH+19, Theorems 3 and 5); collapsing of `H_c` and
+  quantum proof of knowledge of the signature not established. They prove markedly less than the levels of known attacks (≈ 60 / 105 bits
+  for the KEM, ≈ 32 / 68 bits for the signature), which are themselves below the nominal levels.
+- Several ciphertexts under one key (§ 2.4): Sillage-128 loses log₂ N bits by exhaustive search on μ (k = λ); no known gain with
+  several keys.
 - AEAD mode: proofs written (Theorems 14 and 14-mu) in the
   random-permutation model, and tied to the code by
   `tests/test_mode_aead.py`. Each term is confronted with an attack run on a reduced duplex
