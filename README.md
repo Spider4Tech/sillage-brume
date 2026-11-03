@@ -655,6 +655,9 @@ sillage-brume/
 │   ├── nuit_brume.py        Extended BRUME campaign
 │   ├── c/                   C/OpenMP cryptanalysis, validation and size-study programs
 │   └── gpu/                 CUDA cryptanalysis campaigns (byte-for-byte conformant to the C code)
+├── prototypes/              Measured prototypes that are not part of the suite
+│   ├── vole/                VOLE-in-the-Head signature over regular SD (docs/LEADS.md, lead 9)
+│   └── brume_bitslice/      Bitsliced 256-state BRUME-512 kernel (docs/LEADS.md, lead 10)
 ├── resultats/
 │   ├── SYNTHESE.md          Latest committed test summary
 │   ├── BENCH_C.md           C benchmark report
@@ -685,7 +688,7 @@ The current research priorities recorded in the project are:
 
 1. **BRUME cryptanalysis:** improve the analysis of aggregated trails, the actual integral reach, boomerang behaviour and attacks against the keyed modes. The exact division-property reach is established as a method result; the real integral distinguisher remains open.
 2. **Sillage-KEM:** seek a tighter correctness bound that accounts for XOR cancellations without adding an unsupported independence assumption (a parameter search at equal guarantees gains only about 1 and 2 %, [`docs/LEADS.md`](docs/LEADS.md), lead 9); continue structured and multi-block decoding attacks; improve the classical and quantum cost models.
-3. **Sillage-SIG:** strengthen the protocol analysis, evaluate VOLE-in-the-Head as the main route to smaller signatures (a prototype in `tests/c/vole_proto.c` measures 4,112 and 15,906 bytes; it is not a format of this suite, and the conditions for adopting it are listed in [`docs/LEADS.md`](docs/LEADS.md), lead 9), and determine what additional work is required for a meaningful QROM security statement.
+3. **Sillage-SIG:** strengthen the protocol analysis, evaluate VOLE-in-the-Head as the main route to smaller signatures (a prototype in `prototypes/vole/vole_proto.c` measures 4,112 and 15,906 bytes; it is not a format of this suite, and the conditions for adopting it are listed in [`docs/LEADS.md`](docs/LEADS.md), lead 9), and determine what additional work is required for a meaningful QROM security statement.
 4. **AEAD modes:** continue checking the correspondence between the proof models and the C/Python implementations, including nonce handling, multi-user use and parallel-leaf boundary cases.
 5. **C portability:** measure the NEON implementation on native ARM hardware, improve runtime backend selection, and continue testing across compilers and CPU generations.
 6. **Reproducibility:** retain complete run manifests, compiler/CPU metadata, source fingerprints and raw outputs for long cryptanalysis campaigns.

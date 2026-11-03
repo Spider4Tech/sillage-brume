@@ -4,6 +4,8 @@
 **Dépôt :** `Spider4Tech/sillage-brume`  
 **Date de revue :** 31 octobre 2026  
 **Périmètre :** `tests/c/vole_proto.c`, `tests/c/vole_params.c` et leurs dépendances C directes, ainsi que le harnais de test et les notes de résultats.  
+*Depuis cette revue, les fichiers examinés ont été déplacés dans `prototypes/vole/` ; les chemins ci-dessous sont ceux du commit examiné.*
+
 **Nature :** revue statique du code source et de sa cohérence inter-fichiers. Ce document n'est ni une certification, ni une preuve de sécurité, ni un audit cryptographique indépendant du protocole.
 
 ---

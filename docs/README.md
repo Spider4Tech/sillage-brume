@@ -10,7 +10,7 @@ Every document exists in English and in French. The French version is the refere
 | [`DESIGN_NOTE.md`](DESIGN_NOTE.md) | [`guide.md`](guide.md) | The original design note: the “cryptography by decoding” idea behind the suite | Historical; the constructions have since departed from it |
 | [`CAMPAIGN_24H.md`](CAMPAIGN_24H.md) | [`CAMPAGNE_24H.md`](CAMPAGNE_24H.md) | How to run the long test and cryptanalysis campaigns on another machine (Linux or Windows through WSL 2) | Operational guide |
 | [`GPU_CRYPTANALYSIS_PLAN.md`](GPU_CRYPTANALYSIS_PLAN.md) | [`PLAN_CRYPTANALYSE_GPU.md`](PLAN_CRYPTANALYSE_GPU.md) | Planned GPU cryptanalysis: reduced-round BRUME distinguishers, cubes, hash collisions, quasi-cyclic ISD, reaction attacks | Plan; the first campaign has started (`tests/gpu/`) |
-| [`VOLE_CODE_REVIEW.md`](VOLE_CODE_REVIEW.md) | [`REVUE_CODE_VOLE.md`](REVUE_CODE_VOLE.md) | A code review of the VOLE-in-the-Head signature prototype (`tests/c/vole_proto.c`), which is not part of the suite | Review; how each finding was handled is in `LEADS.md`, lead 9 |
+| [`VOLE_CODE_REVIEW.md`](VOLE_CODE_REVIEW.md) | [`REVUE_CODE_VOLE.md`](REVUE_CODE_VOLE.md) | A code review of the VOLE-in-the-Head signature prototype (`prototypes/vole/vole_proto.c`), which is not part of the suite | Review; how each finding was handled is in `LEADS.md`, lead 9 |
 
 ## Where results live
 

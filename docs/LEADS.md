@@ -184,7 +184,7 @@ only gains the padding bits, 16 B at most on SIG-128.
 
 The gain is small for that time, and each variant breaks the format: not adopted.
 
-**Signature, change of protocol: VOLE-in-the-Head over regular SD**, in the style of SDitH v2.0. It is the only lever of this magnitude. Measured prototype (`tests/c/vole_proto.c`, Ryzen 5 5600G):
+**Signature, change of protocol: VOLE-in-the-Head over regular SD**, in the style of SDitH v2.0. It is the only lever of this magnitude. Measured prototype (`prototypes/vole/vole_proto.c`, Ryzen 5 5600G):
 
 | | Current SIG-128 | VOLE-128 | Current SIG-256 | VOLE-256 |
 |---|---|---|---|---|
@@ -198,7 +198,7 @@ The gain is small for that time, and each variant breaks the format: not adopted
 Averages over 5 keys × 8 messages; medians, p90, keygen and a 1 MiB message in `resultats/vole_proto.json`. Exploratory measurements, not a statistical characterisation. Public key: a λ-bit seed ‖ y. H is cached per key; otherwise, add 2.1 and 10.1 ms on one core. Signing time varies because of grinding, on public values.
 
 *Parameters.* The reduction (SDitH, Theorem 5.1) maps RSD `(n, k_rsd, w)` to SD `(n, k_sd, w)`, with a loss of `log2(C(n, w)/(n/w)^w)`. With our ISD estimator (free memory), the reduction only guarantees the SDitH2 instances
-108.7 / 155.6 / 198.1 bits, against 143 / 207 / 272 targeted (`tests/c/vole_params.c`). These are guarantees by reduction, not attack costs (see below). For the reduction to hold in our model, longer codes are needed: `(18620, 18004, 76)` and `(38456, 37232, 152)`, which keep the margins of the current signature (160 and 316 bits), blocks of 245 and 253, d = 4, μ = (4, 4, 4, 4). τ, κ, T_open and the grinding come from SDitH (τκ = 121 and 252).
+108.7 / 155.6 / 198.1 bits, against 143 / 207 / 272 targeted (`prototypes/vole/vole_params.c`). These are guarantees by reduction, not attack costs (see below). For the reduction to hold in our model, longer codes are needed: `(18620, 18004, 76)` and `(38456, 37232, 152)`, which keep the margins of the current signature (160 and 316 bits), blocks of 245 and 253, d = 4, μ = (4, 4, 4, 4). τ, κ, T_open and the grinding come from SDitH (τκ = 121 and 252).
 
 *Checked.* Exact sizes against the SDitH formula, alterations rejected, false witness rejected, and an attack run on a reduced model: without a witness, α cancels the residue at d points of E, Δ is searched among them, and the verifier accepts, at a measured cost of 1 235 trials against N^τ/d = 1 024.
 The specification stores the leaves at `e·N + i`: with this layout, paths never merge and T_open is never reached. The prototype interleaves (`i·τ + e`), which recovers the stated probability (0.19 for 0.2).
@@ -311,7 +311,7 @@ Possible next steps:
 - **constant-time by construction** (Boolean operations only), but dudect has to be run again;
 - **95 KB of generated code** to maintain: the C generator would be the only source.
 
-The prototype (generator `gen_asm.c`, S-box `sbox2.h`, measurement bench) is not under version control.
+Prototype: `prototypes/brume_bitslice/` (generator `gen_asm.c`, S-box `sbox_bs.h`, bench `banc.c`, which reruns the checks and measurements).
 
 ## Tried and rejected
 

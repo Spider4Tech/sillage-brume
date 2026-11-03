@@ -22,6 +22,7 @@ GROUPES = [
     ("Sources Python", ["sillage/*.py"]),
     ("Sources C et en-têtes générés", ["sillage/c/*.c", "sillage/c/*.h", "sillage/c/Makefile"]),
     ("Tests", ["tests/*.py", "tests/c/*.c", "tests/c/*.h", "tests/c/Makefile"]),
+    ("Prototypes (hors suite)", ["prototypes/*/*.c", "prototypes/*/*.h", "prototypes/*/Makefile"]),
     ("Certificats (pistes de division property)", ["resultats/pistes_division.json",
                                                    "resultats/pistes_exactes.json"]),
     ("Résultats de la batterie", ["resultats/*.json", "resultats/SYNTHESE.md"]),

@@ -296,9 +296,9 @@ gcc -O3 -march=native -fopenmp -I $LIB -o tests/c/build/sig_ct tests/c/sig_ct.c 
     || { journal "ÉCHEC de construction de sig_ct"; exit 1; }
 tests/c/build/sig_ct 50 >>"$LOG" 2>&1 || { journal "ÉCHEC : chemins constant-time de la SIG non conformes"; exit 1; }
 make -s -C tests/c compression >>"$LOG" 2>&1 || { journal "ÉCHEC de construction des outils VOLE et RSD"; exit 1; }
-gcc -O1 -g -march=native -fopenmp -fsanitize=address,undefined -fno-sanitize-recover=all -I $LIB -I tests/c -o tests/c/build/vole_asan tests/c/vole_proto.c $SRC -lm \
+gcc -O1 -g -march=native -fopenmp -fsanitize=address,undefined -fno-sanitize-recover=all -I $LIB -I tests/c -o tests/c/build/vole_asan prototypes/vole/vole_proto.c $SRC -lm \
     >>"$LOG" 2>&1 || { journal "ÉCHEC de construction du fuzzer du vérifieur VOLE"; exit 1; }
-gcc -O2 -g -march=native -fopenmp -DSL_VALGRIND -I $LIB -I tests/c -o tests/c/build/vole_ct tests/c/vole_proto.c $SRC -lm \
+gcc -O2 -g -march=native -fopenmp -DSL_VALGRIND -I $LIB -I tests/c -o tests/c/build/vole_ct prototypes/vole/vole_proto.c $SRC -lm \
     >>"$LOG" 2>&1 || { journal "ÉCHEC de construction de vole_ct"; exit 1; }
 journal "construction et conformité : OK"
 

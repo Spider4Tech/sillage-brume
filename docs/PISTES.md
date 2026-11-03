@@ -182,7 +182,7 @@ ne gagne que les bits de bourrage, 16 o au plus sur SIG-128.
 
 Le gain est faible pour ce temps, et chaque variante casse le format : non adopté.
 
-**Signature, changement de protocole : VOLE-in-the-Head sur SD régulier**, à la SDitH v2.0. C'est le seul levier de cette ampleur. Prototype mesuré (`tests/c/vole_proto.c`, Ryzen 5 5600G) :
+**Signature, changement de protocole : VOLE-in-the-Head sur SD régulier**, à la SDitH v2.0. C'est le seul levier de cette ampleur. Prototype mesuré (`prototypes/vole/vole_proto.c`, Ryzen 5 5600G) :
 
 | | SIG-128 actuelle | VOLE-128 | SIG-256 actuelle | VOLE-256 |
 |---|---|---|---|---|
@@ -196,7 +196,7 @@ Le gain est faible pour ce temps, et chaque variante casse le format : non adopt
 Moyennes sur 5 clés × 8 messages ; médianes, p90, keygen et message de 1 Mio dans `resultats/vole_proto.json`. Mesures exploratoires, pas une caractérisation statistique. Clé publique : graine de λ bits ‖ y. H est en cache par clé ; sinon, ajouter 2,1 et 10,1 ms sur un cœur. Le temps de signature varie à cause du grinding, sur des valeurs publiques.
 
 *Paramètres.* La réduction (SDitH, Théorème 5.1) ramène RSD `(n, k_rsd, w)` à SD `(n, k_sd, w)`, avec une perte de `log2(C(n, w)/(n/w)^w)`. Avec notre estimateur ISD (mémoire gratuite), la réduction ne garantit aux instances SDitH2 que
-108,7 / 155,6 / 198,1 bits, contre 143 / 207 / 272 visés (`tests/c/vole_params.c`). Ce sont des garanties par réduction, pas des coûts d'attaque (voir plus bas). Pour que la réduction tienne chez nous, il faut des codes plus longs : `(18620, 18004, 76)` et `(38456, 37232, 152)`, qui gardent les marges de la SIG actuelle (160 et 316 bits), blocs de 245 et 253, d = 4, μ = (4, 4, 4, 4). τ, κ, T_open et le grinding viennent de SDitH (τκ = 121 et 252).
+108,7 / 155,6 / 198,1 bits, contre 143 / 207 / 272 visés (`prototypes/vole/vole_params.c`). Ce sont des garanties par réduction, pas des coûts d'attaque (voir plus bas). Pour que la réduction tienne chez nous, il faut des codes plus longs : `(18620, 18004, 76)` et `(38456, 37232, 152)`, qui gardent les marges de la SIG actuelle (160 et 316 bits), blocs de 245 et 253, d = 4, μ = (4, 4, 4, 4). τ, κ, T_open et le grinding viennent de SDitH (τκ = 121 et 252).
 
 *Vérifié.* Tailles exactes contre la formule de SDitH, altérations rejetées, faux témoin rejeté, et attaque exécutée sur modèle réduit : sans témoin, α annule le résidu en d points de E, Δ est cherché parmi eux, le vérifieur accepte, pour un coût mesuré de 1 235 essais contre N^τ/d = 1 024.
 La spécification range les feuilles en `e·N + i` : avec cette disposition, les chemins ne fusionnent jamais et T_open n'est jamais atteint. Le prototype entrelace (`i·τ + e`), ce qui redonne la probabilité annoncée (0,19 pour 0,2).
@@ -310,7 +310,7 @@ Suites possibles :
 - **temps constant par construction** (opérations booléennes seulement), mais dudect est à refaire ;
 - **95 Ko de code généré** à maintenir : le générateur en C serait le seul source.
 
-Le prototype (générateur `gen_asm.c`, S-box `sbox2.h`, banc de mesure) n'est pas versionné.
+Prototype : `prototypes/brume_bitslice/` (générateur `gen_asm.c`, S-box `sbox_bs.h`, banc `banc.c`, qui refait les contrôles et les mesures).
 
 ## Essayé et écarté
 

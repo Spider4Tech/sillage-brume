@@ -81,9 +81,9 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 | `tests/c/structure_miss.c` | `8064bb4d1267a2f41607723b98920d58b037c1c7ec2b284c006041e0378dc69a` |
 | `tests/c/temps.c` | `f59b5aadb5b6d33dec9461bd80b172771d2d1150da9aca2d9234534a3d77d368` |
 | `tests/c/trace_pc.c` | `97300089809ac8bb53d3fc3f183a4c7eff4a069e9737d9aecf58b683383f0741` |
-| `tests/c/vole_kat.h` | `b72f26bc437c4685f5175cc3956a3b35540a5fa2f608de77b6d923dfc56cf256` |
-| `tests/c/vole_params.c` | `f84f53c714832f392d63a593b3ee84ead5bc0a48f194683dabf4e57ebdf57f06` |
-| `tests/c/vole_proto.c` | `363e350cb20a8b0c33ca10e83284ba993b14beea388a3fb54c17ab5ffa540dae` |
+| `prototypes/vole/vole_kat.h` | `b72f26bc437c4685f5175cc3956a3b35540a5fa2f608de77b6d923dfc56cf256` |
+| `prototypes/vole/vole_params.c` | `f84f53c714832f392d63a593b3ee84ead5bc0a48f194683dabf4e57ebdf57f06` |
+| `prototypes/vole/vole_proto.c` | `363e350cb20a8b0c33ca10e83284ba993b14beea388a3fb54c17ab5ffa540dae` |
 | `tests/commun.py` | `4c42c8e3bb8ff345006777c6ffa1fe08a8cc78ec45181be2d5c044f3edef968e` |
 | `tests/dp_cpsat.py` | `9f7efe1431e9a0e0286bb88c77cbaa6484689d7c974a8627ea9e578512013370` |
 | `tests/dp_queue.py` | `fdad527d13321006d4a3cedbadb4fca77bfffeb3a3c865da4391481bcfe61425` |

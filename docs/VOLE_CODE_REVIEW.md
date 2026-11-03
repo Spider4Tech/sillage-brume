@@ -6,6 +6,8 @@
 **Repository:** `Spider4Tech/sillage-brume`  
 **Review date:** 31 October 2026  
 **Scope:** `tests/c/vole_proto.c`, `tests/c/vole_params.c` and their direct C dependencies, as well as the test harness and the result notes.  
+*Since this review, the files it examined have moved to `prototypes/vole/`; the paths below are those of the commit reviewed.*
+
 **Nature:** a static review of the source code and of its cross-file consistency. This document is neither a certification, nor a security proof, nor an independent cryptographic audit of the protocol.
 
 ---

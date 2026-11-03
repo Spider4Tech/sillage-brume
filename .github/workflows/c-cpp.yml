@@ -24,7 +24,7 @@ jobs:
     - name: Short verifier fuzzing under ASan and UBSan
       run: |
         gcc -O1 -g -march=native -fopenmp -fsanitize=address,undefined -fno-sanitize-recover=all -I sillage/c -I tests/c \
-            -o tests/c/build/vole_asan tests/c/vole_proto.c sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c -lm
+            -o tests/c/build/vole_asan prototypes/vole/vole_proto.c sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c -lm
         OMP_NUM_THREADS=1 tests/c/build/vole_asan --fuzz 300 1
     - name: Install the Python dependency
       run: python3 -m pip install -r requirements.txt

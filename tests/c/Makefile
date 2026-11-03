@@ -5,9 +5,9 @@ CC      ?= gcc
 CFLAGS  ?= -O3 -march=native -fopenmp -Wall -Wextra
 LIB     := ../../sillage/c
 SRC     := $(LIB)/commun.c $(LIB)/brume512.c $(LIB)/brume512_avx2.c $(LIB)/kem.c $(LIB)/sig.c
-NATIFS  := revue_c h1p_fourier structure_miss isd_reel isd_comparaison diffusion_support kem_distributions sig_flux brume_attaques mini_brume vole_proto compression_sig
+NATIFS  := revue_c h1p_fourier structure_miss isd_reel isd_comparaison diffusion_support kem_distributions sig_flux brume_attaques mini_brume compression_sig
 NUIT    := nuit_cryptanalyse nuit_kem_reel nuit_isd
-all: $(addprefix build/,$(NATIFS))
+all: $(addprefix build/,$(NATIFS)) build/vole_proto
 nuit: $(addprefix build/,$(NUIT))
 build/%: %.c resultat.h brume_ref.h $(SRC)
 	@mkdir -p build
@@ -29,12 +29,14 @@ compression: build/compression_kem build/compression_sig build/vole_params build
 build/rsd_attaques: rsd_attaques.c resultat.h $(LIB)/isd.c
 	@mkdir -p build
 	$(CC) $(CFLAGS) -I $(LIB) -o $@ $< $(LIB)/isd.c $(LIB)/commun.c $(LIB)/brume512.c $(LIB)/brume512_avx2.c -lquadmath -lm
-build/vole_proto: vole_proto.c vole_kat.h resultat.h $(LIB)/commun.c
+# prototype VOLE-in-the-Head (hors suite) : sources dans prototypes/vole/, binaires ici comme les autres tests
+VOLE    := ../../prototypes/vole
+build/vole_proto: $(VOLE)/vole_proto.c $(VOLE)/vole_kat.h resultat.h $(LIB)/commun.c
 	@mkdir -p build
-	$(CC) $(CFLAGS) -I $(LIB) -o $@ $< $(LIB)/commun.c $(LIB)/brume512.c $(LIB)/brume512_avx2.c -lm
-build/vole_params: vole_params.c resultat.h $(LIB)/isd.c
+	$(CC) $(CFLAGS) -I . -I $(LIB) -o $@ $< $(LIB)/commun.c $(LIB)/brume512.c $(LIB)/brume512_avx2.c -lm
+build/vole_params: $(VOLE)/vole_params.c resultat.h $(LIB)/isd.c
 	@mkdir -p build
-	$(CC) $(CFLAGS) -I $(LIB) -o $@ $< $(LIB)/isd.c -lm
+	$(CC) $(CFLAGS) -I . -I $(LIB) -o $@ $< $(LIB)/isd.c -lm
 build/kem_var.c: $(LIB)/kem.c
 	@mkdir -p build
 	sed 's/^static const params_t P\[2\]/static params_t P[2]/' $< > $@
