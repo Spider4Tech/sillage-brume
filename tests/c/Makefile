@@ -5,7 +5,7 @@ CC      ?= gcc
 CFLAGS  ?= -O3 -march=native -fopenmp -Wall -Wextra
 LIB     := ../../sillage/c
 SRC     := $(LIB)/commun.c $(LIB)/brume512.c $(LIB)/brume512_avx2.c $(LIB)/kem.c $(LIB)/sig.c
-NATIFS  := revue_c h1p_fourier invariants kem_rejet brume_gd2 structure_miss isd_reel isd_comparaison diffusion_support kem_distributions sig_flux brume_attaques mini_brume compression_sig
+NATIFS  := revue_c h1p_fourier invariants kem_rejet brume_gd2 sig_kz structure_miss isd_reel isd_comparaison diffusion_support kem_distributions sig_flux brume_attaques mini_brume compression_sig
 NUIT    := nuit_cryptanalyse nuit_kem_reel nuit_isd sat_trails
 all: $(addprefix build/,$(NATIFS)) build/vole_proto
 nuit: $(addprefix build/,$(NUIT))
@@ -42,6 +42,12 @@ build/kem_var.c: $(LIB)/kem.c
 	sed 's/^static const params_t P\[2\]/static params_t P[2]/' $< > $@
 build/compression_kem: compression_kem.c build/kem_var.c resultat.h $(SRC) $(LIB)/isd.c
 	$(CC) $(CFLAGS) -I $(LIB) -I build -o $@ $< $(filter-out $(LIB)/kem.c,$(SRC)) $(LIB)/isd.c -lm
+# sig_kz : sig.c avec sa table de paramètres modifiable (instance réduite), pour cette seule attaque
+build/sig_var.c: $(LIB)/sig.c
+	@mkdir -p build
+	sed 's/^static const sp_t SP\[2\]/static sp_t SP[2]/' $< > $@
+build/sig_kz: sig_kz.c build/sig_var.c resultat.h $(SRC)
+	$(CC) $(CFLAGS) -I $(LIB) -I build -o $@ $< $(filter-out $(LIB)/sig.c,$(SRC)) -lm
 build/compression_sig: compression_sig.c resultat.h
 	@mkdir -p build
 	$(CC) $(CFLAGS) -o $@ $< -lm
