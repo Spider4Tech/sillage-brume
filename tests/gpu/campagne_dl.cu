@@ -15,9 +15,13 @@
  * se reprend aussi avec --long, les cibles ajoutées partant de zéro.
  * Portable : compilé pour sm_75 (Turing, RTX 20xx) et sm_89 (Ada) ; 8 blocs par SM ; lancements de moins de 0,5 s
  * (chien de garde de l'affichage, TDR de Windows sous WSL).
- *     tests/gpu/build/campagne_dl <dossier> <budget_s> [échelle] [--long]   (depuis la racine)
+ *     tests/gpu/build/campagne_dl <dossier> <budget_s> [échelle] [--long] [--part k/N]   (depuis la racine)
  *     --long : plan étendu (cibles ci-dessous après les 9 du plan de base), pour une carte qui peut tourner plus longtemps
- *     → resultats/gpu_dl.json et resultats/gpu_dl.md */
+ *     --part k/N : la tranche k (0 ≤ k < N) des paires de CHAQUE expérience, pour N GPU en parallèle (CUDA_VISIBLE_DEVICES) ;
+ *                  les paires sont indexées, les tranches sont disjointes et leur union est la campagne sur un seul GPU
+ *     → resultats/gpu_dl.json et resultats/gpu_dl.md (resultats/gpu_dl_p<k>.* pour une tranche)
+ *     tests/gpu/build/campagne_dl --fusion <dossier_1> … <dossier_N>
+ *     → additionne les histogrammes des tranches (sans GPU) et écrit resultats/gpu_dl.{json,md} pour la campagne entière */
 #include <math.h>
 #include <signal.h>
 #include <stdio.h>
@@ -82,7 +86,7 @@ __device__ __forceinline__ uint64_t sm64(uint64_t z)
 }
 
 template <int INV>
-__global__ void k_paires(int R, int force, uint64_t graine, uint64_t debut, int iters, const uint32_t *dl,
+__global__ void k_paires(int R, int force, uint64_t graine, uint64_t debut, uint64_t fin, int iters, const uint32_t *dl,
                          const uint32_t *mi, unsigned long long *n)
 {
     __shared__ uint32_t h[NH];
@@ -99,6 +103,8 @@ __global__ void k_paires(int R, int force, uint64_t graine, uint64_t debut, int 
     uint64_t t = (uint64_t)blockIdx.x * blockDim.x + threadIdx.x;
     for (int it = 0; it < iters; it++) {
         uint64_t idx = debut + t * (uint64_t)iters + (uint64_t)it;
+        if (idx >= fin)                              /* fin exacte de la tranche : aucune paire comptée deux fois */
+            break;
         uint32_t a[16], b[16];
         for (int k = 0; k < 8; k++) {
             uint64_t z = sm64(graine ^ (idx * 8 + (uint64_t)k));
@@ -269,17 +275,120 @@ static int conforme(const uint32_t *d_mi)
     return ok;
 }
 
+/* δ : la ligne de DDT (direct) ou de DDT de S⁻¹ (inverse) au plus fort coefficient */
+static int DMAX[2] = {1, 1};
+static void calculer_dmax(void)
+{
+    int best[2] = {0, 0};
+    for (int a = 1; a < 16; a++)
+        for (int b = 1; b < 16; b++) {
+            int c0 = 0, c1 = 0;
+            for (int x = 0; x < 16; x++) {
+                c0 += (BR_SBOX[x] ^ BR_SBOX[x ^ a]) == b;
+                c1 += (BSI[x] ^ BSI[x ^ a]) == b;
+            }
+            if (c0 > best[0]) { best[0] = c0; DMAX[0] = a; }
+            if (c1 > best[1]) { best[1] = c1; DMAX[1] = a; }
+        }
+}
+
+typedef struct { int temoins, h0, structure, nt, nh, ns; } bilan_t;
+
+/* statistiques d'une expérience terminée, mesure et contrôles associés */
+static void rapporter(resultat_t *res, int q, const etat_t *e, bilan_t *b)
+{
+    const exp_t *x = &PLAN[q];
+    int delta = x->delta ? x->delta : DMAX[x->sens];
+    stat_t s = statistiques(e);
+    char nom[96];
+    snprintf(nom, sizeof nom, "%s_%s_%dt_j%d_d%d_2^%d", x->role, x->sens ? "inverse" : "direct", x->R, x->j0,
+             delta, (int)lround(log2((double)e->fait)));
+    int detecte = fmin(s.pchi, s.pdl) < 1e-6;
+    res_mesure(res, nom,
+               "{\"detecte\": %s, \"paires_log2\": %.2f, \"chi2_max\": %.1f, \"nibble_chi2\": %d, \"z_chi2\": %.2f, "
+               "\"p_bonferroni_chi2\": %.3g, \"dl_z_max\": %.2f, \"dl_nibble\": %d, \"dl_masque\": %d, "
+               "\"p_bonferroni_dl\": %.3g, \"duree_s\": %.0f}",
+               detecte ? "true" : "false", log2((double)e->fait), s.chi2, s.jchi, s.zchi, s.pchi, s.zdl, s.jdl, s.mdl, s.pdl, e->duree);
+    fprintf(stderr, "%s : p_χ² = %.3g, p_DL = %.3g → %s\n", nom, s.pchi, s.pdl, detecte ? "DÉTECTÉ" : "rien");
+    if (!strcmp(x->role, "temoin"))
+        b->temoins &= detecte, b->nt++;
+    if (!strcmp(x->role, "structure"))
+        b->structure &= detecte, b->ns++;
+    if (!strcmp(x->role, "h0"))
+        b->h0 &= fmin(s.pchi, s.pdl) > 1e-3, b->nh++;
+    res_ecrire(res);
+}
+
+static int conclure(resultat_t *res, int complet, const bilan_t *b, const char *quoi)
+{
+    if (b->nh)
+        res_controle(res, "h0_32_tours_non_detecte", b->h0);
+    if (b->nt)
+        res_controle(res, "temoin_biais_2^-15_detecte_a_2^32_paires", b->temoins);
+    if (b->ns == 2)
+        res_controle(res, "alignement_structure_5_tours_direct_2_inverse_detectee", b->structure);
+    res_mesure(res, "etat", "\"%s\"", complet ? "terminé" : arret ? "arrêté (reprise possible)" : "budget épuisé (reprise possible)");
+    fprintf(stderr, "%s %s, %s\n", quoi, complet ? "terminée" : "interrompue, reprise possible",
+            NEXP == NEXP_MAX ? "plan étendu" : "plan de base");
+    return res_ecrire(res);
+}
+
+/* fusion des tranches : histogrammes additionnés, sans GPU */
+static int fusionner(int nd, char **dossiers)
+{
+    static etat_t T[NEXP_MAX], S[NEXP_MAX];
+    memset(S, 0, sizeof S);
+    int n0 = 0;
+    NEXP = NEXP_MAX;                          /* charger() accepte jusqu'au plan étendu */
+    for (int d = 0; d < nd; d++) {
+        char f[512];
+        snprintf(f, sizeof f, "%s/reprise.bin", dossiers[d]);
+        int n = charger(f, T);
+        if (!n) { fprintf(stderr, "fusion : %s illisible\n", f); return 2; }
+        if (d && n != n0) { fprintf(stderr, "fusion : plans différents (%d et %d expériences)\n", n0, n); return 2; }
+        n0 = n;
+        for (int q = 0; q < n; q++) {
+            S[q].fait += T[q].fait;
+            S[q].cible += T[q].cible;
+            if (T[q].duree > S[q].duree) S[q].duree = T[q].duree;   /* tranches en parallèle : durée de la plus longue */
+            for (int i = 0; i < NH; i++) S[q].n[i] += T[q].n[i];
+        }
+    }
+    NEXP = n0;
+    resultat_t res = {.nom = "gpu_dl", .titre = "Campagne GPU : différentielles tronquées et différentielle-linéaire"};
+    res_mesure(&res, "tranches_fusionnees", "%d", nd);
+    bilan_t b = {1, 1, 1, 0, 0, 0};
+    int complet = 1;
+    for (int q = 0; q < NEXP; q++) {
+        if (S[q].fait < S[q].cible) { complet = 0; break; }
+        rapporter(&res, q, &S[q], &b);
+    }
+    return conclure(&res, complet, &b, "fusion");
+}
+
 int main(int argc, char **argv)
 {
+    if (argc >= 3 && !strcmp(argv[1], "--fusion")) {
+        if (!bref_init()) return 2;
+        calculer_dmax();
+        return fusionner(argc - 2, argv + 2);
+    }
     if (argc < 3) {
-        fprintf(stderr, "usage : %s <dossier> <budget_s> [échelle] [--long]\n", argv[0]);
+        fprintf(stderr, "usage : %s <dossier> <budget_s> [échelle] [--long] [--part k/N]\n"
+                        "        %s --fusion <dossier_1> … <dossier_N>\n", argv[0], argv[0]);
         return 2;
     }
     const char *dos = argv[1];
     double budget = atof(argv[2]), echelle = 1.0;
+    int part = 0, nparts = 1;
     for (int i = 3; i < argc; i++) {
         if (!strcmp(argv[i], "--long")) NEXP = NEXP_MAX;
-        else echelle = atof(argv[i]);
+        else if (!strcmp(argv[i], "--part") && i + 1 < argc) {
+            if (sscanf(argv[++i], "%d/%d", &part, &nparts) != 2 || nparts < 1 || part < 0 || part >= nparts) {
+                fprintf(stderr, "--part k/N : 0 ≤ k < N\n");
+                return 2;
+            }
+        } else echelle = atof(argv[i]);
     }
     char frep[512];
     snprintf(frep, sizeof frep, "%s/reprise.bin", dos);
@@ -296,30 +405,30 @@ int main(int argc, char **argv)
     CK(cudaMalloc(&d_dl, 64));
     CK(cudaMalloc(&d_n, NH * sizeof(unsigned long long)));
 
-    resultat_t res = {.nom = "gpu_dl", .titre = "Campagne GPU : différentielles tronquées et différentielle-linéaire"};
+    char nom_res[32];
+    snprintf(nom_res, sizeof nom_res, nparts > 1 ? "gpu_dl_p%d" : "gpu_dl", part);
+    resultat_t res = {.nom = nom_res, .titre = "Campagne GPU : différentielles tronquées et différentielle-linéaire"};
+    if (nparts > 1) res_mesure(&res, "tranche", "\"%d/%d\"", part, nparts);
     int conf = conforme(d_mi);
     res_controle(&res, "noyau_gpu_conforme_direct_5_a_7_tours_et_inverse_3_tours", conf);
     if (!conf) { res_ecrire(&res); return 1; }
 
-    /* δ : la ligne de DDT (direct) ou de DDT de S⁻¹ (inverse) au plus fort coefficient */
-    int dmax[2] = {1, 1}, best[2] = {0, 0};
-    for (int a = 1; a < 16; a++)
-        for (int b = 1; b < 16; b++) {
-            int c0 = 0, c1 = 0;
-            for (int x = 0; x < 16; x++) {
-                c0 += (BR_SBOX[x] ^ BR_SBOX[x ^ a]) == b;
-                c1 += (BSI[x] ^ BSI[x ^ a]) == b;
-            }
-            if (c0 > best[0]) { best[0] = c0; dmax[0] = a; }
-            if (c1 > best[1]) { best[1] = c1; dmax[1] = a; }
-        }
+    calculer_dmax();
 
     static etat_t E[NEXP_MAX];
     int lus = charger(frep, E);
     if (!lus) memset(E, 0, sizeof E);
-    for (int q = lus; q < NEXP; q++) {
-        double n = ldexp(echelle, PLAN[q].log2N);
-        E[q].cible = (uint64_t)fmax(n, 1 << 20);
+    /* tranche [LO, LO + cible) des paires de chaque expérience ; recalculée à chaque reprise (mêmes échelle et --part) */
+    static uint64_t LO[NEXP_MAX];
+    for (int q = 0; q < NEXP; q++) {
+        uint64_t tot = (uint64_t)fmax(ldexp(echelle, PLAN[q].log2N), 1 << 20);
+        LO[q] = tot / nparts * part;
+        uint64_t hi = part == nparts - 1 ? tot : tot / nparts * (part + 1);
+        if (q >= lus) E[q].cible = hi - LO[q];
+        else if (E[q].cible != hi - LO[q]) {
+            fprintf(stderr, "reprise : la tranche de l'expérience %d ne correspond pas (autre échelle ou autre --part ?)\n", q);
+            return 2;
+        }
     }
     if (!lus) fprintf(stderr, "nouvelle campagne dans %s (%d expériences)\n", dos, NEXP);
     else fprintf(stderr, "reprise dans %s (%d expériences reprises sur %d)\n", dos, lus, NEXP);
@@ -330,11 +439,11 @@ int main(int argc, char **argv)
     const int blocs = 8 * prop.multiProcessorCount, fils = 256;   /* 480 sur la 4070 Ti (60 SM), 368 sur la 2080 (46) */
     const double t0 = maintenant();
     double dern_sauv = t0;
-    int temoins = 1, h0 = 1, structure = 1, nt = 0, nh = 0, ns = 0;
+    bilan_t bil = {1, 1, 1, 0, 0, 0};
     for (int q = 0; q < NEXP; q++) {
         const exp_t *x = &PLAN[q];
         etat_t *e = &E[q];
-        int delta = x->delta ? x->delta : dmax[x->sens];
+        int delta = x->delta ? x->delta : DMAX[x->sens];
         uint32_t D[16] = {0};
         if (!x->sens)
             D[x->j0 >> 3] = (uint32_t)delta << (4 * (x->j0 & 7));
@@ -349,13 +458,13 @@ int main(int argc, char **argv)
             int it = (int)fmin(iters, ceil((double)reste / par));
             double a = maintenant();
             if (x->sens)
-                k_paires<1><<<blocs, fils>>>(x->R, x->force, 0xB2u + q, e->fait, it, d_dl, d_mi, d_n);
+                k_paires<1><<<blocs, fils>>>(x->R, x->force, 0xB2u + q, LO[q] + e->fait, LO[q] + e->cible, it, d_dl, d_mi, d_n);
             else
-                k_paires<0><<<blocs, fils>>>(x->R, x->force, 0xB2u + q, e->fait, it, d_dl, d_mi, d_n);
+                k_paires<0><<<blocs, fils>>>(x->R, x->force, 0xB2u + q, LO[q] + e->fait, LO[q] + e->cible, it, d_dl, d_mi, d_n);
             CK(cudaDeviceSynchronize());
             CK(cudaGetLastError());
             double dt = maintenant() - a;
-            e->fait += par * (uint64_t)it;
+            e->fait += (uint64_t)fmin((double)(par * (uint64_t)it), (double)reste);
             e->duree += dt;
             if (dt < 0.25 && it == iters)              /* lancements de 0,25 à 0,5 s : sous le TDR de Windows (2 s) */
                 iters *= 2;
@@ -371,34 +480,9 @@ int main(int argc, char **argv)
         sauver(frep, E);
         if (e->fait < e->cible)
             break;                                     /* arrêt ou budget : la reprise continuera ici */
-        stat_t s = statistiques(e);
-        char nom[96];
-        snprintf(nom, sizeof nom, "%s_%s_%dt_j%d_d%d_2^%d", x->role, x->sens ? "inverse" : "direct", x->R, x->j0,
-                 delta, (int)lround(log2((double)e->fait)));
-        int detecte = fmin(s.pchi, s.pdl) < 1e-6;
-        res_mesure(&res, nom,
-                   "{\"detecte\": %s, \"paires_log2\": %.2f, \"chi2_max\": %.1f, \"nibble_chi2\": %d, \"z_chi2\": %.2f, "
-                   "\"p_bonferroni_chi2\": %.3g, \"dl_z_max\": %.2f, \"dl_nibble\": %d, \"dl_masque\": %d, "
-                   "\"p_bonferroni_dl\": %.3g, \"duree_s\": %.0f}",
-                   detecte ? "true" : "false", log2((double)e->fait), s.chi2, s.jchi, s.zchi, s.pchi, s.zdl, s.jdl, s.mdl, s.pdl, e->duree);
-        fprintf(stderr, "%s : p_χ² = %.3g, p_DL = %.3g → %s\n", nom, s.pchi, s.pdl, detecte ? "DÉTECTÉ" : "rien");
-        if (!strcmp(x->role, "temoin"))
-            temoins &= detecte, nt++;
-        if (!strcmp(x->role, "structure"))
-            structure &= detecte, ns++;
-        if (!strcmp(x->role, "h0"))
-            h0 &= fmin(s.pchi, s.pdl) > 1e-3, nh++;
+        rapporter(&res, q, e, &bil);
         res_ecrire(&res);
     }
     int complet = E[NEXP - 1].fait >= E[NEXP - 1].cible;
-    if (nh)
-        res_controle(&res, "h0_32_tours_non_detecte", h0);
-    if (nt)
-        res_controle(&res, "temoin_biais_2^-15_detecte_a_2^32_paires", temoins);
-    if (ns == 2)
-        res_controle(&res, "alignement_structure_5_tours_direct_2_inverse_detectee", structure);
-    res_mesure(&res, "etat", "\"%s\"", complet ? "terminé" : arret ? "arrêté (reprise possible)" : "budget épuisé (reprise possible)");
-    fprintf(stderr, "campagne %s, %s\n", complet ? "terminée" : "interrompue, reprise possible",
-            NEXP == NEXP_MAX ? "plan étendu" : "plan de base");
-    return res_ecrire(&res);
+    return conclure(&res, complet, &bil, nparts > 1 ? "tranche" : "campagne");
 }

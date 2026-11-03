@@ -92,3 +92,28 @@ less than 0.5 s, below the Windows watchdog (TDR, 2 s) when the card also drives
   start in that case.
 - **Results:** `resultats/gpu_dl.{json,md}`; log, GPU readings and checkpoint: `resultats/gpu/<date>/`. Send back that folder and
   the two files.
+
+## 8. GPU campaign on a rented machine, with a time limit: `./scripts/rungpu_cloud`
+
+For an instance rented by the hour, with one or more cards (Turing, Ada or Hopper: binary for sm_75, sm_89 and sm_90). Each card
+computes a slice of the pairs of **every** experiment; at the end, the slices are added up, and the result is identical to that
+of a single GPU (checked: the same statistics, bit for bit, for one GPU and for two merged slices).
+
+1. **Instance:** Ubuntu with the NVIDIA driver. `nvidia-smi` displays “CUDA Version: X.Y”; install the compiler of that version
+   (12.0 at least) from NVIDIA's repository:
+   ```bash
+   wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb
+   sudo dpkg -i cuda-keyring_1.1-1_all.deb && sudo apt update
+   sudo apt install -y build-essential git cuda-nvcc-X-Y cuda-cudart-dev-X-Y     # X-Y: the version displayed, e.g. 12-8
+   git clone https://github.com/Spider4Tech/sillage-brume.git && cd sillage-brume
+   ```
+2. **Run:** `./scripts/rungpu_cloud` (at most 10 h). The script counts the cards, checks conformance to the C code, measures the throughput,
+   announces the duration of both plans and takes the extended plan if it fits in the budget, otherwise the base plan (to force it: `--long` or
+   `--base`; another budget: `./scripts/rungpu_cloud 8`). It runs in the background: the SSH session can be closed.
+3. **Follow:** `./scripts/rungpu_cloud --statut`. Stop: `--arreter`; running it again resumes, with the same number of cards.
+4. **Collect:** at the end, `resultats/gpu_cloud_<date>.tar.gz` (slices, logs, card readings, merged `gpu_dl.json` and `.md`);
+   `scp` it to your machine, then **delete the instance**: a stopped instance is still billed.
+
+The work amounts to ≈ 6.5 h of RTX 4070 Ti for the base plan and ≈ 26 h for the extended plan; the duration is divided by the number of cards and
+by their relative speed, which the script measures before starting. The campaign only uses integer operations and counters in
+shared memory: neither the tensor cores, nor the HBM memory, nor the memory of 80 GB cards are of any use to it.

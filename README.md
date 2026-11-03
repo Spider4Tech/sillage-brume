@@ -673,6 +673,7 @@ sillage-brume/
     ├── runspecial           Targeted dudect measurements (timing investigations)
     ├── rungpu               GPU cryptanalysis campaigns (tests/gpu)
     ├── rungpu2080           The same on a slower card (e.g. RTX 2080): extended plan, 72 h
+    ├── rungpu_cloud         The same on a rented multi-GPU machine, time-bounded (10 h)
     ├── rundenuit.cmd, .ps1  Windows launcher (runs the campaign in WSL 2)
     └── rundenuit_wsl.sh     Linux side of the Windows launcher
 ```

@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# Campagne GPU n° 1 sur une machine louée (une ou plusieurs cartes), en temps borné (docs/CAMPAGNE_24H.md, § 8).
+#
+#   ./scripts/rungpu_cloud [heures] [--long|--base]   défaut 10 h ; le plan étendu si le débit mesuré le fait tenir, sinon le plan de base
+#   ./scripts/rungpu_cloud --statut                   où en est chaque carte
+#   ./scripts/rungpu_cloud --arreter                  arrêt propre (points de reprise écrits) ; relancer reprend, avec le même nombre de cartes
+#
+# Chaque carte calcule une tranche des paires de chaque expérience (campagne_dl --part k/N) ; à la fin, les tranches sont
+# fusionnées (résultat identique à un seul GPU) et tout est emballé dans resultats/gpu_cloud_<date>.tar.gz, à télécharger.
+# Tourne en arrière-plan, insensible à la déconnexion SSH. Penser à SUPPRIMER l'instance ensuite : arrêtée, elle reste facturée.
+set -u
+export LC_ALL=C
+cd "$(dirname "$(readlink -f "$0")")/.."   # racine du dépôt
+R=resultats/gpu_cloud
+mkdir -p "$R"
+pids() { cat "$R/run.pid" 2>/dev/null; }
+en_cours() { local p; for p in $(pids); do kill -0 "$p" 2>/dev/null && return 0; done; return 1; }
+
+case "${1:-}" in
+    --statut)
+        if en_cours; then echo "en cours"; else echo "rien ne tourne"; fi
+        D=$(cat "$R/dossier" 2>/dev/null)
+        [ -n "$D" ] && for j in "$D"/p*/journal.log; do echo "== ${j%/journal.log}"; tail -2 "$j"; done
+        [ -n "$D" ] && { tail -1 "$D/gpu.log" 2>/dev/null; tail -3 "$D/bilan.log" 2>/dev/null; }
+        exit 0 ;;
+    --arreter)
+        if en_cours; then kill -TERM $(pids) 2>/dev/null; echo "arrêt demandé : points de reprise en cours d'écriture"; else echo "rien ne tourne"; fi
+        exit 0 ;;
+esac
+H=10 PLAN=auto
+for a in "$@"; do
+    case $a in
+        --long) PLAN=--long ;;
+        --base) PLAN=base ;;
+        ''|*[!0-9.]*) sed -n '2,11p' "$0" | cut -c3-; exit 1 ;;
+        *) H=$a ;;
+    esac
+done
+en_cours && { echo "une campagne tourne déjà (./scripts/rungpu_cloud --statut)"; exit 1; }
+command -v nvidia-smi >/dev/null || { echo "nvidia-smi introuvable : pilote NVIDIA absent"; exit 1; }
+N=$(nvidia-smi -L | grep -c '^GPU')
+[ "$N" -ge 1 ] || { echo "aucun GPU visible"; exit 1; }
+make -s -C tests/gpu >/dev/null || { echo "échec de compilation (make -C tests/gpu) : CUDA 12 attendu dans /usr/local/cuda/bin, sinon NVCC=…"; exit 1; }
+nvidia-smi --query-gpu=index,name,power.limit,memory.total --format=csv,noheader
+mkdir -p resultats
+SORTIE=$(CUDA_VISIBLE_DEVICES=0 tests/gpu/build/brume_gpu 2>&1) || { echo "$SORTIE" | tail -8; echo "contrôle de conformité GPU en échec : rien n'est lancé"; exit 1; }
+E=$(echo "$SORTIE" | grep 'débit' | awk '{ for (i = 1; i <= NF; i++) if ($i == "5" && $(i+1) == "tours" && $(i-1) != "inverse") { split($(i+2), a, "^"); print a[2] + 0 } }')
+# travail en heures de RTX 4070 Ti (2^29,95 permutations de 5 tours par seconde) : plan de base 6,5 h, plan étendu 26 h
+estime() { awk -v w="$1" -v e="$E" -v n="$N" 'BEGIN { printf "%.1f", w * 2 ^ (29.95 - e) / n }'; }
+LONG=$(estime 26) BASE=$(estime 6.5)
+echo "$N carte(s), 2^$E permutations de 5 tours par seconde et par carte : plan de base ≈ $BASE h, plan étendu ≈ $LONG h"
+if [ "$PLAN" = auto ]; then
+    if awk -v a="$LONG" -v h="$H" 'BEGIN { exit !(a <= 0.9 * h) }'; then PLAN=--long; else PLAN=base; fi
+fi
+[ "$PLAN" = base ] && PLAN=
+FIN=$( [ -n "$PLAN" ] && echo "$LONG" || echo "$BASE" )
+awk -v a="$FIN" -v h="$H" 'BEGIN { exit !(a > h) }' && echo "attention : ≈ $FIN h estimées pour $H h de budget ; la campagne s'arrêtera au budget, reprise possible"
+
+D=$(cat "$R/dossier" 2>/dev/null)
+if [ -n "$D" ] && [ -d "$D" ] && [ "$(cat "$D/cartes" 2>/dev/null)" = "$N" ] && ! grep -q 'fusion terminée' "$D/bilan.log" 2>/dev/null; then
+    echo "reprise de $D"
+else
+    D=$R/$(date +%Y%m%d_%H%M%S)
+    mkdir -p "$D"
+    echo "$D" >"$R/dossier"
+    echo "$N" >"$D/cartes"
+fi
+{
+    echo "date : $(date '+%F %T %z')"
+    echo "commit : $(git rev-parse --short HEAD 2>/dev/null)$(git diff --quiet 2>/dev/null || echo ' (modifié)')"
+    echo "plan : ${PLAN:-base}, budget $H h, $N carte(s), 2^$E perm./s par carte"
+    nvidia-smi --query-gpu=name,driver_version,power.limit --format=csv,noheader
+    $(command -v nvcc || echo /usr/local/cuda/bin/nvcc) --version 2>/dev/null | tail -1
+} >>"$D/fiche.txt"
+
+S=$(awk -v h="$H" 'BEGIN { printf "%d", h * 3600 }')
+: >"$R/run.pid"
+for k in $(seq 0 $((N - 1))); do
+    mkdir -p "$D/p$k"
+    CUDA_VISIBLE_DEVICES=$k nohup setsid tests/gpu/build/campagne_dl "$D/p$k" "$S" $PLAN --part "$k/$N" >>"$D/p$k/journal.log" 2>&1 &
+    echo $! >>"$R/run.pid"
+done
+# superviseur : relevés des cartes, puis fusion et archive quand toutes les tranches sont arrêtées
+nohup setsid bash -c '
+    D=$0; R=$1; N=$2
+    vivant() { for p in $(cat "$R/run.pid"); do kill -0 "$p" 2>/dev/null && return 0; done; return 1; }
+    while vivant; do
+        nvidia-smi --query-gpu=timestamp,index,temperature.gpu,power.draw,utilization.gpu --format=csv,noheader >>"$D/gpu.log"
+        sleep 60
+    done
+    tests/gpu/build/campagne_dl --fusion $(for k in $(seq 0 $((N - 1))); do echo "$D/p$k"; done) >>"$D/bilan.log" 2>&1
+    cp resultats/gpu_dl.json resultats/gpu_dl.md "$D/" 2>/dev/null
+    tar czf "resultats/gpu_cloud_$(basename "$D").tar.gz" "$D" resultats/gpu_dl.json resultats/gpu_dl.md 2>>"$D/bilan.log"
+    echo "archive : resultats/gpu_cloud_$(basename "$D").tar.gz" >>"$D/bilan.log"
+' "$D" "$R" "$N" >/dev/null 2>&1 &
+sleep 2
+en_cours || { echo "échec du lancement (voir $D/p*/journal.log)"; exit 1; }
+echo "lancé sur $N carte(s), plan ${PLAN:-base}, $H h au plus ; dossier $D"
+echo "  ./scripts/rungpu_cloud --statut     où on en est"
+echo "  à la fin : resultats/gpu_cloud_$(basename "$D").tar.gz, à télécharger (scp), puis SUPPRIMER l'instance"
