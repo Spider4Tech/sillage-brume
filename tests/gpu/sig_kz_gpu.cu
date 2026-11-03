@@ -10,6 +10,7 @@
  *   - k_h2 : une cible par fil, diffusion recomposée axe par axe, h2 puis défis ; le plus petit u gagnant est retenu.
  * SHAKE256 : même éponge octet par octet que sillage/c/commun.c (sl_shake_absorb / final / squeeze), Keccak-f[1600] en
  * registres. Conformité : contrôles conformite_gpu_c_h1_et_faux_positifs et conformite_gpu_c_h2 de l'hôte.
+ * L'étape 2 est appelée par tous les threads de l'hôte : un flux CUDA et des tampons par thread.
  * ponytail: un état d'éponge par fil en mémoire locale ; passer à un warp par tentative si le débit en est limité. */
 #include <cuda_runtime.h>
 #include <stdio.h>
@@ -271,9 +272,11 @@ __global__ void k_h2(const ParamH2 P, uint64_t base, uint64_t lim, unsigned long
 static uint32_t *d_essais;
 static uint8_t *d_nf, *d_sels, *d_h1;
 static size_t cap_essais, cap_nf, cap_sels;
-static unsigned long long *d_premier;
-static uint32_t *d_ci;
-static size_t cap_ci;
+/* étape 2 : appelée par plusieurs threads de l'hôte à la fois, d'où un flux et des tampons par thread */
+static thread_local cudaStream_t t_flux;
+static thread_local unsigned long long *t_premier;
+static thread_local uint32_t *t_ci;
+static thread_local size_t t_cap_ci;
 
 static int agrandir(void **p, size_t *cap, size_t n)
 {
@@ -306,7 +309,6 @@ extern "C" int kz_gpu_init(const kz_dims_t *d, const uint8_t *sk, const uint8_t 
     CK(cudaMemcpyToSymbol(c_masque, masque, KLP));
     CK(cudaMemcpyToSymbol(c_tz, tz, (1 << KEP) / 8));
     CK(cudaMemcpyToSymbol(c_pb, &d->pb, 8));
-    CK(cudaMalloc(&d_premier, sizeof *d_premier));
     return 0;
 }
 
@@ -352,17 +354,22 @@ extern "C" int kz_gpu_h2(const uint8_t *sel, const uint8_t *h1, const uint8_t *l
     memcpy(P.lignes, lignes, sizeof P.lignes);
     P.libres = libres;
     if (ndbg > lim) ndbg = (uint32_t)lim;
-    if (ci && agrandir((void **)&d_ci, &cap_ci, 4 * (size_t)KTAU * (ndbg ? ndbg : 1))) return -1;
+    if (!t_flux) {
+        CK(cudaStreamCreateWithFlags(&t_flux, cudaStreamNonBlocking));
+        CK(cudaMalloc(&t_premier, sizeof *t_premier));
+    }
+    if (ci && agrandir((void **)&t_ci, &t_cap_ci, 4 * (size_t)KTAU * (ndbg ? ndbg : 1))) return -1;
     *premier = -1;
     const uint64_t LOT = 1u << 22;                         /* par tranches croissantes : la première qui gagne donne le minimum */
     for (uint64_t base = 0; base < lim; base += LOT) {
         unsigned long long rien = ~0ULL, r;
         uint64_t n = lim - base < LOT ? lim - base : LOT;
-        CK(cudaMemcpy(d_premier, &rien, sizeof rien, cudaMemcpyHostToDevice));
-        k_h2<<<(unsigned)((n + 127) / 128), 128>>>(P, base, base + n, d_premier, ci ? d_ci : NULL, ndbg);
+        CK(cudaMemcpyAsync(t_premier, &rien, sizeof rien, cudaMemcpyHostToDevice, t_flux));
+        k_h2<<<(unsigned)((n + 127) / 128), 128, 0, t_flux>>>(P, base, base + n, t_premier, ci ? t_ci : NULL, ndbg);
         CK(cudaGetLastError());
-        CK(cudaMemcpy(&r, d_premier, sizeof r, cudaMemcpyDeviceToHost));
-        if (ci && base == 0) CK(cudaMemcpy(ci, d_ci, 4 * (size_t)KTAU * ndbg, cudaMemcpyDeviceToHost));
+        CK(cudaMemcpyAsync(&r, t_premier, sizeof r, cudaMemcpyDeviceToHost, t_flux));
+        if (ci && base == 0) CK(cudaMemcpyAsync(ci, t_ci, 4 * (size_t)KTAU * ndbg, cudaMemcpyDeviceToHost, t_flux));
+        CK(cudaStreamSynchronize(t_flux));
         if (r != ~0ULL) { *premier = (int64_t)r; break; }
     }
     return 0;
@@ -370,5 +377,5 @@ extern "C" int kz_gpu_h2(const uint8_t *sel, const uint8_t *h1, const uint8_t *l
 
 extern "C" void kz_gpu_fin(void)
 {
-    cudaFree(d_essais); cudaFree(d_nf); cudaFree(d_sels); cudaFree(d_h1); cudaFree(d_premier); cudaFree(d_ci);
+    cudaFree(d_essais); cudaFree(d_nf); cudaFree(d_sels); cudaFree(d_h1);   /* tampons par thread : libérés à la sortie */
 }

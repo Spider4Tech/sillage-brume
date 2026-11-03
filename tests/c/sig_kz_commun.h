@@ -187,7 +187,7 @@ static void vue_verifieur(const etat_t *s, const uint8_t *pk, uint32_t rep, uint
 {
     uint32_t D = p->D, sb = p->sb, hb = p->hb, t = p->t;
     const uint64_t *H = matrice(NIV, pk);
-    static uint8_t q[1 << 16];
+    static _Thread_local uint8_t q[1 << 16];               /* un tampon par thread (étape 2 parallèle du GPU) */
     corps_rep(s, rep, c, q);
     const uint8_t *com = q + (size_t)D * sb, *aux = com + hb, *al = aux + La, *be = al + pts;
     uint8_t *tr = sl_calloc(2 * (size_t)N, sb), *connu = sl_calloc(2 * (size_t)N, 1), *cm = sl_malloc((size_t)N * hb);

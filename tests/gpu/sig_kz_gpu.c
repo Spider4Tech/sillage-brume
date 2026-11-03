@@ -35,14 +35,97 @@ static void composer(const uint8_t *l0, const uint8_t *l1, uint32_t c, uint8_t *
         memcpy(o + (2 + 3 * (size_t)d) * pts, (c >> d & 1 ? l1 : l0) + (2 + 3 * (size_t)d) * pts, 3 * pts);
 }
 
+/* état d'un thread de l'étape 2 : signataire tricheur et tampons propres (vue_verifieur a son tampon par thread) */
+typedef struct { etat_t s; uint8_t *lignes, *vue, *diff, *sig, *dv; uint32_t ci[32]; } ctx_t;
+
+static void ctx_init(ctx_t *c)
+{
+    allouer(&c->s);
+    c->lignes = sl_malloc(2 * (size_t)p->tau * lrep_d); c->vue = sl_malloc(lrep_d); c->diff = sl_malloc(p->tau * lrep_d);
+    c->sig = sl_malloc(lsig); c->dv = sl_malloc(lrep_d);
+}
+
+static void ctx_liberer(ctx_t *c)
+{
+    etat_t *e = &c->s;
+    free(e->arbres); free(e->coms); free(e->auxs); free(e->cotes); free(e->tots); free(e->hs); free(e->dh); free(e->ouv);
+    free(c->lignes); free(c->vue); free(c->diff); free(c->sig); free(c->dv);
+}
+
 /* diffusion complète pour l'indice u des cibles (u en base N sur les répétitions libres) */
-static void diffusion_u(const uint8_t *lignes, uint32_t libres, uint64_t u, uint32_t *cible)
+static void diffusion_u(const uint8_t *lignes, uint32_t libres, uint64_t u, uint32_t *cible, uint8_t *dif)
 {
     for (uint32_t rep = 0; rep < p->tau; rep++) {
         cible[rep] = 0;
         if (libres >> rep & 1) { cible[rep] = (uint32_t)(u % N); u /= N; }
-        composer(lignes + (2 * rep) * lrep_d, lignes + (2 * rep + 1) * lrep_d, cible[rep], diff + rep * lrep_d);
+        composer(lignes + (2 * rep) * lrep_d, lignes + (2 * rep + 1) * lrep_d, cible[rep], dif + rep * lrep_d);
     }
+}
+
+/* résultat de l'étape 2 pour un h1 retenu */
+typedef struct { int nf_ok, compo_ok, compo_fait, erreur, conf2, rejoue_ok, gagne, valide; long q2; } r2_t;
+
+/* étape 2 d'un h1 retenu (essai e, tentative tent) : mise en gage refaite en C, vues du vérifieur, énumération de h2 sur
+ * GPU, succès rejoué en C et soumis à sl_sig_verify. compo : vérifier la vue composée feuille par feuille ;
+ * conf : comparer aux défis du C les défis de h2 du GPU sur les 256 premières cibles. */
+static r2_t etape2(ctx_t *c, uint64_t graine, size_t si, uint32_t e, uint32_t tent, int nf_gpu, int compo, int conf)
+{
+    r2_t r = {1, 1, 0, 0, -1, 1, 0, 0, 0};
+    etat_t *st = &c->s;
+    kz_sel(graine, (uint32_t)si, e, tent, st->salt);
+    engager(st, sk, pk, msg, sizeof msg);
+    int nfc = 0;
+    uint32_t libres = 0, m = 0;
+    for (uint32_t rep = 0; rep < p->tau; rep++) {
+        int fp = faux_positif(st, xn, sk, rep);
+        nfc += fp;
+        uint8_t *l0 = c->lignes + (2 * rep) * lrep_d, *l1 = l0 + lrep_d;
+        if (fp) { memcpy(l0, st->dh + rep * lrep_d, lrep_d); memcpy(l1, l0, lrep_d); continue; }
+        libres |= 1u << rep; m++;
+        vue_verifieur(st, pk, rep, 0, l0);
+        vue_verifieur(st, pk, rep, N - 1, l1);
+    }
+    r.nf_ok = nfc == nf_gpu;
+    if (compo) {                                            /* vue composée = vue du vérifieur, pour toute feuille */
+        for (uint32_t rep = 0; rep < p->tau; rep++)
+            if (libres >> rep & 1)
+                for (uint32_t f = 0; f < N; f++) {
+                    vue_verifieur(st, pk, rep, f, c->dv);
+                    composer(c->lignes + (2 * rep) * lrep_d, c->lignes + (2 * rep + 1) * lrep_d, f, c->vue);
+                    r.compo_ok &= !memcmp(c->dv, c->vue, lrep_d);
+                }
+        r.compo_fait = 1;
+    }
+    uint64_t M = 1;
+    for (uint32_t i = 0; i < m; i++) M *= N;
+    uint64_t lim = (uint64_t)STRAT[si].q2 < M ? (uint64_t)STRAT[si].q2 : M;
+    int64_t u = -1;
+    uint32_t cible[4];
+    if (conf) {                                             /* conformité de l'étape 2 sur les 256 premières cibles */
+        uint32_t ndbg = lim < 256 ? (uint32_t)lim : 256, *cig = sl_malloc(4 * (size_t)p->tau * 256);
+        r.erreur = kz_gpu_h2(st->salt, st->h1, c->lignes, libres, lim, &u, cig, ndbg) != 0;
+        r.conf2 = !r.erreur;
+        for (uint32_t k = 0; r.conf2 && k < ndbg; k++) {
+            diffusion_u(c->lignes, libres, k, cible, c->diff);
+            signer_avec(st, c->diff, c->sig, c->ci);
+            for (uint32_t rep = 0; rep < p->tau; rep++) r.conf2 &= c->ci[rep] == cig[p->tau * k + rep];
+        }
+        free(cig);
+    } else
+        r.erreur = kz_gpu_h2(st->salt, st->h1, c->lignes, libres, lim, &u, NULL, 0) != 0;
+    if (r.erreur) return r;
+    if (u >= 0) {                                           /* succès : rejoué en C, puis vrai vérifieur */
+        diffusion_u(c->lignes, libres, (uint64_t)u, cible, c->diff);
+        size_t ls = signer_avec(st, c->diff, c->sig, c->ci);
+        for (uint32_t rep = 0; rep < p->tau; rep++) r.rejoue_ok &= !(libres >> rep & 1) || c->ci[rep] == cible[rep];
+        if (r.rejoue_ok) {
+            r.gagne = 1;
+            r.valide = sl_sig_verify(NIV, pk, msg, sizeof msg, c->sig, ls);
+        }
+        r.q2 = u + 1;
+    } else
+        r.q2 = (long)lim;
+    return r;
 }
 
 int main(int argc, char **argv)
@@ -106,7 +189,9 @@ int main(int argc, char **argv)
     int h1_confirmes = 1, succes_confirmes = 1, compo_ok = 1, compo_h1 = 0, conf2 = -1;
     double ms_h1 = 0, t_etape2 = 0;
     uint32_t lot = 1u << 16;
-    uint8_t *lignes = sl_malloc(2 * (size_t)p->tau * lrep_d), *vue = sl_malloc(lrep_d), *nf = NULL;
+    uint8_t *nf = NULL;
+    ctx_t ctx0;
+    ctx_init(&ctx0);
     size_t cap_nf = 0;
     for (size_t si = 0; si < NS; si++) {
         bilan_t *b = &B[si];
@@ -155,69 +240,43 @@ int main(int argc, char **argv)
             a0 += C;
         }
         double t2 = maintenant();
-        int compo_strat = 0;
-        for (uint32_t e = 0; e < ne; e++) {                 /* étape 2, dans l'ordre des essais */
+        uint32_t nret = 0, *ret = sl_malloc(4 * (size_t)ne + 4);
+        for (uint32_t e = 0; e < ne; e++) {
             b->q1tot += premier[e] < 0 ? STRAT[si].q1 : premier[e] + 1;
             if (premier[e] < 0) continue;
+            ret[nret++] = e;
             b->retenus++;
             b->nf_hist[nf_ret[e]]++;
-            kz_sel(graine, (uint32_t)si, e, (uint32_t)premier[e], s.salt);
-            engager(&s, sk, pk, msg, sizeof msg);
-            int fp[4] = {0}, nfc = 0;
-            uint32_t libres = 0, m = 0;
-            for (uint32_t rep = 0; rep < p->tau; rep++) {
-                fp[rep] = faux_positif(&s, xn, sk, rep);
-                nfc += fp[rep];
-                uint8_t *l0 = lignes + (2 * rep) * lrep_d, *l1 = l0 + lrep_d;
-                if (fp[rep]) { memcpy(l0, s.dh + rep * lrep_d, lrep_d); memcpy(l1, l0, lrep_d); continue; }
-                libres |= 1u << rep; m++;
-                vue_verifieur(&s, pk, rep, 0, l0);
-                vue_verifieur(&s, pk, rep, N - 1, l1);
-            }
-            h1_confirmes &= nfc == nf_ret[e];
-            if (compo_strat < 2) {                          /* vue composée = vue du vérifieur, pour toute feuille */
-                for (uint32_t rep = 0; rep < p->tau; rep++)
-                    if (libres >> rep & 1)
-                        for (uint32_t c = 0; c < N; c++) {
-                            vue_verifieur(&s, pk, rep, c, dv);
-                            composer(lignes + (2 * rep) * lrep_d, lignes + (2 * rep + 1) * lrep_d, c, vue);
-                            compo_ok &= !memcmp(dv, vue, lrep_d);
-                        }
-                compo_strat++; compo_h1++;
-            }
-            uint64_t M = 1;
-            for (uint32_t i = 0; i < m; i++) M *= N;
-            uint64_t lim = (uint64_t)STRAT[si].q2 < M ? (uint64_t)STRAT[si].q2 : M;
-            int64_t u = -1;
-            uint32_t cible[4];
-            if (conf2 < 0) {                                /* conformité de l'étape 2 sur les 256 premières cibles */
-                uint32_t ndbg = lim < 256 ? (uint32_t)lim : 256, *cig = sl_malloc(4 * (size_t)p->tau * 256);
-                conf2 = kz_gpu_h2(s.salt, s.h1, lignes, libres, lim, &u, cig, ndbg) == 0;
-                for (uint32_t k = 0; conf2 && k < ndbg; k++) {
-                    diffusion_u(lignes, libres, k, cible);
-                    signer_avec(&s, diff, sig, ci);
-                    for (uint32_t rep = 0; rep < p->tau; rep++) conf2 &= ci[rep] == cig[p->tau * k + rep];
-                }
-                free(cig);
-            } else if (kz_gpu_h2(s.salt, s.h1, lignes, libres, lim, &u, NULL, 0)) {
+        }
+        /* étape 2 : le premier h1 retenu sur le thread principal (conformité de h2), les autres sur tous les cœurs ;
+         * chaque essai a son résultat, sommé ensuite dans l'ordre : le bilan ne dépend pas du nombre de threads */
+        r2_t *R = sl_malloc(sizeof *R * ((size_t)nret + 1));
+        if (nret) R[0] = etape2(&ctx0, graine, si, ret[0], (uint32_t)premier[ret[0]], nf_ret[ret[0]], 1, conf2 < 0);
+#pragma omp parallel if (nret > 16)
+        {
+            ctx_t c;
+            ctx_init(&c);
+#pragma omp for schedule(dynamic, 8)
+            for (uint32_t k = 1; k < nret; k++)
+                R[k] = etape2(&c, graine, si, ret[k], (uint32_t)premier[ret[k]], nf_ret[ret[k]], k < 2, 0);
+            ctx_liberer(&c);
+        }
+        for (uint32_t k = 0; k < nret; k++) {
+            if (R[k].erreur) {
                 res_controle(&res, "campagne_gpu_sans_erreur", 0);
                 kz_gpu_fin();
                 return res_ecrire(&res);
             }
-            if (u >= 0) {                                   /* succès : rejoué en C, puis vrai vérifieur */
-                diffusion_u(lignes, libres, (uint64_t)u, cible);
-                size_t ls = signer_avec(&s, diff, sig, ci);
-                int ok = 1;
-                for (uint32_t rep = 0; rep < p->tau; rep++) ok &= !(libres >> rep & 1) || ci[rep] == cible[rep];
-                succes_confirmes &= ok;
-                if (ok) {
-                    b->gagne++;
-                    b->valides += sl_sig_verify(NIV, pk, msg, sizeof msg, sig, ls);
-                }
-                b->q2tot += u + 1;
-            } else
-                b->q2tot += (long)lim;
+            if (R[k].conf2 >= 0) conf2 = R[k].conf2;
+            h1_confirmes &= R[k].nf_ok;
+            compo_ok &= R[k].compo_ok;
+            compo_h1 += R[k].compo_fait;
+            succes_confirmes &= R[k].rejoue_ok;
+            b->gagne += R[k].gagne;
+            b->valides += R[k].valide;
+            b->q2tot += R[k].q2;
         }
+        free(R); free(ret);
         t_etape2 += maintenant() - t2;
         free(actifs); free(premier); free(nf_ret);
     }
@@ -244,6 +303,7 @@ int main(int argc, char **argv)
                compo_h1, t_etape2, tt);
     fprintf(stderr, "  GPU : %ld tentatives de h1 en %.1f s de noyau (%.0f/s, %.3g permutations Keccak/s) ; étape 2 : %.1f s ; total %.1f s\n",
             tentatives, ms_h1 / 1000, tentatives / (ms_h1 / 1000), tentatives * (double)perm / (ms_h1 / 1000), t_etape2, tt);
+    ctx_liberer(&ctx0);
     kz_gpu_fin();
     return res_ecrire(&res);
 }

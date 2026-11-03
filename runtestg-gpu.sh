@@ -2,8 +2,8 @@
 # Version GPU du test « sig_kz » : attaque de Kales–Zaverucha sur l'instance réduite (N = 2^8, τ = 4, K = GF(2^12)),
 # broyage de h1 et de h2 sur GPU, chaque falsification rejouée en C et soumise au vrai vérifieur sl_sig_verify.
 #
-#   ./runtestg-gpu.sh                      300 essais par stratégie, 100 000 essais quantitatifs (≈ 20 s sur RTX 4070 Ti)
-#   ./runtestg-gpu.sh 1000 1000000         campagne plus grande (≈ 3 min, dont 2 d'étape 2 sur un cœur)
+#   ./runtestg-gpu.sh                      300 essais par stratégie, 100 000 essais quantitatifs (≈ 10 s sur RTX 4070 Ti)
+#   ./runtestg-gpu.sh 1000 1000000         campagne plus grande (≈ 1 min) ; 10^7 essais quantitatifs ≈ 10 min
 #   SIG_KZ_GRAINE=42 ./runtestg-gpu.sh     aléa reproductible, graine imposée
 #
 # CUDA : nvcc de l'hôte s'il existe, sinon le conteneur distrobox « tgh » (CUDA 12.9), où le script se relance.
@@ -23,6 +23,7 @@
 #
 # Sortie : code 0 si tous les contrôles passent, 1 sinon. Résultat JSON : resultats/sig_kz_gpu.json ;
 # synthèse lisible : resultats/sig_kz_gpu.md ; températures du GPU : resultats/sig_kz_gpu_capteurs.log.
+# Chaque run est aussi archivé dans resultats/sig_kz_gpu_runs/<date>_graine<g>_<essais>_<quantitatifs>/ (rien n'est écrasé).
 set -u
 cd "$(dirname "$(readlink -f "$0")")" || exit 1
 
@@ -73,6 +74,10 @@ wait "$pid"
 statut=$?
 kill "$surv" 2>/dev/null
 capteurs
+if [ -f "$JSON" ]; then
+    ARCH_DIR=resultats/sig_kz_gpu_runs/$(date +%Y%m%d_%H%M%S)_graine${SIG_KZ_GRAINE:-defaut}_${1:-300}_${2:-100000}
+    mkdir -p "$ARCH_DIR" && cp "$JSON" resultats/sig_kz_gpu.md "$CAPT" "$ARCH_DIR"/ 2>/dev/null
+fi
 
 echo
 if [ ! -f "$JSON" ]; then

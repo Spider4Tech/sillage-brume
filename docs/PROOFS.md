@@ -466,11 +466,14 @@ the D1 plan (N = 2^12, 2^35 to 2^42 trials) remains beyond CPU reach.
 (`tests/c/sig_kz_commun.h`). The GPU performs the full commitment of each h1 attempt (GGM tree, 4 × 256 leaves, aux,
 commitments, challenges) and enumerates the h2 targets; the host recomputes every retained h1 in C, replays every success
 and submits it to `sl_sig_verify`. The false-positive rate is exact there: T has 63 roots in K = GF(2^12), hence 0.015621
-per repetition, which the campaign recovers (0.015598 over 10.7 M repetitions). The verifier's view for leaf c is derived,
+per repetition, which the campaign recovers (0.015640 over 101 M repetitions). The verifier's view for leaf c is derived,
 axis by axis, from the views of leaves 0 and N − 1 (the simulated side depends only on bit d of c), which is checked leaf by
-leaf. Over 100,000 low-bound trials: 2,202 forgeries, frequency 0.0220, exact 95% CI [0.0211, 0.0229], against an exact
-prediction of 0.0223 and a bound of 0.0486. GPU = C conformance: h1 and false positives on 256 salts, h2 challenges on 256
-targets. Throughput: 4.9·10^5 h1 attempts per second (RTX 4070 Ti), about 300 times one CPU core.
+leaf. Over 1,000,000 low-bound trials: 22,525 forgeries, frequency 0.0225, exact 95% CI [0.0222, 0.0228], against an exact
+prediction of 0.0223 and a bound of 0.0486; both stages agree separately (h1: 0.0354 measured, 0.0352 predicted; h2: 0.636
+and 0.632). The two other strategies give 200 / 1,000 (prediction 0.200) and 320 / 500 (0.630). All 23,045 forgeries are
+accepted by the real verifier. GPU = C conformance: h1 and false positives on 256 salts, h2 challenges on 256 targets.
+Throughput: 5·10^5 h1 attempts per second (RTX 4070 Ti), about 300 times one CPU core; the host side (step 2) runs on every
+core and does not change the results.
 
 **Proposition 9 (unique encoding, SUF-CMA).** With `aux = 0` required when `i* = N − 1`, for every F as in Theorem 8,
 

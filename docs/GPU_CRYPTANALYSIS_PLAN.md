@@ -114,7 +114,7 @@ strength of the design and no time is spent on it.
 
 | Attack | What is done | Why |
 |---|---|---|
-| **D1. Kales–Zaverucha forgery at an intermediate scale**: N = 2^8, τ = 4, K = GF(2^16) to GF(2^20), t = 1 to 2; grinding h1 then h2 on GPU, with the real C verifier | Forgery cost measured at 2^35 to 2^42, against Theorem 8 | This is the attack that sets τ. **First step done on 2026-11-03** (`./runtestg-gpu.sh`): N = 2^8, τ = 4, K = GF(2^12), t = 1, h1 and h2 grinding on GPU, real C verifier; 2,202 / 100,000 against an exact prediction of 0.0223 and a bound of 0.0486. Still to do: a larger K (GF(2^18), since e \| ep) and the cost at 2^35 |
+| **D1. Kales–Zaverucha forgery at an intermediate scale**: N = 2^8, τ = 4, K = GF(2^16) to GF(2^20), t = 1 to 2; grinding h1 then h2 on GPU, with the real C verifier | Forgery cost measured at 2^35 to 2^42, against Theorem 8 | This is the attack that sets τ. **First step done on 2026-11-03** (`./runtestg-gpu.sh`): N = 2^8, τ = 4, K = GF(2^12), t = 1, h1 and h2 grinding on GPU, real C verifier; 22,525 / 1,000,000 against an exact prediction of 0.0223 and a bound of 0.0486. Still to do: a larger K (GF(2^18), since e \| ep) and the cost at 2^35 |
 | **D2. ISD on binary SD of rate 0.7 near GV**, n from 256 to 640, BJMM included | Measure BJMM where it overtakes Dumer | PROOFS § 5: “the advantage of BJMM at large sizes rests on the model, not on a measurement”. The GPU can measure it |
 | **D3. Algebraic false witnesses**: look for (Q, P) with S·Q = P·F for an S of weight > w, over GF(2^8) to GF(2^11) | Exhaustive, then random search | A direct check of Lemma A at the size of the real F_poly (checked today over GF(8)) |
 
