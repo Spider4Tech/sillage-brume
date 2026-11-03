@@ -507,3 +507,21 @@ validation » reste en place jusqu'à une relecture humaine.
 
 Contrôles : `tests/c/revue_c.c` (6/6) ; `test_api_c`, `test_c_impl`, `test_te`, `test_c_fuzz`, `test_c_simd`,
 `test_kem`, `test_fonctionnel`, `test_robustesse`, `test_hachage_arbre`, `test_aead_parallele` réussis.
+
+## Errata du 2026-11-03 (cryptanalyse : invariants, rejet des clés)
+
+**Taux de rejet des clés du KEM : les valeurs citées étaient fausses.** PREUVES § 1 et § 2.3 (et l'errata précédent) donnaient
+« 5 % et 8 % » pour Sillage-128 et Sillage-256. Mesuré sur 32 768 et 8 192 clés tirées comme par `KeyGen` (`tests/c/kem_rejet.c`) :
+**7,1 % ± 0,14 et 5,9 % ± 0,26**, ordre inversé. Aucune conséquence sur les énoncés : la perte des coûts d'ISD sur clés acceptées vaut
+log₂(1/(1 − ε_rej)) ≤ 0,11 bit (0,13 annoncé). Valeurs corrigées dans PREUVES, PROOFS et le plan de cryptanalyse.
+
+**Rejet et clé publique (attaque C4 du plan) : aucune trace.** Cinq statistiques non linéaires de s (poids, transitions aux pas 1 et 2,
+triplets de uns, `wt(s ∧ z⁷s)`) ne séparent pas clés acceptées et rejetées : |z| ≤ 1,79 au seuil 4,5 (écart détectable : 0,10 et
+0,21 écart-type d'une clé). Test de détection, pas une preuve de H1-P sur clés acceptées.
+
+**Invariants non linéaires de BRUME (attaque A6 du plan) : exclus par calcul.** Critère de Beierle, Canteaut, Leander et Rotella :
+dim W_M(D) = 512 avec les 31 constantes intérieures, trois constantes consécutives suffisent ; aucun invariant commun à tous les tours,
+quelle que soit la S-box (`tests/c/invariants.c`, PREUVES § 4.2 bis). Restent hors critère les invariants variant d'un tour à l'autre et les
+invariants en boucle fermée.
+
+Contrôles : `invariants` 5/5, `kem_rejet` 6/6.

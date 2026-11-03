@@ -509,3 +509,21 @@ validation” status stays until a human review.
 
 Checks: `tests/c/revue_c.c` (6/6); `test_api_c`, `test_c_impl`, `test_te`, `test_c_fuzz`, `test_c_simd`,
 `test_kem`, `test_fonctionnel`, `test_robustesse`, `test_hachage_arbre`, `test_aead_parallele` passed.
+
+## Errata of 2026-11-03 (cryptanalysis: invariants, key rejection)
+
+**KEM key rejection rates: the values quoted were wrong.** PROOFS § 1 and § 2.3 (and the previous errata) gave
+“5 % and 8 %” for Sillage-128 and Sillage-256. Measured on 32 768 and 8 192 keys drawn as by `KeyGen` (`tests/c/kem_rejet.c`):
+**7.1 % ± 0.14 and 5.9 % ± 0.26**, in the opposite order. No consequence for the statements: the loss on ISD costs for accepted keys is
+log₂(1/(1 − ε_rej)) ≤ 0.11 bit (0.13 stated). Values corrected in PREUVES, PROOFS and the cryptanalysis plan.
+
+**Rejection and the public key (attack C4 of the plan): no trace.** Five non-linear statistics of s (weight, transitions at steps 1 and 2,
+triples of ones, `wt(s ∧ z⁷s)`) do not separate accepted from rejected keys: |z| ≤ 1.79 against a threshold of 4.5 (detectable shift: 0.10 and
+0.21 standard deviations of one key). A detection test, not a proof of H1-P on accepted keys.
+
+**Non-linear invariants of BRUME (attack A6 of the plan): excluded by computation.** Criterion of Beierle, Canteaut, Leander and Rotella:
+dim W_M(D) = 512 with the 31 inner constants, three consecutive constants suffice; no invariant common to all rounds,
+whatever the S-box (`tests/c/invariants.c`, PROOFS § 4.2 bis). Outside the criterion remain invariants that vary from round to round and
+closed-loop invariants.
+
+Checks: `invariants` 5/5, `kem_rejet` 6/6.

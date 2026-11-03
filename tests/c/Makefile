@@ -5,7 +5,7 @@ CC      ?= gcc
 CFLAGS  ?= -O3 -march=native -fopenmp -Wall -Wextra
 LIB     := ../../sillage/c
 SRC     := $(LIB)/commun.c $(LIB)/brume512.c $(LIB)/brume512_avx2.c $(LIB)/kem.c $(LIB)/sig.c
-NATIFS  := revue_c h1p_fourier structure_miss isd_reel isd_comparaison diffusion_support kem_distributions sig_flux brume_attaques mini_brume compression_sig
+NATIFS  := revue_c h1p_fourier invariants kem_rejet structure_miss isd_reel isd_comparaison diffusion_support kem_distributions sig_flux brume_attaques mini_brume compression_sig
 NUIT    := nuit_cryptanalyse nuit_kem_reel nuit_isd
 all: $(addprefix build/,$(NATIFS)) build/vole_proto
 nuit: $(addprefix build/,$(NUIT))
@@ -13,7 +13,7 @@ build/%: %.c resultat.h brume_ref.h $(SRC)
 	@mkdir -p build
 	$(CC) $(CFLAGS) -I $(LIB) -o $@ $< $(SRC) -lm
 # kem_distributions et nuit_kem_reel incluent kem.c (fonctions internes) : on ne le relie pas une seconde fois
-build/kem_distributions build/nuit_kem_reel: build/%: %.c resultat.h $(SRC)
+build/kem_distributions build/nuit_kem_reel build/kem_rejet: build/%: %.c resultat.h $(SRC)
 	@mkdir -p build
 	$(CC) $(CFLAGS) -I $(LIB) -o $@ $< $(filter-out $(LIB)/kem.c,$(SRC)) -lm
 # sig_flux : sig.c instrumenté (trace-pc), sl_alea déterministe (trace_pc.c),

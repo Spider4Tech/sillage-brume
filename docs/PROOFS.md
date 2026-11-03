@@ -48,11 +48,17 @@ acceptance in § 2.3), the pair `(h, x·h ⊕ y)` is indistinguishable from `(h,
 *Why accepted keys (correction of 2026-11-02).* Acceptance E depends on (x, y), which
 (h, s) determines. A statement about uniform secrets does not extend to accepted secrets: one only
 gets `|Pr[D | E] − Pr_ideal[D]| ≤ (Adv + ε_rej)/(1 − ε_rej)`, and the additive term ε_rej
-(≈ 5 % and 8 %) is not negligible. The **search** form (recovering x, y) does transfer:
+(7.1 % and 5.9 %, measured on 32 768 and 8 192 keys by `tests/c/kem_rejet.c`) is not negligible. The **search** form (recovering x, y) does transfer:
 the conditioned distribution has density at most `1/(1 − ε_rej)` with respect to the uniform one, so
 `Pr_E[A finds (x, y)] ≤ Pr[A finds (x, y)]/(1 − ε_rej)`. ISD costs remain valid on accepted
-keys, up to log₂(1/(1 − ε_rej)) ≤ 0.13 bit. The decisional statement, for its part, is made on the
+keys, up to log₂(1/(1 − ε_rej)) ≤ 0.11 bit. The decisional statement, for its part, is made on the
 actual key distribution: the one that `tests/c/kem_distributions.c` tests (600 and 150 accepted keys).
+
+*Rejection does not show in the public key* (`tests/c/kem_rejet.c`, a detection test). On 32 768 keys at 128 bits (2 330 rejected)
+and 8 192 at 256 bits (487), drawn exactly as by `KeyGen`, none of the five non-linear statistics of s tested (weight,
+transitions at steps 1 and 2, triples of ones, `wt(s ∧ z⁷s)`) separates accepted from rejected keys: |z| ≤ 1.79 against a threshold of 4.5, for a detectable
+mean shift of 0.10 and 0.21 standard deviations of one key. The parity of s is the same for every key (Lemma 0). On the secret side, the
+bound obviously separates the two classes (z = 151 and 77). This does not prove H1-P on accepted keys, but no trace of rejection appears.
 
 **(H2-P) Truncated three-block decisional QCSD, with parity.** For `h ← R`
 uniform, `s ← R_{β(h)}` uniform, `r1, r2 ← S_w^n` and `e = e1 ⊕ π(e2)`
@@ -234,7 +240,7 @@ for the 254 sets, replacing `e^{θc}` with `⌈2^{12}·e^{θc}⌉/2^{12}`, which
 any key with some `c > 15`. The C code computes the `c` values by a Walsh transform on registers, without
 any key-dependent branch or memory access (Valgrind); only the worst product `M_x·M_y` is made
 public. `keygen` rejects any key whose bound exceeds `2^{−λ}`. Hence **δ ≤ 2^{−λ} is proved** for the
-distribution of keys produced. Medians measured on raw keys (`resultats/kem.json`): `2^{−146}` and `2^{−289}`, rejections 5 % and 8 %.
+distribution of keys produced. Medians measured on raw keys (`resultats/kem.json`): `2^{−146}` and `2^{−289}`; rejections 7.1 % and 5.9 % (`tests/c/kem_rejet.c`).
 
 *v0.3 correction.* v0.2 justified correctness with a Gaussian z-score
 (bits assumed independent). The proved bound above shows that the
@@ -727,6 +733,14 @@ activity alone: **5 rounds** in both cases, no contradiction at 6 rounds or beyo
   `M ⊕ T_h M T_h⁻¹` has rank ≥ 126 over GF(16) for every translation h. The coefficients agree on at most 9.8 % (6.7 % at random).
 - *Invariant subspaces of M.* The binary minimal polynomial has degree 512, with factors of degrees 4, 8, 24 and 476: M is cyclic, and it has exactly **16 invariant subspaces**, one of dimension 4 (eigenvector over GF(16), λ = 3).
   They therefore exist, contrary to what a test restricted to small orders might suggest. They are harmless as such: these vectors have weights 119 and 118 nibbles, the S layer moves their line off every affine line (checked for each round and without constant), and a trail following them would activate more than 100 S-boxes per round.
+- *Non-linear invariants with the actual constants: excluded* (`tests/c/invariants.c`). Criterion of Beierle, Canteaut, Leander and Rotella
+  (CRYPTO 2017): an invariant g common to the S layer and to every “M then constant” layer has the whole of `W_M(D)` as linear
+  structures, the smallest M-invariant subspace containing `D = {rc_i ⊕ rc_j}`; if `dim W_M(D) ≥ n − 1`, g is affine, which an S-box
+  without an affine component forbids. With the 31 inner constants (rc₁ to rc₃₁), **dim W_M(D) = 512**: the non-linear invariant attack
+  (Todo–Leander–Sasaki) and the invariant subspace attack do not apply, **whatever the S-box**. Three consecutive constants suffice
+  (two: 508), so every reduced version of at least 4 rounds is covered. The 15 components of the S-box have degree 3. Control: with
+  L = identity instead of M, W falls back to span(D), of dimension 30. Outside the criterion: invariants that change from round to round and
+  closed-loop invariants (Beyne, ASIACRYPT 2018).
 
 **Algebraic.** S-box: 21 quadratic relations, univariate polynomial of degree 14 with 15 terms over GF(16), a single Frobenius-equivariant point. State recovery (rate known at input and output, c unknown bits):
 - **1 round: broken**, 256 bits recovered by linear solving (rate-capacity block of rank 64), without a solver;
@@ -1460,6 +1474,7 @@ depth 48; a seed oracle of one Keccak; total depth limited to MAXDEPTH via N·g�
   (`tests/c/structure_miss.c`). Exploiting the coefficient values gains nothing there for one nibble in input and output
   (`tests/c/brume_attaques.c`); this is not a bound for heavier patterns, nor for sets correlated across nibbles.
 - Boomerang (3 rounds measured), integrals, algebraic, graph structure (§ 4.2 bis): attacks that were searched for, without a general bound.
+  Excluded, on the other hand, by computation: non-linear invariants common to all rounds (BCLR criterion, dim W_M(D) = 512, § 4.2 bis).
 - QROM: reductions instantiated in § 5 bis, with caveats: implicit rejection of the KEM to be checked, collapsing of `H_c` and quantum
   proof of knowledge of the signature not established. They prove markedly less than the levels of known attacks (≈ 60 / 104 bits for the KEM,
   ≈ 32 / 68 bits for the signature), which are themselves below the nominal levels. Multi-user KEM not instantiated.

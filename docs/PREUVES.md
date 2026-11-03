@@ -46,11 +46,17 @@ l'acceptation de § 2.3), la paire `(h, x·h ⊕ y)` est indistinguable de `(h, 
 *Pourquoi les clés acceptées (correctif du 2026-11-02).* L'acceptation E dépend de (x, y), que
 (h, s) détermine. Un énoncé sur des secrets uniformes ne s'étend pas aux secrets acceptés : on a
 seulement `|Pr[D | E] − Pr_idéal[D]| ≤ (Adv + ε_rej)/(1 − ε_rej)`, et le terme additif ε_rej
-(≈ 5 % et 8 %) n'est pas négligeable. La forme **calculatoire** (retrouver x, y) se transfère, elle :
+(7,1 % et 5,9 %, mesurés sur 32 768 et 8 192 clés par `tests/c/kem_rejet.c`) n'est pas négligeable. La forme **calculatoire** (retrouver x, y) se transfère, elle :
 la loi conditionnée a une densité au plus `1/(1 − ε_rej)` par rapport à la loi uniforme, donc
 `Pr_E[A trouve (x, y)] ≤ Pr[A trouve (x, y)]/(1 − ε_rej)`. Les coûts d'ISD restent valables sur clés
-acceptées, à log₂(1/(1 − ε_rej)) ≤ 0,13 bit près. L'énoncé décisionnel, lui, est posé sur la loi
+acceptées, à log₂(1/(1 − ε_rej)) ≤ 0,11 bit près. L'énoncé décisionnel, lui, est posé sur la loi
 réelle des clés : c'est celle que `tests/c/kem_distributions.c` éprouve (600 et 150 clés acceptées).
+
+*Le rejet ne se voit pas dans la clé publique* (`tests/c/kem_rejet.c`, test de détection). Sur 32 768 clés à 128 bits (2 330 rejetées)
+et 8 192 à 256 bits (487), tirées exactement comme par `KeyGen`, aucune des cinq statistiques non linéaires de s testées (poids,
+transitions aux pas 1 et 2, triplets de uns, `wt(s ∧ z⁷s)`) ne sépare clés acceptées et rejetées : |z| ≤ 1,79 au seuil 4,5, pour un écart de
+moyenne détectable de 0,10 et 0,21 écart-type d'une clé. La parité de s est la même pour toutes les clés (Lemme 0). Côté secret, la
+borne sépare évidemment les deux classes (z = 151 et 77). Cela ne prouve pas H1-P sur clés acceptées, mais aucune trace du rejet n'apparaît.
 
 **(H2-P) QCSD décisionnel à 3 blocs tronqué, avec parité.** Pour `h ← R`
 uniforme, `s ← R_{β(h)}` uniforme, `r1, r2 ← S_w^n` et `e = e1 ⊕ π(e2)`
@@ -232,7 +238,7 @@ pour les 254 ensembles, en remplaçant `e^{θc}` par `⌈2^{12}·e^{θc}⌉/2^{1
 toute clé ayant un `c > 15`. Le C calcule les `c` par transformée de Walsh sur des registres, sans
 branchement ni accès mémoire dépendant de la clé (Valgrind) ; seul le pire produit `M_x·M_y` est rendu
 public. `keygen` rejette toute clé dont la borne dépasse `2^{−λ}`. On a donc **δ ≤ 2^{−λ} prouvé** pour la
-distribution des clés produite. Médianes mesurées sur clés brutes (`resultats/kem.json`) : `2^{−146}` et `2^{−289}`, rejets 5 % et 8 %.
+distribution des clés produite. Médianes mesurées sur clés brutes (`resultats/kem.json`) : `2^{−146}` et `2^{−289}` ; rejets 7,1 % et 5,9 % (`tests/c/kem_rejet.c`).
 
 *Correctif v0.3.* La v0.2 justifiait la correction par un z-score gaussien
 (bits supposés indépendants). La borne prouvée ci-dessus montre que les
@@ -725,6 +731,14 @@ l'activité seule : **5 tours** dans les deux cas, aucune contradiction à 6 tou
   `M ⊕ T_h M T_h⁻¹` a un rang ≥ 126 sur GF(16) pour toute translation h. Les coefficients coïncident au plus à 9,8 % (6,7 % au hasard).
 - *Sous-espaces invariants de M.* Le polynôme minimal binaire est de degré 512, de facteurs de degrés 4, 8, 24 et 476 : M est cyclique, et elle a exactement **16 sous-espaces invariants**, dont un de dimension 4 (vecteur propre sur GF(16), λ = 3).
   Ils existent donc, contrairement à ce que pourrait laisser croire un test limité aux petits ordres. Ils sont inoffensifs tels quels : ces vecteurs ont pour poids 119 et 118 nibbles, la couche S fait quitter à leur droite toute droite affine (vérifié pour chaque tour et sans constante), et une piste qui les suivrait activerait plus de 100 S-box par tour.
+- *Invariants non linéaires avec les vraies constantes : exclus* (`tests/c/invariants.c`). Critère de Beierle, Canteaut, Leander et Rotella
+  (CRYPTO 2017) : un invariant g commun à la couche S et à toutes les couches « M puis constante » admet pour structures linéaires tout
+  `W_M(D)`, plus petit sous-espace stable par M contenant `D = {rc_i ⊕ rc_j}` ; si `dim W_M(D) ≥ n − 1`, g est affine, ce qu'interdit une
+  S-box sans composante affine. Avec les 31 constantes intérieures (rc₁ à rc₃₁), **dim W_M(D) = 512** : l'attaque par invariant non linéaire
+  (Todo–Leander–Sasaki) et par sous-espace invariant ne s'applique pas, **quelle que soit la S-box**. Trois constantes consécutives suffisent
+  (deux : 508), donc toute version réduite d'au moins 4 tours est couverte. Les 15 composantes de la S-box sont de degré 3. Témoin : avec
+  L = identité à la place de M, W retombe à span(D), de dimension 30. Hors critère : invariants changeant d'un tour à l'autre et invariants
+  en boucle fermée (Beyne, ASIACRYPT 2018).
 
 **Algébrique.** S-box : 21 relations quadratiques, polynôme univarié de degré 14 à 15 termes sur GF(16), un seul point équivariant par Frobenius. Récupération d'état (débit connu en entrée et en sortie, c bits inconnus) :
 - **1 tour : cassé**, 256 bits retrouvés par résolution linéaire (bloc débit-capacité de rang 64), sans solveur ;
@@ -1458,6 +1472,7 @@ profondeur 48 ; oracle de graine d'un Keccak ; profondeur totale limitée à MAX
   (`tests/c/structure_miss.c`). Exploiter les valeurs des coefficients n'y gagne rien pour un nibble en entrée et en sortie
   (`tests/c/brume_attaques.c`) ; ce n'est pas une borne pour des motifs plus lourds, ni pour des ensembles corrélés entre nibbles.
 - Boomerang (3 tours mesurés), intégrales, algébrique, structure du graphe (§ 4.2 bis) : des attaques cherchées, sans borne générale.
+  Exclus en revanche, par calcul : les invariants non linéaires communs à tous les tours (critère BCLR, dim W_M(D) = 512, § 4.2 bis).
 - QROM : réductions instanciées au § 5 bis, sous réserve : rejet implicite du KEM à vérifier, collapsing de `H_c` et preuve de connaissance
   quantique de la SIG non établis. Elles prouvent nettement moins que les niveaux des attaques connues (≈ 60 / 104 bits pour le KEM,
   ≈ 32 / 68 bits pour la SIG), eux-mêmes inférieurs aux niveaux nominaux. KEM multi-utilisateur non instancié.
