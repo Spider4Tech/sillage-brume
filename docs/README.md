@@ -4,6 +4,7 @@ Every document exists in English and in French. The French version is the refere
 
 | English | French (reference) | Content | Status |
 |---|---|---|---|
+| [`SPEC.md`](SPEC.md) | — (English only for now) | Normative specification: encodings, tables, algorithms and known answers for BRUME-512 and its modes, Sillage-KEM and Sillage-SIG | Draft for review, written from the reference implementation |
 | [`PROOFS.md`](PROOFS.md) | [`PREUVES.md`](PREUVES.md) | Assumptions, theorems and proofs for the KEM, the signature, BRUME-512, the AEAD and hash modes; parameter derivations; quantum analysis; what remains outside the proofs | Maintained |
 | [`AUDIT_REPORT.md`](AUDIT_REPORT.md) | [`RAPPORT_AUDIT.md`](RAPPORT_AUDIT.md) | Development history: every flaw found (by the test suite, by external reviews or by re-reading), how it was found and how it was fixed; dated errata | Maintained |
 | [`LEADS.md`](LEADS.md) | [`PISTES.md`](PISTES.md) | Measured optimisations and research leads that were **not** adopted, and the security conditions under which they could be | Maintained |

@@ -621,6 +621,7 @@ sillage-brume/
 ├── requirements-tests.txt   Dependencies of the full test suite
 ├── docs/
 │   ├── README.md            Index of the documents (each in English and French)
+│   ├── SPEC.md              Normative specification (English)
 │   ├── PROOFS.md            Proofs, assumptions and parameter derivations   (PREUVES.md)
 │   ├── AUDIT_REPORT.md      Development audit history and corrected issues  (RAPPORT_AUDIT.md)
 │   ├── LEADS.md             Measured optimisations and research leads       (PISTES.md)
