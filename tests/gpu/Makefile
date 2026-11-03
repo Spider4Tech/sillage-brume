@@ -15,4 +15,14 @@ build/%: %.cu brume.cuh $(LIB) Makefile
 	@mkdir -p build
 	$(NVCC) $(NVFL) -o $@ $< $(LIB) -lgomp -lm
 
+# sig_kz_gpu : hôte C (code SIG réel, tests/c/sig_kz_commun.h) + noyaux CUDA ; lanceur : ./runtestg-gpu.sh
+CC    ?= cc
+CFL    = -O3 -march=native -fopenmp -Wall -Wextra -I$(L) -I../c -I../c/build
+../c/build/sig_var.c: $(L)/sig.c
+	$(MAKE) -C ../c build/sig_var.c
+build/sig_kz_gpu: sig_kz_gpu.c sig_kz_gpu.cu sig_kz_gpu.h ../c/sig_kz_commun.h ../c/build/sig_var.c ../c/resultat.h $(LIB) Makefile
+	@mkdir -p build
+	$(CC) $(CFL) -c -o build/sig_kz_gpu_hote.o sig_kz_gpu.c
+	$(NVCC) $(NVFL) -Xptxas -v -o $@ sig_kz_gpu.cu build/sig_kz_gpu_hote.o $(LIB) -lgomp -lm 2>build/sig_kz_gpu.ptxas || { cat build/sig_kz_gpu.ptxas; exit 1; }
+
 .PHONY: all

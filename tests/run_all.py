@@ -76,6 +76,7 @@ TESTS = [
     ("c:kem_rejet", "kem_rejet", "Intensif (C)"),
     ("c:brume_gd2", "brume_gd2", "Intensif (C)"),
     ("c:sig_flux", "sig_flux", "Intensif (C)"),
+    ("c:sig_kz", "sig_kz", "Intensif (C)"),
     ("c:brume_attaques", "brume_attaques", "Intensif (C)"),
     ("c:mini_brume", "mini_brume", "Intensif (C)"),
     ("c:vole_proto", "vole_proto", "Intensif (C)"),

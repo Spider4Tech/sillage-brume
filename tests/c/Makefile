@@ -24,7 +24,7 @@ build/sig_flux: sig_flux.c trace_pc.c resultat.h $(SRC)
 	$(CC) $(CFLAGS) -Dsl_alea=sl_alea_systeme -I $(LIB) -c -o build/commun_rejeu.o $(LIB)/commun.c
 	$(CC) $(CFLAGS) -fsanitize-coverage=trace-pc -I $(LIB) -o $@ $< build/trace_pc.o build/commun_rejeu.o \
 		$(LIB)/brume512.c $(LIB)/brume512_avx2.c -lm
-# Études de taille et attaques sur SD régulier (docs/PISTES.md, piste 9). kem_var.c : kem.c avec sa table de paramètres modifiable, pour ce seul outil
+# Études de taille et attaques sur SD régulier (docs/LEADS.md, piste 9). kem_var.c : kem.c avec sa table de paramètres modifiable, pour ce seul outil
 compression: build/compression_kem build/compression_sig build/vole_params build/vole_proto build/rsd_attaques
 build/rsd_attaques: rsd_attaques.c resultat.h $(LIB)/isd.c
 	@mkdir -p build
@@ -46,7 +46,7 @@ build/compression_kem: compression_kem.c build/kem_var.c resultat.h $(SRC) $(LIB
 build/sig_var.c: $(LIB)/sig.c
 	@mkdir -p build
 	sed 's/^static const sp_t SP\[2\]/static sp_t SP[2]/' $< > $@
-build/sig_kz: sig_kz.c build/sig_var.c resultat.h $(SRC)
+build/sig_kz: sig_kz.c sig_kz_commun.h build/sig_var.c resultat.h $(SRC)
 	$(CC) $(CFLAGS) -I $(LIB) -I build -o $@ $< $(filter-out $(LIB)/sig.c,$(SRC)) -lm
 build/compression_sig: compression_sig.c resultat.h
 	@mkdir -p build
