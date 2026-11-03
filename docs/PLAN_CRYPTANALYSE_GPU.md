@@ -93,7 +93,7 @@ annoncée (24 tours au-delà des distingueurs mesurés) et serait publiable comm
 |---|---|---|
 | **B1. Collision sur le hachage à tours réduits** : trail différentiel trouvé en A3 et A5, modification de message sur les premiers tours, paradoxe des anniversaires par points distingués sur GPU pour la fin | sans clé | **Une collision réelle sur R tours**, le résultat phare classique. Viser R = 4 à 5 |
 | **B2. Préimage par structures linéaires** (Guo–Liu–Song) : choix d'un sous-espace d'entrée qui linéarise 1 à 2 tours, puis énumération GPU | sans clé | 2 à 3 tours, au lieu du seul tour cassé aujourd'hui |
-| **B3. Récupération d'état du duplex à tours réduits** : devine-et-détermine, avec énumération GPU de 2^40 à 2^48 hypothèses sur la capacité, puis linéarisation | AEAD, débit connu des deux côtés | 2 tours avec 256 bits inconnus (SAT plafonne à 128), puis 3 tours |
+| **B3. Récupération d'état du duplex à tours réduits** : devine-et-détermine, avec énumération GPU de 2^40 à 2^48 hypothèses sur la capacité, puis linéarisation | AEAD, débit connu des deux côtés | **2 tours fait le 2026-11-03, sur CPU** (`tests/c/brume_gd2.c`) : 256 bits retrouvés en ≈ 2^97, modèle validé ; 3 tours hors de portée de la méthode (63 inconnues sur 64 par équation) |
 | **B4. Attaques avec réutilisation de nonce** (hors modèle, mais un pro le mesure) : cubes sur un bloc de clair, capacité fixe | AEAD, nonce répété | Fixer le niveau de résistance aux erreurs d'usage ; à documenter comme hors revendication |
 
 L'initialisation de l'AEAD (nonce → 2 permutations complètes → flux) est hors de portée par construction : on le documente comme une

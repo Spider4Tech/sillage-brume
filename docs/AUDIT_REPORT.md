@@ -510,7 +510,7 @@ validation” status stays until a human review.
 Checks: `tests/c/revue_c.c` (6/6); `test_api_c`, `test_c_impl`, `test_te`, `test_c_fuzz`, `test_c_simd`,
 `test_kem`, `test_fonctionnel`, `test_robustesse`, `test_hachage_arbre`, `test_aead_parallele` passed.
 
-## Errata of 2026-11-03 (cryptanalysis: invariants, key rejection)
+## Errata of 2026-11-03 (cryptanalysis: invariants, key rejection, reduced-round BRUME)
 
 **KEM key rejection rates: the values quoted were wrong.** PROOFS § 1 and § 2.3 (and the previous errata) gave
 “5 % and 8 %” for Sillage-128 and Sillage-256. Measured on 32 768 and 8 192 keys drawn as by `KeyGen` (`tests/c/kem_rejet.c`):
@@ -526,4 +526,12 @@ dim W_M(D) = 512 with the 31 inner constants, three consecutive constants suffic
 whatever the S-box (`tests/c/invariants.c`, PROOFS § 4.2 bis). Outside the criterion remain invariants that vary from round to round and
 closed-loop invariants.
 
-Checks: `invariants` 5/5, `kem_rejet` 6/6.
+**BRUME at 2 rounds: capacity recovered in ≈ 2^97 (attack B3 of the plan).** Guess-and-determine on the bipartite structure
+(rate = half A, capacity = half B, generators all reflections): each rate nibble depends on 6 unknowns after 2 rounds,
+width 24, model validated on the real BRUME (oracle of 21 unknowns, 24 states out of 24 recovered, deviation ≤ 1.2 bits). SAT topped out at
+128 unknown bits. At 3 rounds, 63 unknowns out of 64 per equation: the method stops. Preimage at 2 rounds: 2²⁰⁴, above the generic bound.
+
+**Minimal number of active S-boxes, exact model.** Bit-level linear layer, actual DDT and actual LAT (SAT, `tests/c/sat_trails.c`):
+exactly 8 over 2 rounds, reached; 3 rounds undecided at 600 s for K = 13 to 20. No improvement of Proposition 10 within this budget.
+
+Checks: `invariants` 5/5, `kem_rejet` 6/6, `brume_gd2` 4/4.

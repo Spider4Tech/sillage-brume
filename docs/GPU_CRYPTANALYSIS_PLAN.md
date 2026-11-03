@@ -95,7 +95,7 @@ margin (24 rounds beyond the measured distinguishers) and would be publishable a
 |---|---|---|
 | **B1. Collision on the reduced-round hash**: differential trail found in A3 and A5, message modification on the first rounds, birthday paradox with distinguished points on GPU for the end | unkeyed | **A real collision on R rounds**, the classic flagship result. Aim for R = 4 to 5 |
 | **B2. Preimage through linear structures** (Guo–Liu–Song): choose an input subspace that linearises 1 to 2 rounds, then GPU enumeration | unkeyed | 2 to 3 rounds, instead of the single round broken today |
-| **B3. State recovery on the reduced-round duplex**: guess-and-determine, with GPU enumeration of 2^40 to 2^48 guesses on the capacity, then linearisation | AEAD, rate known on both sides | 2 rounds with 256 unknown bits (SAT tops out at 128), then 3 rounds |
+| **B3. State recovery on the reduced-round duplex**: guess-and-determine, with GPU enumeration of 2^40 to 2^48 guesses on the capacity, then linearisation | AEAD, rate known on both sides | **2 rounds done on 2026-11-03, on CPU** (`tests/c/brume_gd2.c`): 256 bits recovered in ≈ 2^97, model validated; 3 rounds out of reach of the method (63 unknowns out of 64 per equation) |
 | **B4. Nonce-reuse attacks** (outside the model, but a professional measures it): cubes on one plaintext block, fixed capacity | AEAD, repeated nonce | Establish the level of resistance to misuse; to be documented as outside the claims |
 
 The AEAD initialisation (nonce → 2 full permutations → keystream) is out of reach by construction: this is documented as a

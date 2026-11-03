@@ -743,9 +743,22 @@ l'activité seule : **5 tours** dans les deux cas, aucune contradiction à 6 tou
 **Algébrique.** S-box : 21 relations quadratiques, polynôme univarié de degré 14 à 15 termes sur GF(16), un seul point équivariant par Frobenius. Récupération d'état (débit connu en entrée et en sortie, c bits inconnus) :
 - **1 tour : cassé**, 256 bits retrouvés par résolution linéaire (bloc débit-capacité de rang 64), sans solveur ;
 - SAT, 20 à 25 s par cas : jusqu'à 128 bits inconnus à 2 tours, 16 bits à 3 et 4 tours, rien à 5 tours ; aucun cas à 256 bits, même à 1 tour, où l'attaque dédiée fait pourtant mieux. **SAT sous-estime donc les attaques dédiées.**
+- **2 tours : capacité entière (256 bits) retrouvée en ≈ 2^97**, par devinette et détermination (`tests/c/brume_gd2.c`). Tous les générateurs
+  relient la moitié A (débit) à la moitié B (capacité) : après 2 tours, chaque nibble de débit ne dépend que de 6 nibbles inconnus, ses voisins
+  de B (u + {0, 7, 8, 21, 45, 62} mod 64). En introduisant les 64 inconnues dans un ordre choisi, chaque équation complète filtre d'un
+  facteur 16 ; la largeur max (|V| − |E|) vaut 24 (glouton et recuit simulé, 24 sur toutes les graines ; aucune graine de propagation
+  pure de taille ≤ 8), d'où 16²⁴ = 2⁹⁶ en énumération en profondeur, mémoire négligeable. Validé sur le vrai BRUME à 2 tours, oracle
+  fournissant 21 inconnues : état retrouvé sur 24 états sur 24, une seule solution, nœuds à 1,2 bit du modèle (≈ 2^97,2).
+- **3 tours : cette méthode s'arrête.** Chaque nibble de débit dépend alors de 63 des 64 nibbles inconnus.
+- *Préimage d'un bloc du hachage réduit* : 1 tour cassé (chaque nibble de sortie ne dépend que d'un nibble de message) ; à 2 tours,
+  31 nibbles de message par nibble de sortie, largeur 51, soit 2²⁰⁴, au-dessus de la borne générique de l'éponge (2¹²⁸) : pas d'attaque.
 L'estimation par degré de régularité sous hypothèse semi-régulière (2²⁴⁷ à 1 tour) est contredite par cette attaque à 1 tour : ce n'est **pas** un argument de sécurité, et elle n'est pas utilisée comme tel.
 
 **Activité.** CP-SAT sur le modèle tronqué ne prouve à ce budget que 12, 16 et 24 S-box sur 3, 4 et 6 tours, soit le 4r de la Proposition 10 : **128 à 32 tours n'est pas amélioré**. Les trails trouvés sont bien au-dessus (44 à 3 tours).
+Modèle exact (`tests/c/sat_trails.c`, méthode de Sun, Wang et Wang, ToSC 2021 : couche linéaire bit à bit, vraie DDT et vraie LAT,
+CryptoMiniSat, chaque solution revérifiée hors du solveur) : sur 2 tours, le minimum est **exactement 8** en différentiel et en linéaire,
+atteint (1 puis 7 S-box, 7 puis 1) : la borne de branchement est serrée. Sur 3 tours, en différentiel, « ≤ 13 », « ≤ 16 » et « ≤ 20 » restent indécis à
+600 s : la méthode ne passe pas l'échelle de 128 S-box par tour, ce que notent aussi ses auteurs pour les états non légers.
 
 Des échelles plus grandes sont prévues dans le volet `tests/nuit_brume.py` de la campagne de nuit.
 

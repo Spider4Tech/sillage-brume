@@ -508,7 +508,7 @@ validation » reste en place jusqu'à une relecture humaine.
 Contrôles : `tests/c/revue_c.c` (6/6) ; `test_api_c`, `test_c_impl`, `test_te`, `test_c_fuzz`, `test_c_simd`,
 `test_kem`, `test_fonctionnel`, `test_robustesse`, `test_hachage_arbre`, `test_aead_parallele` réussis.
 
-## Errata du 2026-11-03 (cryptanalyse : invariants, rejet des clés)
+## Errata du 2026-11-03 (cryptanalyse : invariants, rejet des clés, BRUME à tours réduits)
 
 **Taux de rejet des clés du KEM : les valeurs citées étaient fausses.** PREUVES § 1 et § 2.3 (et l'errata précédent) donnaient
 « 5 % et 8 % » pour Sillage-128 et Sillage-256. Mesuré sur 32 768 et 8 192 clés tirées comme par `KeyGen` (`tests/c/kem_rejet.c`) :
@@ -524,4 +524,12 @@ dim W_M(D) = 512 avec les 31 constantes intérieures, trois constantes consécut
 quelle que soit la S-box (`tests/c/invariants.c`, PREUVES § 4.2 bis). Restent hors critère les invariants variant d'un tour à l'autre et les
 invariants en boucle fermée.
 
-Contrôles : `invariants` 5/5, `kem_rejet` 6/6.
+**BRUME à 2 tours : capacité retrouvée en ≈ 2^97 (attaque B3 du plan).** Devinette et détermination sur la structure bipartie
+(débit = moitié A, capacité = moitié B, générateurs tous réflexions) : chaque nibble de débit dépend de 6 inconnues après 2 tours,
+largeur 24, modèle validé sur le vrai BRUME (oracle de 21 inconnues, 24 états sur 24 retrouvés, écart ≤ 1,2 bit). SAT plafonnait à
+128 bits inconnus. À 3 tours, 63 inconnues sur 64 par équation : la méthode s'arrête. Préimage à 2 tours : 2²⁰⁴, au-dessus du générique.
+
+**Nombre minimal de S-box actives, modèle exact.** Couche linéaire bit à bit, vraie DDT et vraie LAT (SAT, `tests/c/sat_trails.c`) :
+8 exactement sur 2 tours, atteint ; 3 tours indécis à 600 s pour K = 13 à 20. Aucune amélioration de la Proposition 10 à ce budget.
+
+Contrôles : `invariants` 5/5, `kem_rejet` 6/6, `brume_gd2` 4/4.

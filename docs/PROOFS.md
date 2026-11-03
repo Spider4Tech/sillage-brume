@@ -745,9 +745,22 @@ activity alone: **5 rounds** in both cases, no contradiction at 6 rounds or beyo
 **Algebraic.** S-box: 21 quadratic relations, univariate polynomial of degree 14 with 15 terms over GF(16), a single Frobenius-equivariant point. State recovery (rate known at input and output, c unknown bits):
 - **1 round: broken**, 256 bits recovered by linear solving (rate-capacity block of rank 64), without a solver;
 - SAT, 20 to 25 s per case: up to 128 unknown bits at 2 rounds, 16 bits at 3 and 4 rounds, nothing at 5 rounds; no case at 256 bits, even at 1 round, where the dedicated attack does better. **SAT therefore underestimates dedicated attacks.**
+- **2 rounds: the whole capacity (256 bits) recovered in ≈ 2^97**, by guess-and-determine (`tests/c/brume_gd2.c`). Every generator
+  links half A (rate) to half B (capacity): after 2 rounds, each rate nibble depends on only 6 unknown nibbles, its neighbours
+  in B (u + {0, 7, 8, 21, 45, 62} mod 64). Introducing the 64 unknowns in a chosen order, each completed equation filters by a
+  factor 16; the maximal width (|V| − |E|) is 24 (greedy and simulated annealing, 24 on every seed; no pure propagation seed
+  of size ≤ 8), hence 16²⁴ = 2⁹⁶ by depth-first enumeration, with negligible memory. Validated on the real 2-round BRUME, with an oracle
+  supplying 21 unknowns: state recovered on 24 states out of 24, a single solution, nodes within 1.2 bits of the model (≈ 2^97.2).
+- **3 rounds: this method stops.** Each rate nibble then depends on 63 of the 64 unknown nibbles.
+- *Preimage of one block of the reduced hash*: 1 round broken (each output nibble depends on a single message nibble); at 2 rounds,
+  31 message nibbles per output nibble, width 51, i.e. 2²⁰⁴, above the generic sponge bound (2¹²⁸): no attack.
 The estimate by degree of regularity under the semi-regular assumption (2²⁴⁷ at 1 round) is contradicted by this 1-round attack: it is **not** a security argument, and it is not used as one.
 
 **Activity.** CP-SAT on the truncated model only proves, within this budget, 12, 16 and 24 S-boxes over 3, 4 and 6 rounds, i.e. the 4r of Proposition 10: **128 at 32 rounds is not improved**. The trails found are well above (44 at 3 rounds).
+Exact model (`tests/c/sat_trails.c`, method of Sun, Wang and Wang, ToSC 2021: bit-level linear layer, actual DDT and actual LAT,
+CryptoMiniSat, each solution rechecked outside the solver): over 2 rounds, the minimum is **exactly 8** in differential and in linear,
+reached (1 then 7 S-boxes, 7 then 1): the branch-number bound is tight. Over 3 rounds, in differential, “≤ 13”, “≤ 16” and “≤ 20” remain undecided at
+600 s: the method does not scale to 128 S-boxes per round, as its authors also note for non-lightweight states.
 
 Larger scales are planned in the `tests/nuit_brume.py` part of the night campaign.
 
