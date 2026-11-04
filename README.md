@@ -284,7 +284,7 @@ The exact branch-number result gives a wide-trail lower bound of at least 128 ac
 - differential characteristic probability: at most `2⁻²⁵⁶`;
 - linear trail correlation: at most `2⁻¹²⁸`.
 
-These are **characteristic/trail bounds in the stated model**, not bounds on the sum of all differential characteristics or linear trails for the concrete fixed permutation. The Markov model is an approximation; reduced-model experiments found it close in the tested settings, but not exact. A two-round aggregation bound is documented separately. No corresponding general aggregation proof is claimed for arbitrary numbers of rounds.
+These are **characteristic/trail bounds in the stated model**, not bounds on the sum of all differential characteristics or linear trails for the concrete fixed permutation. The Markov model is an assumption for a permutation without subkeys. In exact reduced models (mini-BRUME, 24 bits), fixed-constant instances deviate from it by no more than the dispersion measured between random constant sets, of which the Markov chain is the exact average (PROOFS § 4.2 bis); this does not extend to 512 bits by itself. A two-round aggregation bound is documented separately. No corresponding general aggregation proof is claimed for arbitrary numbers of rounds.
 
 The permutation is not proved to be an ideal permutation or a secure PRP. Its structural properties rule out or constrain particular attack families; they do not prove the security of the full 32-round construction.
 

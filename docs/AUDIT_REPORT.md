@@ -535,3 +535,46 @@ width 24, model validated on the real BRUME (oracle of 21 unknowns, 24 states ou
 exactly 8 over 2 rounds, reached; 3 rounds undecided at 600 s for K = 13 to 20. No improvement of Proposition 10 within this budget.
 
 Checks: `invariants` 5/5, `kem_rejet` 6/6, `brume_gd2` 4/4.
+
+## Errata of 2026-11-04 (statistical tests: null distributions assumed, not verified)
+
+Review of every test whose verdict compares a statistic with a threshold, looking for a null distribution that is assumed instead of
+checked. Three defects fixed, two missing controls added (commit 3d2e44d).
+
+**mini-BRUME, Markov test (`tests/c/mini_brume.c`, PROOFS § 4.2 bis).** The z of the actual/Markov ratio assumed a Poisson noise of
+variance N·p per point. It was never checked, it missed the factor 2 for differences (H counts ordered pairs), and “noise of c² ≈ 1/N”
+was a guess. Fix: each round XORs its constant before the S-boxes, so with independent uniform constants the Markov chain is exactly
+the average of the real distribution (Lai–Massey–Murphy; Nyberg for LP). The test draws 32 constant sets per (instance, α, R), R = 2
+to 5, and measures the same ratio on the same 64 points. The mean is 1 everywhere (new check
+`markov_egal_a_la_moyenne_sur_les_constantes`); the linear spread is 2 to 17 times the Poisson value at 3 rounds. Every instance stays
+within 2.5 σ of its constant distribution: **the “statistically clear gap at 3 rounds (z = 4.6; 11)” is withdrawn**; it came from the
+noise model. The random-permutation witness now also measures the LP and boomerang maxima: 16, 31.2/N and 6/N against thresholds
+of 24, 40/N and 24/N (new check `seuils_de_portee_non_atteints_par_le_temoin`).
+
+**`nuit_cryptanalyse`, H0 calibration: cause of the z = 4.49 of the 24-hour campaign.** The z of the mean joint linear χ² assumed the
+128 per-nibble values independent. Each contains the χ² of the input-nibble margin (15 dof), which is the same for all 128, since the
+samples are shared. Exact-H0 simulation (400 × 8 runs): standard deviation 1.995, not 0.706. The 4.49 was about 1.5 real σ, and
+|z| < 5 failed spuriously in about 8 % of runs. The margin term is now removed: 240 independent dof, simulated σ 0.696 against
+0.685 predicted; check run 240.16 for 240 (z = 0.24). The detection statistics (maximum χ², Bonferroni) were not affected.
+
+**`test_diff_lin_empirique`, clustering at 2 rounds.** The count kept only the 5 most frequent differences of each batch of 2¹⁶
+pairs and measured 2⁻¹⁹·⁰, below the best characteristic itself (2⁻¹⁷), which is impossible: the one-sided check against
+amplification could not fail. Candidates are now selected on 2²⁰ pairs and counted on 2²¹ independent pairs: 2⁻¹⁷·⁵⁴.
+
+**Missing control: H0 witness of the statistical battery (`test_c_statistiques`).** Nothing checked that the battery accepts a truly
+random stream, so a rejection of BRUME would have proved nothing. Same battery on 64 MiB of SHAKE256: 34 tests, p_min 0.053, KS 0.82
+(new check `temoin_h0_flux_de_reference_conforme`).
+
+**Cosmetic.** `test_sig_modele`: margin at the binomial variance of the bound rather than 1/4 (bounds 0.47 to 0.66: no effect).
+
+**Reviewed, no defect found:** `campagne_dl` (GPU; H0 at 32 rounds and an imposed 2⁻¹⁵ bias as witnesses), the boomerang of
+`brume_attaques` (witness at 1 round, Bonferroni), `test_c_diff_lin`, `test_c_sac`, `kem_rejet`, `kem_distributions`,
+`test_c_kem_bruit` (simulation cross-checked against real encapsulations), `test_c_temps` (A/A and 300-cycle witness),
+`test_c_integral`.
+
+**Left as is, minor:** `test_kem` (`marge_decodage`) still uses the independent-bit model that v0.3 dropped from the proof (a heuristic
+check far from its threshold; δ is proved elsewhere); `campagne_dl` takes the χ² tail from the Wilson–Hilferty approximation; the KS
+test of the battery runs on partly correlated p-values (covered by the H0 witness, for one seed).
+
+Checks: `mini_brume` 6/6 (8 instances, 2 α, 35 instances at 32 bits, 32 constant sets); `test_diff_lin_empirique` 4/4; H0 calibration
+of `nuit_cryptanalyse` passed. The night campaign of 2026-11-04 runs these versions.

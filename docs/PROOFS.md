@@ -745,7 +745,7 @@ Three similar-looking statements do not have the same status:
 | Statement | Nature | What it does not say |
 |---|---|---|
 | ≥ 128 active S-boxes per characteristic over 32 rounds | **proved and certified** (Theorem 9, Proposition 10), a property of the construction | nothing about probabilities, nor about aggregated differentials |
-| Characteristic ≤ 2⁻²⁵⁶, linear trail ≤ 2⁻¹²⁸ | **Markov model**: an assumption, BRUME having no subkeys | nothing about the concrete permutation; the model is measurably inexact (below) |
+| Characteristic ≤ 2⁻²⁵⁶, linear trail ≤ 2⁻¹²⁸ | **Markov model**: an assumption, BRUME having no subkeys | nothing about the concrete permutation; at small scale, a fixed-constant instance deviates from the model by the key-to-key dispersion, not more (below) |
 | 20 rounds inside-out | **exact reach of the division property** | it is not an actual integral attack on 20 rounds, nor a ceiling for such an attack |
 
 The actual integral reach and aggregation beyond 2 rounds remain **open** at 512 bits. What follows sheds light on them without closing them.
@@ -763,16 +763,32 @@ At 32 bits, reality therefore exceeds the degree bound by one round. This may co
 Direct test, SAT solver with weight windows: of 20 queries at 5 rounds and 32 bits, **13 with no trail at all, 0 with a trail, 7 undecided** at 15 minutes. **No cancellation was
 observed**: where the computation finishes, the division property sees this extra round. Caveat: 7 queries remain undecided, and this small-scale result does not guarantee 512 bits.
 
-*Aggregation and Markov* (input nibble, exact distribution versus Markov chain and best trail, two α per instance):
+*Aggregation and Markov* (input nibble, exact distribution versus Markov chain and best trail, two α per instance, 8 instances).
+Each round XORs its constant before the S-boxes, so with **independent uniform constants the Markov chain is exactly the average of
+the real distribution over the constants** (Lai–Massey–Murphy for differences, Nyberg for LP). The test uses this to calibrate the
+noise instead of assuming it: for each instance, α and R, 32 random constant sets give the same ratio, on the same 64 points chosen by
+the model. Their mean is 1 in every case (check `markov_egal_a_la_moyenne_sur_les_constantes`); their spread σ is the actual deviation
+of a fixed-constant instance from the model.
 
-| Rounds | Actual peak / best trail | Actual / Markov, 64 points chosen by the model | Exact LP / ELP, likewise |
-|---|---|---|---|
-| 2 | ≤ 1.25 | 1.00 | 0.99 to 1.04 |
-| 3 | ≤ 3.4 (peak chosen after the fact: biased upwards) | 0.95 to 1.12 | 0.90 to 1.14 |
-| ≥ 4 | at noise level (random control: H_max = 16, actual ≤ 20) | not significant | not significant |
+| Rounds | Actual peak / best trail | Actual / Markov, 64 points (diff.) | σ between constants (diff.; Poisson) | Exact LP / ELP, likewise | σ between constants (lin.; Poisson) | max \|z\| against the constants |
+|---|---|---|---|---|---|---|
+| 2 | ≤ 1.25 | 1.000 (exact, for every constant set) | 0 | 0.99 to 1.04 | 0.0025 (0.004) | 1.4 |
+| 3 | ≤ 3.4 (peak chosen after the fact: biased upwards) | 0.95 to 1.12 | 0.025 (0.024) | 0.70 to 1.14 | 0.14 (0.047) | 1.9 |
+| 4 | at noise level (random control: H_max = 16, actual ≤ 20) | 0.52 to 1.07 | 0.18 (0.16) | 0.73 to 1.16 | 0.18 (0.12) | 2.4 |
+| 5 | likewise | 0.72 to 1.40 | 0.18 (0.18) | 0.72 to 1.33 | 0.17 (0.13) | 2.5 |
 
-Aggregation stays moderate as long as it can be measured, and Markov tracks reality within ≈ 15 %, without being equal to it: the gap at 3 rounds is statistically clear (z = 4.6; 11 in the linear case). The signal
-vanishes from 4 rounds on at this size, which says nothing about 512 bits, where the space is not saturated.
+σ: median over the 16 (instance, α) cases; in brackets, what a Poisson noise of variance 2·N·p per point (N·p for c²) would give.
+**No instance deviates from Markov more than a typical constant set does**: max |z| ≤ 2.5 over 128 cases, and the RMS of z is 0.7 to
+1.0. At 3 rounds the differential spread matches Poisson (0.35 to 3.3 times it, depending on the case), but the linear spread is 2 to
+17 times larger. A fixed-constant instance therefore stays within about 2.5 % (differential) and 14 % (linear) of the model at 3
+rounds, on the 64 most probable points, and within about 18 % at 4 and 5 rounds, where the 24-bit space is saturated; this says
+nothing about 512 bits.
+
+*Correction (2026-11-04).* A previous version read the gap at 3 rounds as statistically clear (z = 4.6; 11 in the linear case).
+That z assumed a Poisson noise of variance N·p per point, never checked, and missed the factor 2 for differences (each pair is
+counted twice). Against the measured spread, the same cases give z = 1.8 and 1.9: the gap was an artefact of the noise model. The
+reach thresholds of the test (H_max > 24, LP > 40/N, boomerang > 24/N) are now checked on the random permutation as well
+(16, 31.2/N and 6/N).
 
 **Boomerang** (`tests/c/brume_attaques.c`). S-box: max BCT = 10 out of 16, so a pass through the middle costs `2^{−0.7}` per active S-box, against `2^{−4}` for DDT². Measured, with δ = M·(one nibble):
 **3 rounds** (z = 14.8 at 2²⁰ quartets, 16 combinations), nothing at 4 rounds and beyond at this scale. A first version, with δ on a single nibble, only saw 2 rounds: the dense M⁻¹ immediately activated more than
