@@ -64,18 +64,28 @@ def run():
     c["lin_1_tour_conforme"] = abs(corr - pred) < 5 / math.sqrt(S)
     # 4. regroupement 2 tours : différence la plus fréquente après 2 tours
     #    depuis 1 nibble actif vs meilleure caractéristique (2^-2 · 2^-14)
+    #    Sélection puis comptage sur des échantillons INDÉPENDANTS. L'ancienne version ne cumulait, lot par lot,
+    #    que les 5 différences les plus fréquentes du lot : les occurrences hors de ce top 5 étaient perdues, ce qui
+    #    sous-estimait la fréquence maximale et rendait le contrôle (unilatéral, contre une amplification) aveugle.
+    #    Choisir et compter sur les mêmes paires biaiserait au contraire vers le haut.
     best_char = math.log2(DDT[a, b] / 16) + 7 * math.log2(DDT[1:].max() / 16)
-    cnt = {}
-    S = 1 << 21
-    for _ in range(S // (1 << 16)):
+    sel = {}
+    for _ in range(16):                                  # sélection : 2^20 paires
         X = rng.integers(0, 16, (1 << 16, N), dtype=np.uint8)
         D = permute(X, 2) ^ permute(X ^ din, 2)
         u, k = np.unique(D, axis=0, return_counts=True)
-        top = np.argsort(k)[-5:]
-        for t in top:
+        for t in np.nonzero(k > 1)[0]:
             key = u[t].tobytes()
-            cnt[key] = cnt.get(key, 0) + int(k[t])
-    top = max(cnt.values())
+            sel[key] = sel.get(key, 0) + int(k[t])
+    cands = [np.frombuffer(kk, np.uint8) for kk, _ in sorted(sel.items(), key=lambda e: -e[1])[:8]]
+    S = 1 << 21
+    cnt = [0] * len(cands)
+    for _ in range(S // (1 << 16)):                      # comptage exact : 2^21 paires nouvelles
+        X = rng.integers(0, 16, (1 << 16, N), dtype=np.uint8)
+        D = permute(X, 2) ^ permute(X ^ din, 2)
+        for i, cd in enumerate(cands):
+            cnt[i] += int((D == cd).all(1).sum())
+    top = max(cnt, default=0)
     m["diff_2_tours"] = {"meilleure_frequence_log2": round(math.log2(top / S), 2) if top > 1 else None,
                          "meilleure_caracteristique_log2": best_char,
                          "echantillons_log2": 21}

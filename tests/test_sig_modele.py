@@ -447,8 +447,12 @@ def run():
     att = _attaque_theoreme_8(rng, int(300 * float(os.environ.get("SILLAGE_INTENSITE", "1"))))
     m["attaque_kales_zaverucha"] = att
     c["falsifications_acceptees_par_le_vrai_verifieur"] = all(a["verifiees"] == a["succes"] for a in att.values()) and any(a["succes"] for a in att.values())
-    # marge statistique : 3 écarts-types au-dessus de la borne
-    c["theoreme_8_majore_chaque_attaque"] = all(a["frequence"] <= a["borne_theoreme_8"] + 3 * math.sqrt(0.25 / a["essais"]) for a in att.values())
+    # marge statistique : 3 écarts-types de la binomiale À LA BORNE (sous H0 « la borne tient », la fréquence a au
+    # plus cette variance). L'ancienne marge prenait la variance maximale 1/4 : exacte près de 1/2, ce qui est le cas
+    # ici (bornes de 0,47 à 0,66, écart < 0,002), mais trop large pour une borne petite.
+    c["theoreme_8_majore_chaque_attaque"] = all(
+        a["frequence"] <= a["borne_theoreme_8"] + 3 * math.sqrt(a["borne_theoreme_8"] * (1 - a["borne_theoreme_8"]) / a["essais"])
+        for a in att.values())
     c["attaque_combinee_atteint_la_borne_a_un_facteur_4_pres"] = att["h1_puis_h2"]["frequence"] >= att["h1_puis_h2"]["borne_theoreme_8"] / 4
     correct, acceptes, total = _bits_modele(rng)
     m["bits_modifies_modele"] = dict(acceptes=acceptes, total=total)

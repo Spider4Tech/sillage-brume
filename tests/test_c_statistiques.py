@@ -147,6 +147,15 @@ def run():
     del buf
     reduits, portee = {}, 0
     n = C.taille(21)
+    # témoin H0 : la même batterie sur un flux de référence indépendant de BRUME (SHAKE256). Sans lui, rien ne
+    # vérifiait que la batterie accepte un vrai flux aléatoire (implémentation des tests, approximations
+    # asymptotiques, KS sur des p-valeurs en partie corrélées) : un refus de BRUME n'aurait rien prouvé.
+    import hashlib
+    ref = np.frombuffer(hashlib.shake_256(b"SILLAGE temoin H0 batterie").digest(n * deb) + bytes(16), np.uint8).copy()
+    v = verdict(batterie(ref, n * deb))
+    m["temoin_h0_shake256"] = {"octets": n * deb, **{k: x for k, x in v.items() if k != "p_valeurs"}}
+    c["temoin_h0_flux_de_reference_conforme"] = v["conforme"]
+    del ref
     for R in (2, 3, 4, 5, 6, 8):
         buf = C.flux_compteur(rng.integers(0, 16, B.N, dtype=np.uint8), n, R)
         v = verdict(batterie(buf, n * deb))

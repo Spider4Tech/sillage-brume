@@ -154,7 +154,11 @@ static double gamma_q(double a, double x)
     return pre * h;
 }
 
-/* χ² moyen sur les 128 nibbles de la dernière tronquée ou linéaire : ≈ ddl sous H0 */
+/* χ² moyen sur les 128 nibbles de la dernière tronquée ou linéaire : ≈ ddl sous H0. Pour la linéaire, on retire le
+ * χ² de la marge du nibble d'entrée (15 ddl) : il est le MÊME pour les 128 nibbles de sortie (mêmes échantillons) et ne
+ * se moyenne pas. La moyenne avait un écart-type de 2,0, et non les 0,71 supposés (simulation sous H0 exacte, 400 × 8
+ * runs) : z = 4,49 de la campagne de 24 h valait ≈ 1,5 σ réel. Sans ce terme, il reste 240 ddl indépendants d'un
+ * nibble à l'autre (écart-type mesuré 0,696 contre 0,685 prédit). */
 static double chi_moyen;
 
 /* somme du cube : `log2n` bits d'indice sur les nibbles nib[], base aléatoire */
@@ -268,13 +272,18 @@ static double lineaire_jointe(int q, int R, int sens, uint64_t n, uint64_t grain
             for (int v = 0; v < 256; v++) cnt[j][v] += loc[j][v];
         free(loc);
     }
-    double att = (double)n / 256, cm = 0;
+    double att = (double)n / 256, cm = 0, chi_e = 0;
     *jmax = 0;
     chi_moyen = 0;
+    for (int e = 0; e < 16; e++) {                    /* marge d'entrée, commune à tous les j */
+        double ne = 0;
+        for (int v = 0; v < 16; v++) ne += (double)cnt[0][16 * e + v];
+        chi_e += (ne - (double)n / 16) * (ne - (double)n / 16) / ((double)n / 16);
+    }
     for (int j = 0; j < BR_N; j++) {
         double chi = 0;
         for (int v = 0; v < 256; v++) chi += ((double)cnt[j][v] - att) * ((double)cnt[j][v] - att) / att;
-        chi_moyen += chi / BR_N;
+        chi_moyen += (chi - chi_e) / BR_N;
         if (chi > cm) { cm = chi; *jmax = j; }
     }
     double pr = 128 * gamma_q(127.5, cm / 2);
@@ -348,11 +357,11 @@ int main(int argc, char **argv)
         lineaire_jointe(0, 12, s & 1, 1 << 20, 950 + (uint64_t)s, &jc, &pc);
         m_l += chi_moyen / 8;
     }
-    double z_t = (m_t - 15) / sqrt(2.0 * 15 / (BR_N * 8)), z_l = (m_l - 255) / sqrt(2.0 * 255 / (BR_N * 8));
+    double z_t = (m_t - 15) / sqrt(2.0 * 15 / (BR_N * 8)), z_l = (m_l - 240) / sqrt(2.0 * 240 / (BR_N * 8));
     res_mesure(&res, "calibrage_chi2_h0", "{\"tronquee\": {\"moyenne\": %.2f, \"ddl\": 15, \"z\": %.2f}, "
-               "\"lineaire\": {\"moyenne\": %.2f, \"ddl\": 255, \"z\": %.2f}}", m_t, z_t, m_l, z_l);
+               "\"lineaire_hors_marge_d_entree\": {\"moyenne\": %.2f, \"ddl\": 240, \"z\": %.2f}}", m_t, z_t, m_l, z_l);
     res_controle(&res, "statistiques_chi2_calibrees_sous_h0", fabs(z_t) < 5 && fabs(z_l) < 5);
-    fprintf(stderr, "calibrage H0 : tronquée %.2f (ddl 15, z = %.2f), linéaire %.2f (ddl 255, z = %.2f)\n", m_t, z_t, m_l, z_l);
+    fprintf(stderr, "calibrage H0 : tronquée %.2f (ddl 15, z = %.2f), linéaire hors marge d'entrée %.2f (ddl 240, z = %.2f)\n", m_t, z_t, m_l, z_l);
     static const exp_t E[] = {
         /* témoins, à la portée connue de chaque famille (le cube inverse à 3 tours
          * découle du degré : 3^3 = 27 < 28) */
