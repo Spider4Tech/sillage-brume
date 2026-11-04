@@ -11,6 +11,19 @@
 #include "resultat.h"
 
 #define NIV 0
+
+/* corps des défis K = GF(2^KZ_EP) ⊃ F_poly = GF(2^6) (6 | KZ_EP) : 12 par défaut (tests/c/sig_kz.c, tests/gpu/sig_kz_gpu),
+ * 18 pour la version GPU à faux positifs rares (tests/gpu/sig_kz_gpu_k18, plan D1) */
+#ifndef KZ_EP
+#define KZ_EP 12
+#endif
+#if KZ_EP == 12
+#define KZ_PB ((1ULL << 12) | 0x53)                       /* x^12 + x^6 + x^4 + x + 1 */
+#elif KZ_EP == 18
+#define KZ_PB ((1ULL << 18) | (1ULL << 7) | 1)            /* x^18 + x^7 + 1 */
+#else
+#error "KZ_EP : 12 ou 18"
+#endif
 static const sp_t *p = &SP[NIV];
 
 /* --------------------------------------------------------- aléa reproductible */
@@ -86,12 +99,12 @@ static int irreductible(uint64_t poly, uint32_t deg, const uint32_t *div, int nd
 
 static int reduire(void)
 {
-    sp_t q = {64, 45, 19, 3, 6, 12, 1, 8, 4, 16, 32, (1ULL << 6) | 0x3, (1ULL << 12) | 0x53, 0};
+    sp_t q = {64, 45, 19, 3, 6, KZ_EP, 1, 8, 4, 16, 32, (1ULL << 6) | 0x3, KZ_PB, 0};
     SP[NIV] = q;
-    static const uint32_t d6[2] = {2, 3}, d12[2] = {2, 3};
-    if (!irreductible(SP[NIV].pe, 6, d6, 2) || !irreductible(SP[NIV].pb, 12, d12, 2)) return 0;
-    for (uint64_t g = 2; g < 4096; g++) {                  /* racine dans K du polynôme de F_poly : X^6 + X + 1 */
-        uint64_t g2 = gfm(g, g, SP[NIV].pb, 12), g4 = gfm(g2, g2, SP[NIV].pb, 12), g6 = gfm(g4, g2, SP[NIV].pb, 12);
+    static const uint32_t d6[2] = {2, 3}, dk[2] = {2, 3};  /* diviseurs premiers de 6, 12 et 18 */
+    if (!irreductible(SP[NIV].pe, 6, d6, 2) || !irreductible(SP[NIV].pb, KZ_EP, dk, 2)) return 0;
+    for (uint64_t g = 2; g < 1ULL << KZ_EP; g++) {         /* racine dans K du polynôme de F_poly : X^6 + X + 1 */
+        uint64_t g2 = gfm(g, g, SP[NIV].pb, KZ_EP), g4 = gfm(g2, g2, SP[NIV].pb, KZ_EP), g6 = gfm(g4, g2, SP[NIV].pb, KZ_EP);
         if ((g6 ^ g ^ 1) == 0) { SP[NIV].g = g; return 1; }
     }
     return 0;
@@ -436,11 +449,19 @@ static int instance_preparer(resultat_t *res)
 /* --------------------------------------------------------- stratégies et bilan */
 /* deux stratégies à borne < 1 (dont une quantitative à borne basse) et un grand budget pour la faisabilité */
 typedef struct { const char *nom; int seuil; long q1, q2; int div; int mini; int quantitatif; } strat_t;
+#if KZ_EP == 12
 static const strat_t STRAT[] = {
     {"h1_2_puis_h2", 2, 400, 40000, 1, 0, 0},
     {"h1_2_puis_h2_borne_basse", 2, 25, 131072, 1, 0, 1},
     {"h1_2_puis_h2_grand_budget", 2, 4000, 500000, 2, 6, 0},
 };
+#else   /* K = GF(2^18) : un h1 à deux faux positifs coûte ≈ 2,8·10^6 tentatives ; mêmes rôles, budgets q1 en conséquence */
+static const strat_t STRAT[] = {
+    {"h1_2_puis_h2", 2, 1L << 20, 40000, 1, 0, 0},
+    {"h1_2_puis_h2_borne_basse", 2, 1L << 17, 131072, 1, 0, 1},
+    {"h1_2_puis_h2_grand_budget", 2, 1L << 24, 500000, 2, 6, 0},
+};
+#endif
 enum { NS = sizeof STRAT / sizeof STRAT[0] };
 
 typedef struct { int gagne, retenus, ne; long valides, q1tot, q2tot, nf_hist[5]; } bilan_t;

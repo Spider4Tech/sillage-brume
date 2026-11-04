@@ -24,5 +24,9 @@ build/sig_kz_gpu: sig_kz_gpu.c sig_kz_gpu.cu sig_kz_gpu.h ../c/sig_kz_commun.h .
 	@mkdir -p build
 	$(CC) $(CFL) -c -o build/sig_kz_gpu_hote.o sig_kz_gpu.c
 	$(NVCC) $(NVFL) -Xptxas -v -o $@ sig_kz_gpu.cu build/sig_kz_gpu_hote.o $(LIB) -lgomp -lm 2>build/sig_kz_gpu.ptxas || { cat build/sig_kz_gpu.ptxas; exit 1; }
+build/sig_kz_gpu_k18: sig_kz_gpu.c sig_kz_gpu.cu sig_kz_gpu.h ../c/sig_kz_commun.h ../c/build/sig_var.c ../c/resultat.h $(LIB) Makefile
+	@mkdir -p build
+	$(CC) $(CFL) -DKZ_EP=18 -c -o build/sig_kz_gpu_k18_hote.o sig_kz_gpu.c
+	$(NVCC) $(NVFL) -DKZ_EP=18 -Xptxas -v -o $@ sig_kz_gpu.cu build/sig_kz_gpu_k18_hote.o $(LIB) -lgomp -lm 2>build/sig_kz_gpu_k18.ptxas || { cat build/sig_kz_gpu_k18.ptxas; exit 1; }
 
 .PHONY: all

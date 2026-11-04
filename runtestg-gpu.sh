@@ -5,6 +5,9 @@
 #   ./runtestg-gpu.sh                      300 essais par stratégie, 100 000 essais quantitatifs (≈ 10 s sur RTX 4070 Ti)
 #   ./runtestg-gpu.sh 1000 1000000         campagne plus grande (≈ 1 min) ; 10^7 essais quantitatifs ≈ 10 min
 #   SIG_KZ_GRAINE=42 ./runtestg-gpu.sh     aléa reproductible, graine imposée
+#   ./runtestg-gpu.sh --k18 [essais] [quantitatifs]
+#                                          K = GF(2^18) (plan D1) : faux positifs ≈ 64 fois plus rares, ≈ 2,8·10^6 tentatives
+#                                          de h1 par h1 retenu ; défaut 12 et 300 (≈ 2 min), 20 et 3000 ≈ 15 min
 #
 # CUDA : nvcc de l'hôte s'il existe, sinon le conteneur distrobox « tgh » (CUDA 12.9), où le script se relance.
 # Refuse de partir pendant une mesure de temps (dudect) ou une campagne GPU (scripts/rungpu).
@@ -47,14 +50,21 @@ if [ -z "$NVCC" ]; then
 fi
 command -v nvidia-smi >/dev/null 2>&1 || { echo "runtestg-gpu : nvidia-smi introuvable" >&2; exit 1; }
 
-BIN=tests/gpu/build/sig_kz_gpu
-JSON=resultats/sig_kz_gpu.json
-CAPT=resultats/sig_kz_gpu_capteurs.log
+NOM=sig_kz_gpu
+DEF="300 100000"
+if [ "${1:-}" = "--k18" ]; then
+    shift
+    NOM=sig_kz_gpu_k18
+    DEF="12 300"
+fi
+BIN=tests/gpu/build/$NOM
+JSON=resultats/$NOM.json
+CAPT=resultats/${NOM}_capteurs.log
 mkdir -p resultats
 
 ARCH=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1 | tr -d '. ')
 echo "== Construction de $BIN (sm_${ARCH:-?}) =="
-if ! make -C tests/gpu NVCC="$NVCC" ${ARCH:+ARCHS=$ARCH} build/sig_kz_gpu; then
+if ! make -C tests/gpu NVCC="$NVCC" ${ARCH:+ARCHS=$ARCH} "build/$NOM"; then
     echo "runtestg-gpu : construction impossible" >&2
     exit 1
 fi
@@ -64,7 +74,7 @@ capteurs() { nvidia-smi --query-gpu=timestamp,temperature.gpu,power.draw,utiliza
 capteurs
 
 echo
-echo "== Contrôles sig_kz_gpu${*:+ (arguments : $*)} =="
+echo "== Contrôles $NOM${*:+ (arguments : $*)} =="
 rm -f "$JSON"
 "$BIN" "$@" &
 pid=$!
@@ -75,8 +85,9 @@ statut=$?
 kill "$surv" 2>/dev/null
 capteurs
 if [ -f "$JSON" ]; then
-    ARCH_DIR=resultats/sig_kz_gpu_runs/$(date +%Y%m%d_%H%M%S)_graine${SIG_KZ_GRAINE:-defaut}_${1:-300}_${2:-100000}
-    mkdir -p "$ARCH_DIR" && cp "$JSON" resultats/sig_kz_gpu.md "$CAPT" "$ARCH_DIR"/ 2>/dev/null
+    set -- "$@" $DEF
+    ARCH_DIR=resultats/sig_kz_gpu_runs/$(date +%Y%m%d_%H%M%S)_${NOM#sig_kz_}_graine${SIG_KZ_GRAINE:-defaut}_$1_$2
+    mkdir -p "$ARCH_DIR" && cp "$JSON" "resultats/$NOM.md" "$CAPT" "$ARCH_DIR"/ 2>/dev/null
 fi
 
 echo
@@ -113,7 +124,8 @@ if isinstance(attaques, dict):
         )
 fx, fc = mes.get("faux_positifs_exacts"), mes.get("faux_positifs_campagne")
 if isinstance(fx, dict) and isinstance(fc, dict):
-    print(f"  faux positifs par répétition : exact {fx.get('taux')} ({fx.get('racines_de_T')} racines de T sur {fx.get('corps')}),"
+    print(f"  faux positifs par répétition : exact {fx.get('taux')} ({fx.get('racines_de_T')} racines de T sur {fx.get('corps')},"
+          f" dont {fx.get('dont_dans_F_poly')} dans F_poly),"
           f" mesuré {fc.get('mesure')} sur {fc.get('repetitions')} (borne du lemme 6 {fx.get('borne_lemme_6')})")
 g = mes.get("gpu")
 if isinstance(g, dict):

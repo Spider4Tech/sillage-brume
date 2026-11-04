@@ -14,7 +14,9 @@
  * Conformité : 256 sels au hasard, h1 et faux positifs du GPU = C ; défis de h2 du GPU = C sur les 256 premières cibles du
  * premier h1 retenu ; chaque h1 retenu recalculé en C ; chaque succès rejoué en C.
  *     make -C tests/gpu build/sig_kz_gpu && tests/gpu/build/sig_kz_gpu [essais] [essais_quantitatifs]   (depuis la racine)
- *     → resultats/sig_kz_gpu.json ; lanceur : ./runtestg-gpu.sh */
+ *     → resultats/sig_kz_gpu.json ; lanceur : ./runtestg-gpu.sh
+ * Compilé avec -DKZ_EP=18 (build/sig_kz_gpu_k18, ./runtestg-gpu.sh --k18) : K = GF(2^18), faux positifs ≈ 64 fois plus rares,
+ * ≈ 2,8·10^6 tentatives de h1 par h1 retenu (plan D1) → resultats/sig_kz_gpu_k18.json. */
 #include <time.h>
 
 #include "sig_kz_commun.h"
@@ -130,28 +132,41 @@ static r2_t etape2(ctx_t *c, uint64_t graine, size_t si, uint32_t e, uint32_t te
 
 int main(int argc, char **argv)
 {
+#if KZ_EP == 12
     int essais = argc > 1 ? atoi(argv[1]) : 300;
     int equant = argc > 2 ? atoi(argv[2]) : 100000;
+    resultat_t res = {.nom = "sig_kz_gpu",
+                      .titre = "Sillage-SIG : attaque de Kales–Zaverucha à échelle réduite, broyage sur GPU, vrai vérifieur C"};
+#else
+    int essais = argc > 1 ? atoi(argv[1]) : 12;
+    int equant = argc > 2 ? atoi(argv[2]) : 300;
+    resultat_t res = {.nom = "sig_kz_gpu_k18",
+                      .titre = "Sillage-SIG : attaque de Kales–Zaverucha, K = GF(2^18), broyage sur GPU, vrai vérifieur C"};
+#endif
     if (essais < 1) essais = 1;
     if (equant < 1) equant = 1;
     const char *graine_env = getenv("SIG_KZ_GRAINE");
     uint64_t graine = graine_env ? strtoull(graine_env, NULL, 0) : 0x5349474b5aULL;   /* « SIGKZ » */
     alea_init(&rng, graine);
     double t0 = maintenant();
-    resultat_t res = {.nom = "sig_kz_gpu",
-                      .titre = "Sillage-SIG : attaque de Kales–Zaverucha à échelle réduite, broyage sur GPU, vrai vérifieur C"};
     if (!instance_preparer(&res)) return res_ecrire(&res);
 
     /* taux exact de faux positifs : racines de T sur tout K, et ε = 0 */
-    uint32_t K = 1u << p->ep, racines = 0;
+    uint32_t K = 1u << p->ep, racines = 0, sous_corps = 0;
     uint8_t *tz = sl_calloc(K / 8, 1);
     for (uint32_t r = 0; r < K; r++) {
         s.r[0] = r;
-        if (valeur_T(&s, xn, sk, 0) == 0) { tz[r >> 3] |= (uint8_t)(1u << (r & 7)); racines++; }
+        if (valeur_T(&s, xn, sk, 0) == 0) {
+            tz[r >> 3] |= (uint8_t)(1u << (r & 7));
+            racines++;
+            uint64_t y = r;                                 /* r ∈ F_poly = GF(2^e) ⇔ r^(2^e) = r */
+            for (uint32_t i = 0; i < p->e; i++) y = GF(y, y);
+            sous_corps += y == r;
+        }
     }
     double pf_exact = 1 - (1 - (double)racines / K) * (1 - 1.0 / K);
-    res_mesure(&res, "faux_positifs_exacts", "{\"racines_de_T\": %u, \"corps\": %u, \"taux\": %.6f, \"borne_lemme_6\": %.6f}",
-               racines, K, pf_exact, plemme);
+    res_mesure(&res, "faux_positifs_exacts", "{\"racines_de_T\": %u, \"dont_dans_F_poly\": %u, \"corps\": %u, \"taux\": %.7f, "
+               "\"borne_lemme_6\": %.7f}", racines, sous_corps, K, pf_exact, plemme);
     res_controle(&res, "taux_exact_de_faux_positifs_sous_la_borne_du_lemme_6", pf_exact <= plemme);
 
     /* GPU */
@@ -282,7 +297,7 @@ int main(int argc, char **argv)
     }
 
     double pf = (double)nfp_camp / (double)nrep_camp;
-    res_mesure(&res, "faux_positifs_campagne", "{\"mesure\": %.6f, \"repetitions\": %ld, \"taux_exact\": %.6f, \"borne_lemme_6\": %.4f}",
+    res_mesure(&res, "faux_positifs_campagne", "{\"mesure\": %.7g, \"repetitions\": %ld, \"taux_exact\": %.7g, \"borne_lemme_6\": %.7g}",
                pf, nrep_camp, pf_exact, plemme);
     res_controle(&res, "faux_positifs_de_la_campagne_conformes_au_taux_exact",
                  fabs(pf - pf_exact) <= 4 * sqrt(pf_exact * (1 - pf_exact) / (double)nrep_camp));

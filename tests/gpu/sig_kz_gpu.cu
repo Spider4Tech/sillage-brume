@@ -1,7 +1,8 @@
 /* Noyaux CUDA de l'attaque de Kales–Zaverucha à échelle réduite (hôte : tests/gpu/sig_kz_gpu.c, interface : sig_kz_gpu.h).
  *
  * Instance compilée en dur, celle de tests/c/sig_kz_commun.h (kz_gpu_init compare les dimensions à celles de l'hôte) :
- * N = 2^8 feuilles, τ = 4, t = 1, graines de 16 octets, hachés de 32, K = GF(2^12).
+ * N = 2^8 feuilles, τ = 4, t = 1, graines de 16 octets, hachés de 32, K = GF(2^KZ_EP) avec KZ_EP = 12 (sig_kz_gpu) ou 18
+ * (sig_kz_gpu_k18).
  *   - k_h1 : une tentative de h1 par fil, transcription de engager() : graine maîtresse, arbre GGM parcouru en profondeur
  *     (pile de D + 1 graines, chaque nœud haché une fois), parts et engagements des 256 feuilles, aux, engagement de la
  *     dernière feuille, haché des engagements absorbé au fil de l'eau, h1, défis (r, ε). Le faux positif ε·T(r) = 0 est lu
@@ -18,8 +19,11 @@
 
 #include "sig_kz_gpu.h"
 
-enum { KN = 256, KD = 8, KTAU = 4, KT = 1, KSB = 16, KHB = 32, KLP = 18, KLSK = 12, KPTS = 2, KLA = 14, KEP = 12,
-       KLREP = (2 + 3 * KD) * KPTS, TAUX = 136, LMSG = 54 + KSB };
+#ifndef KZ_EP
+#define KZ_EP 12                                           /* corps des défis GF(2^KZ_EP), comme tests/c/sig_kz_commun.h */
+#endif
+enum { KN = 256, KD = 8, KTAU = 4, KT = 1, KSB = 16, KHB = 32, KLSK = 12, KEP = KZ_EP, KPTS = (KT * KEP + 7) / 8,
+       KLP = KLSK + 3 * KPTS, KLA = KLSK + KPTS, KLREP = (2 + 3 * KD) * KPTS, TAUX = 136, LMSG = 54 + KSB };
 
 __constant__ uint64_t c_KRC[24] = {
     0x0000000000000001ULL, 0x0000000000008082ULL, 0x800000000000808aULL, 0x8000000080008000ULL,
@@ -31,7 +35,8 @@ __constant__ uint64_t c_KRC[24] = {
 __device__ constexpr int RHO[25] = {0, 1, 62, 28, 27, 36, 44, 6, 55, 20, 3, 10, 43, 25, 39,
                                     41, 45, 15, 21, 8, 18, 2, 61, 56, 14};   /* indice x + 5y */
 
-__constant__ uint8_t c_sk[KLSK], c_pkh[KHB], c_mh[KHB], c_masque[KLP], c_tz[(1 << KEP) / 8];
+__constant__ uint8_t c_sk[KLSK], c_pkh[KHB], c_mh[KHB], c_masque[KLP];
+__device__ uint8_t g_tz[(1 << KEP) / 8];                   /* bit r : T(r) = 0 ; 32 Ko pour GF(2^18), en mémoire globale */
 __constant__ uint64_t c_pb;
 
 __device__ __forceinline__ uint64_t rotl(uint64_t x, int n) { return (x << n) | (x >> ((64 - n) & 63)); }
@@ -184,8 +189,9 @@ __device__ int tentative(const uint8_t *sel, uint8_t *h1)
         }
         /* aux = sk ⊕ tot, et c corrigé pour que Σc = a·b ; pile[KD] porte encore la graine de la feuille N − 1 */
         for (int b = 0; b < KLSK; b++) aux[b] = c_sk[b] ^ tot[b];
-        uint64_t a = (tot[KLSK] | (uint64_t)tot[KLSK + 1] << 8) & ((1u << KEP) - 1);
-        uint64_t bb = (tot[KLSK + KPTS] | (uint64_t)tot[KLSK + KPTS + 1] << 8) & ((1u << KEP) - 1);
+        uint64_t a = 0, bb = 0;                              /* lire_bits(ta, 0, ep), lire_bits(tb, 0, ep) */
+        for (int b = 0; b < KPTS; b++) { a |= (uint64_t)tot[KLSK + b] << (8 * b); bb |= (uint64_t)tot[KLSK + KPTS + b] << (8 * b); }
+        a &= (1u << KEP) - 1; bb &= (1u << KEP) - 1;
         uint64_t ab = gf_mul(a, bb);
         for (int b = 0; b < KPTS; b++) aux[KLSK + b] = (uint8_t)(ab >> (8 * b)) ^ tot[KLSK + 2 * KPTS + b];
         uint8_t ib[4];
@@ -208,7 +214,7 @@ __device__ int tentative(const uint8_t *sel, uint8_t *h1)
         uint64_t r = 0, e = 0;
         for (int b = 0; b < 6; b++) { r |= (uint64_t)d[12 * i + b] << (8 * b); e |= (uint64_t)d[12 * i + 6 + b] << (8 * b); }
         r &= (1u << KEP) - 1; e &= (1u << KEP) - 1;
-        nf += e == 0 || (c_tz[r >> 3] >> (r & 7) & 1);
+        nf += e == 0 || (g_tz[r >> 3] >> (r & 7) & 1);
     }
     return nf;
 }
@@ -307,7 +313,7 @@ extern "C" int kz_gpu_init(const kz_dims_t *d, const uint8_t *sk, const uint8_t 
     CK(cudaMemcpyToSymbol(c_pkh, pkh, KHB));
     CK(cudaMemcpyToSymbol(c_mh, mh, KHB));
     CK(cudaMemcpyToSymbol(c_masque, masque, KLP));
-    CK(cudaMemcpyToSymbol(c_tz, tz, (1 << KEP) / 8));
+    CK(cudaMemcpyToSymbol(g_tz, tz, (1 << KEP) / 8));
     CK(cudaMemcpyToSymbol(c_pb, &d->pb, 8));
     return 0;
 }
