@@ -9,7 +9,7 @@ GENC   = $(foreach a,$(ARCHS),-gencode arch=compute_$(a),code=sm_$(a)) -gencode 
 NVFL   = -O3 $(GENC) -I$(L) -I../c -Xcompiler -O3,-march=native,-fopenmp
 LIB    = $(L)/commun.c $(L)/brume512.c $(L)/brume512_avx2.c
 
-all: build/brume_gpu build/campagne_dl
+all: build/brume_gpu build/campagne_dl build/frontiere_gpu
 
 build/%: %.cu brume.cuh $(LIB) Makefile
 	@mkdir -p build

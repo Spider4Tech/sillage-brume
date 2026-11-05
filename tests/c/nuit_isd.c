@@ -48,9 +48,12 @@ int main(int argc, char **argv)
             est = dernier[ty] * pow(2.0, pred - pred_der[ty]) * pow(dim / dim0, 3) * inst / inst_der[ty];
         }
         if (est > reste) {
+            /* QC n ≥ 197 et aléatoire n ≥ 360 : au plan du run spécial GPU (scripts/rungpu_special, mêmes instances), qui
+             * les mesure en ≈ 20 min ; faute de temps ici, elles ne rendent pas la campagne incomplète */
+            int gpu = ty == 0 ? n >= 197 : n >= 360;
             snprintf(buf + strlen(buf), 300, "%s{\"type\": \"%s\", \"n\": %d, \"w\": %d, \"prevision_log2\": %.2f, "
-                     "\"statut\": \"non lancé (≈ %.0f s estimés, %.0f s restants)\"}", nmes ? ", " : "",
-                     ty ? "aleatoire" : "qc", n, w, pred, est, reste);
+                     "\"statut\": \"%s (≈ %.0f s estimés, %.0f s restants)\"}", nmes ? ", " : "",
+                     ty ? "aleatoire" : "qc", n, w, pred, gpu ? "confiée au run spécial GPU" : "non lancé", est, reste);
             nmes++;
             continue;
         }

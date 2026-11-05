@@ -115,3 +115,25 @@ of a single GPU (checked: the same statistics, bit for bit, for one GPU and for 
 The work amounts to ≈ 6.5 h of RTX 4070 Ti for the base plan and ≈ 26 h for the extended plan; the duration is divided by the number of cards and
 by their relative speed, which the script measures before starting. The campaign only uses integer operations and counters in
 shared memory: neither the tensor cores, nor the HBM memory, nor the memory of 80 GB cards are of any use to it.
+
+## 9. Long experiments of the night campaign on the GPU: `./scripts/rungpu_special`
+
+The night campaign (8 h on 12 threads) cannot fit its largest experiments: the backward cubes of 2^34 to 2^38 inputs, the forward cubes of
+2^38 to 2^42, and the real ISD at QC n = 197 to 227 and random n = 360 to 480 (n = 480 alone would take about 26 h on the CPU). They are now
+optional in `tests/c/nuit_cryptanalyse.c` and `tests/c/nuit_isd.c`: run there if the budget allows, otherwise reported as “covered by /
+handed to the GPU special run”, without making the campaign incomplete. `tests/gpu/frontiere_gpu.cu` runs them, in about 3 h on an
+RTX 4070 Ti:
+
+- **Cubes:** same statistic as the night (zero-sum bits, z, most unbalanced bit over a series of 32 cubes). Checked first: cube sums of 2^10
+  identical to the dense reference `tests/c/brume_ref.h` in both directions; witnesses at the known reach (forward 4 rounds, backward 2 and
+  3 rounds) must be detected.
+- **ISD (Prange):** the same instances as the night (same seeds, same generation); one 256-thread block per iteration (Gauss–Jordan, one
+  thread per row). The randomness of an iteration depends only on its index, so the first success is the one of smallest index, exactly as
+  in a sequential run. Checked first: the sizes already measured on the CPU (QC 149, 179; random 200, 280) must fall within the same
+  tolerance, and every solution is checked by the host (H·e = s, 0 < wt(e) ≤ weight).
+
+`./scripts/rungpu_special [hours]` (default 4) builds the program (host `nvcc`, otherwise the `tgh` container), then runs in the background;
+`--statut`, `--arreter`, and running it again resumes (cubes to the launch, ISD to the instance, identically); `--neuf` starts afresh.
+Experiments whose estimated duration exceeds the remaining budget are not launched, and a later run with a larger budget picks them up.
+Results: `resultats/gpu_frontiere.{json,md}`; log, card readings and resume state: `resultats/gpu_special/<date>/`. Like `rungpu`, it refuses
+to start during dudect (`runspecial`, `rundenuit.sh`) or another GPU campaign.

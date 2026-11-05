@@ -132,6 +132,12 @@ strength of the design and no time is spent on it.
 After each step: results in `resultats/gpu/`, a section in `docs/AUDIT_REPORT.md`, an update of the SILLAGE dossier, and
 a proposed fix if a weakness is found.
 
+**Long experiments of the night campaign (2026-11-05).** `tests/gpu/frontiere_gpu.cu`, launched by `./scripts/rungpu_special`
+(docs/CAMPAIGN_24H.md, § 9): the cubes of 2^34 to 2^42 inputs and the real Prange ISD at QC n = 197–227 and random n = 360–480 that the
+8-hour CPU campaign could not fit, about 3 h on the RTX 4070 Ti. Short validation run: cube sums identical to the dense reference;
+ISD at the sizes already measured on the CPU within tolerance (ratios 0.92 to 1.08), every solution checked; random n = 360 in 27 s,
+against about 2 100 s estimated on the CPU. Not yet run in full.
+
 ## 8. What will not run on the GPU
 
 - **dudect and any timing measurement:** the processor is what is measured, and a GPU load would add noise.

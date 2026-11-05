@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# Run spécial GPU : les expériences longues que la campagne de nuit (CPU) ne tient pas dans son budget
+# (tests/gpu/frontiere_gpu.cu) : cubes de 2^34 à 2^42 entrées, directs et inverses, et ISD réel (Prange) aux tailles
+# QC n = 197, 211, 227 et aléatoire n = 360 … 480, mêmes instances que la nuit. Chaque partie est d'abord confrontée au CPU
+# (sommes de cubes = référence dense ; ISD : tailles déjà mesurées par la nuit, solutions vérifiées par l'hôte).
+#
+#   ./scripts/rungpu_special [heures]     lance en arrière-plan (défaut 4 h ; le plan complet en demande ≈ 3 sur une
+#                                         RTX 4070 Ti) ; reprend le dernier run s'il n'est pas terminé
+#   ./scripts/rungpu_special --neuf [h]   repart de zéro (nouveau dossier)
+#   ./scripts/rungpu_special --statut     où on en est
+#   ./scripts/rungpu_special --arreter    arrêt propre : l'état est écrit, ./scripts/rungpu_special reprendra
+#
+# Résultats : resultats/gpu_frontiere.{json,md} ; journal, capteurs et reprise : resultats/gpu_special/<date>/.
+# CUDA : nvcc de l'hôte s'il existe, sinon le conteneur distrobox « tgh », où le script se relance.
+# Refuse de partir pendant une mesure de temps (scripts/runspecial, scripts/rundenuit.sh) ou une autre campagne GPU.
+set -u
+export LC_ALL=C
+cd "$(dirname "$(readlink -f "$0")")/.."   # racine du dépôt
+R=resultats/gpu_special
+PID=$R/run.pid
+mkdir -p "$R"
+en_cours() { [ -s "$PID" ] && kill -0 "$(cat "$PID")" 2>/dev/null; }
+
+case "${1:-}" in
+    --statut)
+        if en_cours; then echo "en cours (pid $(cat "$PID"))"; else echo "rien ne tourne"; fi
+        D=$(cat "$R/dossier" 2>/dev/null)
+        [ -n "$D" ] && { echo "dossier : $D"; grep -v 'contrôles, tous' "$D/journal.log" 2>/dev/null | tail -8; tail -1 "$D/gpu.log" 2>/dev/null; }
+        exit 0 ;;
+    --arreter)
+        if en_cours; then kill -TERM "$(cat "$PID")" && echo "arrêt demandé : état en cours d'écriture"
+        else echo "rien ne tourne"; fi
+        exit 0 ;;
+esac
+NEUF=
+[ "${1:-}" = "--neuf" ] && { NEUF=1; shift; }
+H=${1:-4}
+case $H in ''|*[!0-9.]*) sed -n '2,15p' "$0" | cut -c3-; exit 1 ;; esac
+
+en_cours && { echo "un run spécial GPU tourne déjà (./scripts/rungpu_special --statut)"; exit 1; }
+if [ -s resultats/special/run.pid ] && kill -0 "$(cat resultats/special/run.pid)" 2>/dev/null; then
+    echo "scripts/runspecial mesure le temps : pas de GPU pendant dudect"; exit 1
+fi
+pgrep -f 'rundenuit\.sh' >/dev/null && { echo "scripts/rundenuit.sh tourne (dudect) : relancer après"; exit 1; }
+if [ -s resultats/gpu/run.pid ] && kill -0 "$(cat resultats/gpu/run.pid)" 2>/dev/null; then
+    echo "une campagne GPU tourne (./scripts/rungpu --statut)"; exit 1
+fi
+
+NVCC=$(command -v nvcc 2>/dev/null || { [ -x /usr/local/cuda/bin/nvcc ] && echo /usr/local/cuda/bin/nvcc; })
+if [ -z "$NVCC" ]; then
+    if [ -z "${SILLAGE_DANS_TGH:-}" ] && command -v distrobox >/dev/null 2>&1; then
+        exec distrobox enter tgh -- env SILLAGE_DANS_TGH=1 bash ./scripts/rungpu_special ${NEUF:+--neuf} "$H"
+    fi
+    echo "nvcc introuvable (ni sur l'hôte ni dans le conteneur tgh)"; exit 1
+fi
+command -v nvidia-smi >/dev/null || { echo "nvidia-smi introuvable"; exit 1; }
+make -s -C tests/gpu NVCC="$NVCC" build/frontiere_gpu >/dev/null || { echo "échec de compilation (make -C tests/gpu)"; exit 1; }
+
+D=$(cat "$R/dossier" 2>/dev/null)
+if [ -z "$NEUF" ] && [ -n "$D" ] && [ -s "$D/reprise.bin" ] && ! grep -q 'run spécial terminé' "$D/journal.log" 2>/dev/null; then
+    echo "reprise de $D"
+else
+    D=$R/$(date +%Y%m%d_%H%M%S)
+    mkdir -p "$D"
+    echo "$D" >"$R/dossier"
+fi
+{
+    echo "date : $(date '+%F %T %z')"
+    echo "commit : $(git rev-parse --short HEAD 2>/dev/null)$(git diff --quiet 2>/dev/null || echo ' (modifié)')"
+    echo "budget : $H h"
+    nvidia-smi --query-gpu=name,driver_version,power.limit --format=csv,noheader
+    "$NVCC" --version | tail -1
+} >>"$D/fiche.txt"
+
+S=$(awk -v h="$H" 'BEGIN { printf "%d", h * 3600 }')
+nohup setsid bash -c '
+    tests/gpu/build/frontiere_gpu "$0" "$1" >>"$0/journal.log" 2>&1 &
+    p=$!; echo "$p" >"$2"
+    while kill -0 "$p" 2>/dev/null; do
+        nvidia-smi --query-gpu=timestamp,temperature.gpu,power.draw,utilization.gpu --format=csv,noheader >>"$0/gpu.log"
+        sleep 60
+    done
+    wait "$p"; c=$?
+    J=resultats/gpu_frontiere.json
+    cp "$J" resultats/gpu_frontiere.md "$0"/ 2>/dev/null
+    if grep -q "\"interrompu\": false" "$J" 2>/dev/null && grep -q "\"experiences_non_lancees\": 0" "$J"; then
+        echo "[$(date "+%F %T")] run spécial terminé (code $c)" >>"$0/journal.log"
+    elif grep -q "\"interrompu\": false" "$J" 2>/dev/null; then
+        echo "[$(date "+%F %T")] run spécial incomplet (code $c), expériences non lancées faute de budget : ./scripts/rungpu_special [heures] reprend" >>"$0/journal.log"
+    else
+        echo "[$(date "+%F %T")] run spécial arrêté (code $c) : ./scripts/rungpu_special reprend" >>"$0/journal.log"
+    fi
+' "$D" "$S" "$PID" >/dev/null 2>&1 &
+for _ in 1 2 3 4 5 6 7 8 9 10; do en_cours && break; sleep 0.5; done
+en_cours || { echo "échec du lancement (voir $D/journal.log)"; exit 1; }
+echo "lancé en arrière-plan pour $H h au plus (pid $(cat "$PID")), dossier $D"
+echo "  ./scripts/rungpu_special --statut    où on en est"
+echo "  ./scripts/rungpu_special --arreter   arrêt propre, reprise par ./scripts/rungpu_special"

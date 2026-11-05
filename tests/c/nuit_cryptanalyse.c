@@ -380,19 +380,20 @@ int main(int argc, char **argv)
         /* cube inverse à 4 tours : 227 bits nuls (z = −2,56) le 2026-10-30, à revoir */
         {'c', 1, 4, 1, 32, 0, 1},
         /* cubes simples les plus gros */
-        {'c', 0, 5, 1, 36, 0, 1}, {'c', 1, 4, 1, 36, 0, 1},
-        /* si le temps le permet ; repli du cube inverse si le 2^36 n'a pas tenu */
-        {'c', 1, 4, 1, 34, 0, 1},
-        {'c', 0, 5, 0, 34, 0, 1}, {'c', 0, 6, 1, 34, 0, 1}, {'c', 1, 5, 1, 34, 0, 1},
+        {'c', 0, 5, 1, 36, 0, 1},
+        {'c', 0, 5, 0, 34, 0, 1}, {'c', 0, 6, 1, 34, 0, 1},
         {'c', 0, 5, 0, 32, 0, 1}, {'c', 1, 4, 0, 32, 0, 1},
         {'t', 0, 6, 0, 33, 0, 0}, {'t', 1, 3, 0, 33, 0, 0},
-        /* facultatives (voir nb_requises) : pour les longues campagnes, sur beaucoup de cœurs */
+        /* facultatives : pour les longues campagnes, sur beaucoup de cœurs ; toutes sont aussi au plan du run spécial
+         * GPU (scripts/rungpu_special, tests/gpu/frontiere_gpu.cu), qui les tient en ≈ 3 h. Les cubes inverses de 2^34
+         * et 2^36 en tête (repli sur 2^34 si le 2^36 n'a pas tenu) : la nuit du 2026-11-05 n'a pas pu les lancer. */
+        {'c', 1, 4, 1, 36, 0, 1}, {'c', 1, 4, 1, 34, 0, 1}, {'c', 1, 5, 1, 34, 0, 1},
         {'c', 0, 5, 1, 38, 0, 1}, {'c', 0, 6, 1, 38, 0, 1}, {'c', 0, 5, 1, 40, 0, 1},
         {'k', 0, 5, 1, 28, 0, 32}, {'k', 1, 4, 1, 28, 0, 32}, {'t', 0, 6, 0, 35, 0, 0}, {'t', 1, 3, 0, 35, 0, 0},
         {'l', 0, 2, 0, 32, 0, 0}, {'l', 1, 2, 0, 32, 0, 0}, {'l', 0, 3, 0, 32, 0, 0},
         {'c', 1, 4, 1, 38, 0, 1}, {'c', 0, 6, 1, 40, 0, 1}, {'c', 0, 5, 0, 38, 0, 1}, {'c', 0, 5, 1, 42, 0, 1},
     };
-    enum { nb_facultatives = 17 };                     /* faute de temps, elles ne rendent pas la campagne incomplète */
+    enum { nb_facultatives = 20 };                     /* faute de temps, elles ne rendent pas la campagne incomplète */
     int ne = (int)(sizeof E / sizeof *E), temoins_ok = 1, faits = 0, nouveaux = 0;
     int couvert[6] = {0}, max_t[6] = {0}, inv36 = 0;
     static char liste[24000] = "[", tmp[24100];
@@ -412,7 +413,8 @@ int main(int argc, char **argv)
             snprintf(ligne, sizeof ligne, "%s{\"type\": \"%c\", \"sens\": \"%s\", \"tours\": %d, \"log2\": %d, "
                      "\"nibbles\": \"%s\", \"statut\": \"%s (budget : %.0f s estimés, %.0f s restants)\"}", faits ? ", " : "",
                      e->type, SENS[e->sens], e->R, e->log2n, e->voisinage ? "voisinage" : "hasard",
-                     x >= ne - nb_facultatives ? "facultative, pas assez de temps" : "non lancé", est, reste);
+                     x >= ne - nb_facultatives ? "facultative, pas assez de temps, couverte par scripts/rungpu_special" : "non lancé",
+                     est, reste);
             strcat(liste, ligne);
             faits++;
             continue;
