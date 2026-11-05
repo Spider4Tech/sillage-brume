@@ -138,6 +138,18 @@ def run():
     m["p_min"] = min(allp)
     # seuil corrigé (Bonferroni sur ~33 tests, α = 0,001)
     c["batterie_statistique_aucun_rejet"] = min(allp) > 1e-3 / len(allp)
+    # Témoins : la batterie doit accepter un flux de référence indépendant de BRUME (SHAKE256, même taille que le flux
+    # AEAD) et rejeter un flux biaisé (1 bit sur 64 forcé à 1). Sans eux, un refus ou une acceptation ne prouvait rien.
+    import hashlib
+    ref = np.unpackbits(np.frombuffer(hashlib.shake_256(b"SILLAGE temoin H0 diffusion").digest(1 << 17), np.uint8))
+    p_ref = batterie(ref)
+    biais = ref.copy()
+    biais[::64] = 1
+    p_biais = batterie(biais)
+    m["temoin_h0_shake256"] = {"p_min": min(p_ref.values()), "test_p_min": min(p_ref, key=p_ref.get)}
+    m["temoin_biaise_p_min"] = min(p_biais.values())
+    c["temoin_h0_accepte"] = min(p_ref.values()) > 1e-3 / len(p_ref)
+    c["temoin_biaise_rejete"] = min(p_biais.values()) < 1e-3 / len(p_biais)
     out = {"controles": c, "mesures": m}
     sauver("diffusion_stats", out)
     return out

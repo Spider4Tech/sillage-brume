@@ -86,12 +86,27 @@ TESTS = [
 INTENSIF = "Intensif (C)"
 
 
-def lancer(mod):
+INTENSITE = float(os.environ.get("SILLAGE_INTENSITE", "1"))
+# Les tests du noyau C (tests/noyau_c.py) suffixent leur fichier de résultats quand SILLAGE_INTENSITE ≠ 1.
+AVEC_SUFFIXE = {"c_integral", "c_diff_lin", "c_sac", "c_statistiques", "c_kem_bruit", "c_cube_init", "c_degre"}
+
+
+def fichier_resultat(nom):
+    suf = "" if INTENSITE == 1 or nom not in AVEC_SUFFIXE else f"_x{INTENSITE:g}"
+    return os.path.join(RESULTATS, nom + suf + ".json")
+
+
+def lancer(mod, res):
     """Test Python (tests/<mod>.py) ou, si mod = « c:<nom> », test C natif
     (tests/c/<nom>.c, compilé par tests/c/Makefile, qui écrit lui-même
-    resultats/<nom>.json)."""
+    resultats/<nom>.json). Le fichier de résultats d'un run précédent est effacé avant le lancement : un test qui
+    se termine sans l'écrire ne peut plus être compté sur des contrôles périmés."""
     logs = os.path.join(RESULTATS, "logs")
     os.makedirs(logs, exist_ok=True)
+    try:
+        os.remove(fichier_resultat(res))
+    except FileNotFoundError:
+        pass
     t0 = time.time()
     nom = mod[2:] if mod.startswith("c:") else mod
     with open(os.path.join(logs, nom + ".log"), "w", encoding="utf-8") as f:
@@ -118,18 +133,20 @@ def main():
     t0 = time.time()
     with ThreadPoolExecutor(jobs) as ex:
         runs = {mod: (rc, dt) for mod, rc, dt in
-                ex.map(lambda t: lancer(t[0]), [t for t in choix if t[2] != INTENSIF])}
-    for mod, _, _ in (t for t in choix if t[2] == INTENSIF):
-        _, rc, dt = lancer(mod)
+                ex.map(lambda t: lancer(t[0], t[1]), [t for t in choix if t[2] != INTENSIF])}
+    for mod, nom, _ in (t for t in choix if t[2] == INTENSIF):
+        _, rc, dt = lancer(mod, nom)
         runs[mod] = (rc, dt)
     synth, lignes, echecs = {}, [], []
     theme = None
     for mod, nom, th in choix:
         rc, dt = runs[mod]
         try:
-            ctrl = json.load(open(os.path.join(RESULTATS, nom + ".json")))["controles"]
+            ctrl = json.load(open(fichier_resultat(nom)))["controles"]
         except (OSError, KeyError, ValueError):
             ctrl = {"execution": False}
+        if not ctrl:                                   # un test sans contrôle ne réussit pas par défaut
+            ctrl = {"au_moins_un_controle": False}
         if rc != 0:
             ctrl = {**ctrl, "execution_sans_erreur": False}
         ko = [k for k, v in ctrl.items() if v is not True]

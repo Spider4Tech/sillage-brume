@@ -110,6 +110,9 @@ def run():
                         "facteur_hull": round(abs(mes) / abs(pred), 2) if pred else None}
     # le hull (signe inclus) ne doit pas amplifier massivement la corrélation
     c["hull_2_tours_pas_d_amplification_massive"] = abs(mes) <= 4 * abs(pred) + 5 * sd
+    # Le contrôle ci-dessus est unilatéral : des masques mal construits (convention de LAT, transposition, constantes)
+    # donneraient une corrélation nulle et le feraient passer. La mesure doit donc aussi VOIR la corrélation prédite.
+    c["hull_2_tours_correlation_du_trail_detectee"] = abs(mes) >= 5 * sd and abs(mes) >= abs(pred) / 4
     m["marge_bits"] = {"diff_14_tours_trouve": 2830, "diff_32_tours_prouve": 256,
                        "lin_14_tours_trouve": 1417, "lin_32_tours_prouve": 128}
     out = {"controles": c, "mesures": m}

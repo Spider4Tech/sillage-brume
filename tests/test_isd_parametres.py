@@ -127,7 +127,8 @@ def run():
         m[lvl] = est
         c[f"{lvl}_isd_ge_lambda"] = est["isd"]["classique"] >= p["lam"]
         c[f"{lvl}_forgery_ge_lambda"] = est["forgery_fs_bits"] >= p["lam"]
-        c[f"{lvl}_tau_suffisant"] = est["forgery_fs_bits"] >= p["lam"]
+        # (l'ancien contrôle « tau_suffisant » répétait mot pour mot forgery_ge_lambda ; la minimalité de τ est
+        #  vérifiée par test_sig : <niveau>_tau_minimal)
         c[f"{lvl}_graine_et_haches_ge_lambda"] = est["graine_bits"] >= p["lam"] and est["collision_bits"] >= p["lam"]
     out = {"controles": c, "mesures": m}
     sauver("isd_parametres", out)

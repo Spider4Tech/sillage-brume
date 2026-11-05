@@ -55,7 +55,7 @@ full test suite against v0.3.
 |---|---|
 | Branch number (diff. and lin.) | **B = 8 exactly** (enumeration of weights ≤ 3 of M, M⁻¹, Mᵀ, (Mᵀ)⁻¹) |
 | Bounds at 32 rounds | differential characteristic ≤ 2⁻²⁵⁶, linear trail ≤ 2⁻¹²⁸ (**proved**) |
-| Best trails found, 14 rounds | diff. 2⁻²⁸³⁰, lin. 2⁻¹⁴¹⁷ (greedy); beam: 2⁻²⁷⁵³ / 2⁻¹³⁸⁰ |
+| Best trails found, 14 rounds | diff. 2⁻²⁸³⁰, lin. 2⁻¹⁴¹⁷ (greedy); beam: 2⁻²⁷⁵³ / 2⁻¹³⁸⁰ — under-costed, withdrawn on 2026-11-05: 2⁻²⁸⁹¹ / 2⁻¹⁴²⁷ with exact costs, no better than greedy |
 | Iterative cycles | none on v1 (the unweighted v0 control shows 5 287) |
 | Model validation (1 round) | diff. 0.1263 measured / 0.125 predicted; correlation 0.0070 / 0.0078 (σ = 0.001); exact adjoint |
 | Nibble cubes | zero sum up to 3 rounds; random at 4 |
@@ -578,3 +578,57 @@ test of the battery runs on partly correlated p-values (covered by the H0 witnes
 
 Checks: `mini_brume` 6/6 (8 instances, 2 α, 35 instances at 32 bits, 32 constant sets); `test_diff_lin_empirique` 4/4; H0 calibration
 of `nuit_cryptanalyse` passed. The night campaign of 2026-11-04 runs these versions.
+
+## Errata of 2026-11-05 (test quality pass: checks that could not fail, detectors without a witness)
+
+Second review of the whole battery, this time asking of each check: can it fail, and has the detector behind it ever been seen to
+detect something? Five defects, six missing witnesses, one proof term without a test. All the tests below pass after the fixes
+(94/94 checks on the 12 tests touched); the full battery has not been rerun since.
+
+**Defects.**
+- **`test_beam_trails`: the costs were not those of real trails.** The cost table was indexed by the S-box output difference, and
+  every sampled transition was charged the price of the best transition of its row (DDT = 4, |LAT| = 4), while the beam also samples
+  transitions with DDT = 2 or |LAT| = 2. The costs are now exact (−2·log₂ DDT/16, −2·log₂ |LAT/8|). **The 14-round beam result
+  2⁻²⁷⁵³ / 2⁻¹³⁸⁰, quoted as better than the greedy trails (2⁻²⁸³⁰ / 2⁻¹⁴¹⁷), came from this defect**: with exact costs the beam
+  gives 2⁻²⁸⁹¹ / 2⁻¹⁴²⁷ and does not improve on the greedy search. The wide-trail check is a code-consistency check (a real trail
+  cannot go below a proved bound); the comment now says so.
+- **`test_cycles`: both checks were vacuous.** No greedy cycle is ever found for BRUME, so “every cycle found costs at least the
+  wide-trail bound” was `all([])`; and a cycle, being a real characteristic, could not have gone below the proved bound anyway. The
+  v0 witness found 5 287 cycles but was not checked. New checks: the witness must find cycles, and BRUME must have none.
+- **`run_all`: stale and misread result files.** Results were read from `resultats/<test>.json` without deleting the previous
+  file, so a test ending without writing it would have been counted on the previous run. And with `SILLAGE_INTENSITE ≠ 1`, the
+  C-kernel tests write `<test>_x<k>.json` while `run_all` kept reading the default-intensity file: the documented command
+  `SILLAGE_INTENSITE=8 python3 -m tests.run_all c_integral` reported the old intensity-1 result. Both fixed; a test with no check
+  now fails.
+- **`test_hachage`: the padding check tested a copy of the padding**, rewritten inside the test. It now reads the blocks actually
+  absorbed by `brume512_hash` (the permutation is replaced by a probe that records them), on 5 485 messages including every length
+  around the block boundary; a probe witness checks that the blocks are really captured.
+- **`test_isd_parametres`: `tau_suffisant` repeated `forgery_ge_lambda` word for word** (two checks counted per level for one
+  fact). Removed; the minimality of τ is checked by `test_sig`.
+
+**Witnesses added (detectors that had never been seen to detect).**
+- **`test_c_cube_init`: the linear-superpoly detector (BLR) found nothing at any round**, so nothing showed it could. Witness at
+  1 round: a 2-bit cube inside one nibble has affine non-constant superpolys (4 found); a 3-bit cube has constant ones (0 found).
+- **`test_c_fuzz`: the original witnesses 0 and 1 were caught by UBSan (`object-size`, SIGILL), not by the guard-page allocator**:
+  nothing showed that the canary worked. New cases 5 and 6 go through a pointer UBSan cannot follow: the canary stops the 1-byte
+  overflow (SIGABRT) and the protected page the use after free (SIGSEGV); built without the allocator, both go undetected. Cases 3
+  and 4 witness the UBSan traps themselves (out-of-bounds index, signed overflow). The fuzzing results are unchanged: the allocator
+  was linked in and active, only its witness was missing.
+- **`test_hull`**: the check only bounded the 2-round correlation from above; masks built wrongly would have given 0 and passed. It
+  must now also see the predicted correlation (measured 2⁻⁷·⁸, 8.8 σ).
+- **`test_branch_exact`**: an enumerator returning “≥ 8” for any matrix would have certified B = 8. Codewords of weight 2 and 3 are
+  planted in M; the enumerator finds exactly those weights.
+- **`test_division_property`**: every division-property result rests on `verifier`. It must now reject four trails that are invalid
+  by construction, derived from a valid one (incomplete start, edge outside the support of L, zero S-box output for a non-zero input,
+  arrival on two bits). It does.
+- **`test_diffusion_stats`**: the small statistical battery gets the same H0 witness as the large one (128 KiB of SHAKE256, accepted)
+  and a biased witness (one bit in 64 forced to 1, rejected).
+- **`test_hachage_arbre`**: the domain check now reads the library constants, not the test's copies.
+
+**Proof term without a test: Corollary 14 ter (random nonces).** Every term of Theorem 14 was confronted with an attack except
+`q_e²/2^{193}`. `test_aead_modele` now runs it on the reduced duplex: 8-bit nonces drawn at random, q_e = 8, the adversary looks for
+two equal nonces and tests C ⊕ C′ = M ⊕ M′ on the first block. Advantage 0.107 (exact nonce-collision probability 0.105, bound
+q_e²/2^{r+1} = 0.125); with unique nonces, 0 successes.
+
+**Also run.** `sig_flux` built with gcc 16 (host): 5/5, 53.2 million basic blocks identical across 6 keys. The open item “`sig_flux`
+under gcc 14” remains: gcc 14 is not installed in the campaign container.

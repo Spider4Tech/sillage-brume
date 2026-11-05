@@ -30,6 +30,13 @@ OPTOUT = np.array([int(np.argmax(DDT[a])) for a in range(16)], np.uint8)
 COST = np.array([8 - 2*int(np.log2(max(DDT[a]))) if DDT[a].max() > 1 else 99 for a in range(16)], np.int64)
 OPTIN = np.array([int(np.argmax(np.abs(LAT[a]))) for a in range(16)], np.uint8)
 COSTLIN = np.array([6 - 2*int(np.log2(max(np.abs(LAT[a])))) if np.abs(LAT[a]).max() > 1 else 99 for a in range(16)], np.int64)
+# Coût EXACT d'une transition (demi-bits), et non celui de la meilleure transition de la ligne : l'ancienne version
+# indexait COST par la différence de SORTIE et facturait toute transition tirée au prix de la meilleure (DDT = 4 ou
+# |LAT| = 4), alors que le faisceau tire aussi des transitions de DDT = 2 ou |LAT| = 2. Les coûts rapportés n'étaient
+# donc pas ceux de trails réels.
+with np.errstate(divide="ignore"):
+    CDIFF = np.where(DDT > 0, 8 - 2 * np.log2(np.maximum(DDT, 1)), 999).astype(np.int64)    # a → b : −2·log2(DDT/16)
+    CLIN = np.where(LAT != 0, 6 - 2 * np.log2(np.maximum(np.abs(LAT), 1)), 999).astype(np.int64)  # α → γ : −2·log2|LAT/8|
 
 def diffuse(state):
     return np.bitwise_xor.reduceat(GMUL[E_C, state[:, E_I]], E_SEG[:-1], axis=1)
@@ -65,7 +72,7 @@ def beam(rounds=12, K=300, L=14, seed=5):
         for i in idx:
             s = S[i]; c = costs[i]
             outs = sample_outputs(s, rng, L)
-            cadd = COST[outs].sum(1)
+            cadd = CDIFF[s[None, :], outs].sum(1)
             nxt = diffuse(outs)
             children.append(nxt); cc.append(c + cadd)
         S = np.concatenate(children); costs = np.concatenate(cc)
@@ -97,9 +104,9 @@ def beam_lin(rounds=12, K=300, L=14, seed=6):
         for i in idx:
             s = S[i]; c = costs[i]
             alpha = diffuseT(s[None, :])[0]
-            cadd = int(COSTLIN[alpha].sum())
             inp = sample_inputs(alpha, rng, L)
-            children.append(inp); cc.append(np.full(L, c + cadd, np.int64))
+            cadd = CLIN[alpha[None, :], inp].sum(1)
+            children.append(inp); cc.append(c + cadd)
         S = np.concatenate(children); costs = np.concatenate(cc)
         alive = S.any(1); S, costs = S[alive], costs[alive]
         best[r+1] = int(costs.min())
@@ -113,7 +120,9 @@ def run():
     out["lin_beam_demi_bits"] = beam_lin(rounds=14, K=220, L=9, seed=6)
     print("beam lin", out["lin_beam_demi_bits"], "t=", round(time.time()-t0,1), flush=True)
     # borne wide-trail (B = 8) : 2r tours → ≥ 8r S-box ; diff 2 bits/S-box
-    # (4 demi-bits), lin 1 bit/S-box (2 demi-bits)
+    # (4 demi-bits), lin 1 bit/S-box (2 demi-bits). Cette borne est prouvée : un trail réel ne peut pas passer
+    # dessous. Le contrôle vérifie donc la cohérence du code (diffusion, coûts), pas la sécurité ; l'information est
+    # dans les coûts mesurés, comparés aux trails des autres recherches.
     d, l = out["diff_beam_demi_bits"], out["lin_beam_demi_bits"]
     out["controles"] = {
         "beam_diff_respecte_wide_trail": all(v >= 4 * 8 * (r // 2) for r, v in d.items()),

@@ -48,11 +48,35 @@ def superpoly(bits, R, etat):
     return flux_bits(C.cube(etat, bits, R))
 
 
+def lineaires_non_constants(bits, R, rng):
+    """Test de Blum–Luby–Rubinfeld sur les 256 superpolys du cube : nombre de superpolys affines non constants."""
+    p0 = superpoly(bits, R, np.zeros(N, np.uint8))
+    lin = np.ones(256, bool)
+    const = np.ones(256, bool)
+    for t in range(2 * ESSAIS):
+        if t == ESSAIS and not (lin & ~const).any():
+            break               # confirmation seulement s'il y a des candidats
+        a = rng.integers(0, 16, N, dtype=np.uint8)
+        b = rng.integers(0, 16, N, dtype=np.uint8)
+        pa, pb, pab = superpoly(bits, R, a), superpoly(bits, R, b), superpoly(bits, R, a ^ b)
+        lin &= (pa ^ pb ^ pab ^ p0) == 0
+        const &= (pa == p0) & (pb == p0) & (pab == p0)
+    return int((lin & ~const).sum())
+
+
 def run():
     c, m = {}, {}
     C.charger()
     c["noyau_c_conforme"] = C.conformite()[0]
     rng = np.random.default_rng(2718)
+    # Témoin du détecteur : aucun superpoly linéaire n'a jamais été trouvé ci-dessous, à aucun tour ; rien ne montrait
+    # donc que le test BLR sait en voir un. À 1 tour, un cube de 2 bits d'un même nibble a des superpolys affines
+    # non constants (S-box de degré 3 : affines en les 2 autres bits du nibble) : le détecteur doit les trouver.
+    # Témoin négatif : un cube de 3 bits du même nibble a des superpolys constants (degré 3), qu'il ne doit pas compter.
+    temoin = lineaires_non_constants([0, 1], 1, np.random.default_rng(1))
+    temoin_cst = lineaires_non_constants([0, 1, 2], 1, np.random.default_rng(2))
+    m["temoin_1_tour_superpolys_lineaires"] = {"cube_2_bits": temoin, "cube_3_bits_attendu_0": temoin_cst}
+    c["temoin_detecteur_lineaire_trouve_les_superpolys_a_1_tour"] = temoin > 0 and temoin_cst == 0
     portee_zs = portee_lin = 0
     for R in range(1, 9):
         ligne, zs_vu, lin_vu = {}, False, False
@@ -64,19 +88,7 @@ def run():
                 e = {"bits_nuls_sur_256": zeros}
                 zs_vu |= zeros >= SEUIL
                 if k in DIMS_LIN and zeros < 256:
-                    zero = np.zeros(N, np.uint8)
-                    p0 = superpoly(bits, R, zero)
-                    lin = np.ones(256, bool)
-                    const = np.ones(256, bool)
-                    for t in range(2 * ESSAIS):
-                        if t == ESSAIS and not (lin & ~const).any():
-                            break               # confirmation seulement s'il y a des candidats
-                        a = rng.integers(0, 16, N, dtype=np.uint8)
-                        b = rng.integers(0, 16, N, dtype=np.uint8)
-                        pa, pb, pab = superpoly(bits, R, a), superpoly(bits, R, b), superpoly(bits, R, a ^ b)
-                        lin &= (pa ^ pb ^ pab ^ p0) == 0
-                        const &= (pa == p0) & (pb == p0) & (pab == p0)
-                    nl = int((lin & ~const).sum())
+                    nl = lineaires_non_constants(bits, R, rng)
                     e["superpolys_lineaires_non_constants"] = nl
                     lin_vu |= nl > 0
                 ligne[cle] = e

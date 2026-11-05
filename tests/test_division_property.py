@@ -65,6 +65,43 @@ def graines(sens, r_bc, cache, essais=6, r_max_sup=6):
     return None, [], journal
 
 
+def temoins_verifier(cache):
+    """Toutes les conclusions de la division property (ici, dp_tous_cubes, dp_exact) reposent sur `verifier`. Il doit
+    donc REJETER des pistes invalides par construction, dérivées d'une piste valide : départ privé de deux bits du
+    cube, arête de la couche linéaire hors du support de L, sortie de S-box nulle pour une entrée non nulle (aucun
+    monôme non constant ne donne la constante 1 d'une bijection), arrivée sur deux bits."""
+    import copy
+    from tests.pistes_monomiales import _couches
+    for k, v in sorted(cache.items()):
+        sens, R, _ = k.split("|")
+        R = int(R)
+        if not verifier(v["piste"], R, sens):
+            continue
+        p0 = v["piste"]
+        _, L = _couches(sens)
+        mut = {}
+        q = copy.deepcopy(p0)
+        q[0][1] = q[0][1][2:]
+        mut["depart_incomplet"] = q
+        iL = next(i for i, e in enumerate(p0) if e[0] == "L")
+        q = copy.deepcopy(p0)
+        a_, k_ = q[iL][2][0]
+        hors = next(j for j in range(NB) if not L[j, a_])
+        q[iL][2][0] = [a_, hors]
+        mut["arete_hors_support"] = q
+        iS = next(i for i, e in enumerate(p0) if e[0] == "S")
+        q = copy.deepcopy(p0)
+        nib = q[iS - 1][1][0] // 4                      # un nibble actif à l'entrée de cette couche S
+        q[iS][1] = [b for b in q[iS][1] if b // 4 != nib]
+        mut["sbox_entree_active_sortie_nulle"] = q
+        q = copy.deepcopy(p0)
+        fin = q[-1][1][0]
+        q[-1][1] = sorted({fin, (fin + 1) % NB})
+        mut["arrivee_sur_deux_bits"] = q
+        return {nom: not verifier(x, R, sens) for nom, x in mut.items()}
+    return {}
+
+
 def run():
     cache = {}
     if os.path.exists(CACHE):
@@ -98,6 +135,9 @@ def run():
     tot = sum(hauts.values()) if ok else None
     m["portee_inside_out"] = {"min": 2 * r_bc, "max": tot}
     m["marge_tours_min"] = None if tot is None else B.N_ROUNDS - tot
+    tv = temoins_verifier(cache)
+    m["temoins_verifier_pistes_invalides_rejetees"] = tv
+    c["verifier_rejette_les_pistes_invalides"] = bool(tv) and all(tv.values())
     c["division_property_bornee_dans_les_deux_sens"] = ok
     c["division_property_inside_out_inferieure_a_32_tours"] = ok and tot < B.N_ROUNDS
     out = {"controles": c, "mesures": m}

@@ -85,14 +85,18 @@ def run():
                      ("v0_diff_temoin", dict(weighted=False, direction="diff"))):
         out[name] = search_cycles(n_starts=3000, rounds=80, **kw)
         print(name, out[name]["n_cycles_detectes"], out[name]["cycles"][:3], flush=True)
-    # contrôle : un cycle itératif de BRUME v1 doit coûter ≥ 8 S-box actives
-    # par paire de tours (≥ 16 bits/round·2 en diff, 8 en lin, en demi-bits)
+    # Contrôles. L'ancienne version exigeait seulement « tout cycle trouvé coûte ≥ la borne wide-trail » : sans cycle
+    # trouvé, all([]) était vrai, et un cycle trouvé, étant une vraie caractéristique, ne pouvait pas passer sous la
+    # borne prouvée. Le contrôle ne pouvait donc pas échouer. On exige maintenant (1) que le détecteur trouve les
+    # cycles du témoin v0 (graphe non pondéré), (2) qu'aucun cycle itératif glouton n'existe pour v1 : une assertion
+    # qui peut échouer, puisqu'elle échoue sur le témoin.
     cyc = lambda k: [c["cout_moyen_demi_bits"] for c in out[k]["cycles"]]
+    out["mesures"] = {k: {"cycles_detectes": out[k]["n_cycles_detectes"], "couts_moyens_demi_bits": sorted(cyc(k))[:5]}
+                      for k in ("v1_diff", "v1_lin", "v0_diff_temoin")}
     out["controles"] = {
-        "v1_diff_cycles_cout_par_tour_ge_16_demi_bits":
-            all(c >= 16 for c in cyc("v1_diff")),
-        "v1_lin_cycles_cout_par_tour_ge_8_demi_bits":
-            all(c >= 8 for c in cyc("v1_lin")),
+        "temoin_v0_cycles_detectes": out["v0_diff_temoin"]["n_cycles_detectes"] > 0,
+        "v1_diff_aucun_cycle_iteratif_glouton": out["v1_diff"]["n_cycles_detectes"] == 0,
+        "v1_lin_aucun_cycle_iteratif_glouton": out["v1_lin"]["n_cycles_detectes"] == 0,
     }
     sauver("cycles", out)
     return out

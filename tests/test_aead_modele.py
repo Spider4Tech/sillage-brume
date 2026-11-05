@@ -189,6 +189,28 @@ def _tags(r, c, qd, essais, rng):
     return gagne
 
 
+def _nonces_aleatoires(r, c, qe, essais, rng, uniques=False):
+    """Corollaire 14 ter : q_e chiffrements à nonces de r bits tirés au hasard (ou uniques : compteur). Le distingueur
+    cherche deux nonces égaux et teste C ⊕ C' = M ⊕ M' sur le premier bloc (même flux). Renvoie (succès dans le monde
+    réel, succès dans le monde idéal, où les chiffrés sont uniformes et indépendants)."""
+    reel = ideal = 0
+    for _ in range(essais):
+        d = Duplex(r, c, 2, rng)
+        K = d.cle(rng)
+        nonces = list(range(qe)) if uniques else [int(x) for x in rng.integers(1 << r, size=qe)]
+        Ms = [[int(x) for x in rng.integers(1 << r, size=2)] for _ in range(qe)]
+        Cr = [d.chiffrer(K, n, [], M)[0] for n, M in zip(nonces, Ms)]
+        Ci = [[int(x) for x in rng.integers(1 << r, size=2)] for _ in range(qe)]
+        for C, gagne in ((Cr, True), (Ci, False)):
+            vu = any(nonces[i] == nonces[j] and C[i][0] ^ C[j][0] == Ms[i][0] ^ Ms[j][0]
+                     for i in range(qe) for j in range(i + 1, qe))
+            if gagne:
+                reel += vu
+            else:
+                ideal += vu
+    return reel, ideal
+
+
 def _sous(f, borne, essais):
     return f / essais <= borne + 3 * math.sqrt(max(borne, 1 / essais) / essais)
 
@@ -242,6 +264,19 @@ def run():
     gt = _tags(8, 8, qd, E, rng)
     m["tags_devines"] = {**_freq(gt, E), "qd": qd, "borne": qd / 2 ** 8}
     c["tag_borne_atteinte_sans_depassement"] = _sous(gt, qd / 2 ** 8, E) and gt / E >= qd / 2 ** 8 / 2
+    # Corollaire 14 ter : nonces de r = 8 bits tirés au hasard, q_e = 8 chiffrements. Terme q_e²/2^(r+1) (q_e²/2^193
+    # pour les nonces de 192 bits) : la collision de nonces livre le XOR des clairs, attaque exécutée ici.
+    E, qe = int(3000 * INT), 8
+    gr, gi = _nonces_aleatoires(8, 8, qe, E, rng)
+    gu, _ = _nonces_aleatoires(8, 8, qe, int(500 * INT), rng, uniques=True)
+    adv = (gr - gi) / E
+    bn = qe ** 2 / 2 ** 9
+    exact = 1 - math.prod(1 - i / 2 ** 8 for i in range(qe))      # probabilité d'une collision de nonces
+    m["corollaire_14_ter_nonces_aleatoires"] = {**_freq(gr, E), "ideal": gi, "avantage": round(adv, 4), "qe": qe,
+                                                "borne_qe2_sur_2_r_plus_1": round(bn, 4),
+                                                "collision_exacte": round(exact, 4), "nonces_uniques_succes": gu}
+    c["nonces_aleatoires_terme_atteint_sans_depassement"] = _sous(gr - gi, bn, E) and adv >= exact / 2
+    c["nonces_uniques_aucune_collision_exploitable"] = gu == 0
     out = {"controles": c, "mesures": m}
     sauver("aead_modele", out)
     return out

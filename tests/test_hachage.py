@@ -10,18 +10,42 @@ from tests.commun import sauver
 from sillage.brume512 import brume512_hash, RATE_BYTES
 
 
+def absorbe_reel(msg):
+    """Blocs absorbés par brume512_hash(msg), lus par une sonde à la place de la permutation (qui remet l'état à
+    zéro : le débit vu à chaque appel est alors exactement le bloc absorbé). Le dernier appel est l'extraction."""
+    import sillage.brume512 as B
+    vus, vraie = [], B.brume_v1
+
+    def sonde(etat, rounds=B.N_ROUNDS):
+        vus.append(B._pack_nibbles(etat[:B.RATE]))
+        return np.zeros_like(etat)
+    B.brume_v1 = sonde
+    try:
+        brume512_hash(msg, 1)
+    finally:
+        B.brume_v1 = vraie
+    return b"".join(vus[:-1])
+
+
 def run():
     c, m = {}, {}
-    # 1. padding : injectivité exhaustive sur {00,01,80,FF}^<=6
-    vus, coll = {}, 0
-    for L in range(7):
-        for tup in itertools.product((0, 1, 0x80, 0xFF), repeat=L):
-            msg = bytes(tup)
-            d = msg + b"\x01"
-            d += b"\x00" * ((-len(d)) % RATE_BYTES)
-            coll += d in vus
-            vus[d] = msg
+    # 1. padding : injectivité exhaustive sur {00,01,80,FF}^<=6 et autour des frontières de bloc. L'ancienne version
+    #    recopiait le bourrage dans le test et vérifiait sa copie : elle ne voyait pas le code. On lit maintenant les
+    #    blocs réellement absorbés par brume512_hash, en remplaçant la permutation par une sonde qui les enregistre.
+    mots = [bytes(t) for L in range(7) for t in itertools.product((0, 1, 0x80, 0xFF), repeat=L)]
+    for L in (RATE_BYTES - 2, RATE_BYTES - 1, RATE_BYTES, RATE_BYTES + 1, 2 * RATE_BYTES - 1, 2 * RATE_BYTES):
+        for fin in (b"", b"\x00", b"\x01", b"\x01\x00"):
+            mots.append(b"\xab" * L + fin)
+    vus, coll, forme = {}, 0, True
+    for msg in dict.fromkeys(mots):
+        d = absorbe_reel(msg)
+        coll += d in vus and vus[d] != msg
+        vus[d] = msg
+        forme &= len(d) % RATE_BYTES == 0 and len(d) > len(msg) and d.startswith(msg)
+    m["padding_messages_testes"] = len(vus)
     c["padding_injectif"] = coll == 0
+    c["padding_reel_multiple_du_debit_et_prefixe"] = forme
+    c["sonde_padding_temoin"] = absorbe_reel(b"") == b"\x01" + bytes(RATE_BYTES - 1)
     # 2. extensions par zéros / 0x01 aux frontières
     ok = True
     for L in (0, 1, 30, 31, 32, 33, 63, 64, 65):

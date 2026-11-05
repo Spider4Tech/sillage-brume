@@ -37,9 +37,14 @@ def run():
     c, m = {}, {}
     garde = os.path.join(RACINE, "tests", "c", "garde.c")
     temoin = construire("garde_test", [os.path.join(RACINE, "tests", "c", "garde_test.c"), garde])
-    codes = [subprocess.run([temoin, str(k)], capture_output=True).returncode for k in range(3)]
+    codes = [subprocess.run([temoin, str(k)], capture_output=True).returncode for k in range(7)]
     m["detecteur_codes_erreurs_volontaires"] = codes
     c["detecteur_valide_sur_erreurs_volontaires"] = all(x != 0 for x in codes)
+    # Chaque mécanisme a son propre témoin. Les cas 0 et 1 étaient attrapés par UBSan (object-size, SIGILL), pas par
+    # l'allocateur : rien ne montrait que le canari fonctionnait. Les cas 5 et 6 passent par un pointeur que UBSan ne
+    # suit pas : seul l'allocateur peut les voir (canari → SIGABRT, page protégée → SIGSEGV).
+    c["temoin_ubsan_trap_actif"] = codes[3] == codes[4] == -4
+    c["temoin_allocateur_de_garde_actif"] = codes[2] == -11 and codes[5] == -6 and codes[6] == -11
     fuzz = construire("fuzz", [os.path.join(RACINE, "tests", "c", "fuzz.c"), garde]
                       + [os.path.join(ICI, s) for s in SRC])
     r = subprocess.run([fuzz, str(ITERATIONS)], capture_output=True, text=True,

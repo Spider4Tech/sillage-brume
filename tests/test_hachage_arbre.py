@@ -113,7 +113,9 @@ def run():
     c["decodabilite_de_la_racine"] = dec == len(essais)
     c["completude_des_feuilles"] = compl == len(essais)
     c["separabilite_du_noeud_final"] = sep == len(essais)
-    c["domaines_distincts_et_non_nuls"] = len({FEUILLE, RACINE_D, SEUL}) == 3 and 0 not in (FEUILLE, RACINE_D, SEUL)
+    # sur les constantes de la bibliothèque, pas sur la copie du test
+    dl = (B._DOM_FEUILLE, B._DOM_RACINE, B._DOM_SEUL)
+    c["domaines_distincts_et_non_nuls"] = len(set(dl)) == 3 and 0 not in dl and dl == (FEUILLE, RACINE_D, SEUL)
     # 3. séparation des domaines (sorties)
     c["arbre_different_du_sequentiel"] = all(
         C.hash_arbre(msgs[L]) != C.hash(msgs[L]) for L in LONGUEURS)

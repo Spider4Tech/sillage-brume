@@ -1025,6 +1025,11 @@ add `q_e²/2^{193}` to the advantage, i.e. `2^{−65}` at `q_e = 2^{64}`.
 The code does not choose: the nonce is supplied by the caller. The same corollary applies to the parallel profiles (§ 4.5). Point raised by
 an external audit: the term appeared in the text of the game, but neither in the theorem nor in the table.
 
+*Check* (`tests/test_aead_modele.py`, added on 2026-11-05): on the reduced duplex with 8-bit nonces drawn at random and q_e = 8, an
+adversary that looks for two equal nonces and tests C ⊕ C′ = M ⊕ M′ on the first block reaches an advantage of 0.107, against an exact
+nonce-collision probability of 0.105 and a bound q_e²/2^{r+1} = 0.125; with unique nonces it never succeeds. The term is reached
+and not exceeded.
+
 *Reading the edge case.* With N = 2^128 and σ = 2^64, the bound gives an
 advantage of about 2^−63 for BRUME-512. An adversary that has made 2^128
 queries therefore only has an advantage of 2^−63, which is consistent with 128

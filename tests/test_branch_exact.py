@@ -63,10 +63,21 @@ def run():
     gt = all(int(B.GMUL_T[c, mu]) == int(sum(((mat(c).T @ [(mu >> b) & 1 for b in range(4)])[r] % 2) << r
                                          for r in range(4)))
              for c in range(16) for mu in range(16))
+    # Témoins de l'énumérateur : sans eux, un énumérateur qui renverrait toujours ≥ 8 certifierait B = 8 pour n'importe
+    # quelle matrice. On plante un mot de code de poids 2 (colonne 0 = 3·colonne 1, donc M(e0 ⊕ 3·e1) = 0) puis de
+    # poids 3 (colonne 2 = colonne 0 ⊕ colonne 1) : l'énumérateur doit trouver exactement ces poids.
+    T2 = M.copy()
+    T2[:, 0] = GM[3, M[:, 1]]
+    T3 = M.copy()
+    T3[:, 2] = M[:, 0] ^ M[:, 1]
+    t2, t3 = min_poids_jusqua_3(T2), min_poids_jusqua_3(T3)
+    m["temoins"] = {"poids_2_plante": t2, "poids_3_plante": t3}
+    temoins_ok = t2[2] == 2 and t3[3] == 3 and t3[2] > 3
     out = {"mesures": m,
            "B_differentiel": bd, "B_lineaire": bl,
            "controles": {"B_diff_egal_8": bd == 8, "B_lin_egal_8": bl == 8,
-                         "conjugaison_trace": conj, "GMUL_T_transposee_binaire": gt}}
+                         "conjugaison_trace": conj, "GMUL_T_transposee_binaire": gt,
+                         "temoins_mots_de_code_plantes_trouves": temoins_ok}}
     sauver("branch_exact", out)
     return out
 
