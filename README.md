@@ -226,7 +226,7 @@ The PKE is wrapped in a Fujisaki–Okamoto transform with implicit rejection. De
 
 The v0.4 code uses RM(1,7) repeated `D` times and a public pseudo-random spreading of the positions. A block of `128·D` bits carries one byte of the shared secret. Decoding uses a Walsh transform.
 
-Correctness is analysed with a Chernoff bound that does not assume independent error bits. Key generation evaluates the bound for each candidate key and rejects keys whose certified failure bound exceeds `2⁻λ`. The observed key rejection rates in the documented parameter generation are approximately 5% and 8% for the two profiles. The median bounds are substantially below the acceptance thresholds; see [`docs/PROOFS.md`](docs/PROOFS.md), §2.3.
+Correctness is analysed with a Chernoff bound that does not assume independent error bits. Key generation evaluates the bound for each candidate key and rejects keys whose certified failure bound exceeds `2⁻λ`. The measured key rejection rates are about 7.0% (Sillage-128) and 6.1% (Sillage-256) on 32 768 and 8 192 keys (`tests/c/kem_rejet.c`); θ = 0.7 sits at the minimum of these rates (`tests/test_kem_theta.py`). The median bounds are substantially below the acceptance thresholds; see [`docs/PROOFS.md`](docs/PROOFS.md), §2.3.
 
 ### Parameters
 

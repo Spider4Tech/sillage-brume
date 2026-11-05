@@ -91,6 +91,7 @@ cube.*
 | KEM correctness | 150/150 (128), 25/25 (256) |
 | Decoding margin | max 108 flips for a threshold of 265 (128); 170 / 476 (256) |
 | Proved δ (Chernoff, per key) | generated key 2⁻¹⁶⁷ (128) / 2⁻³⁷⁷ (256); worst of 30 raw keys 2⁻¹³⁸ / 2⁻²⁵⁶; keygen rejects any key above 2^−λ |
+| Sensitivity to the Chernoff parameter θ = 0.7 | θ = 0.7 minimises the rejection rate within 0.02 (6.4 % / 5.8 %); per-key θ gains 0.1 point; 0.6 or 0.8 raise rejection by 1.5 to 2×; θ must stay below 0.924 (uint32 table in C); see PROOFS § 2.3 (`test_kem_theta`) |
 | FO | decodable dishonest ciphertexts → implicit rejection; deterministic rejection; malformed inputs without exceptions |
 | SIG | verification, rejections, witness absent, cheater with a dense preimage (weight 862) rejected, uniform challenges (χ²) |
 | Fuzzing | no undeclared exception (decrypt, decrypt_te, verify, decaps) |
@@ -632,3 +633,37 @@ q_e²/2^{r+1} = 0.125); with unique nonces, 0 successes.
 
 **Also run.** `sig_flux` built with gcc 16 (host): 5/5, 53.2 million basic blocks identical across 6 keys. The open item “`sig_flux`
 under gcc 14” remains: gcc 14 is not installed in the campaign container.
+
+## Errata of 2026-11-05 (parameters set without a check)
+
+The question asked of each constant was: what justifies its value, and does a test check that justification? Most constants
+are already covered: n and D are minimal (`test_isd_parametres`), τ is minimal (`test_sig`), the fields are irreducible
+(`test_sig_modele`), and `KARA_SEUIL` is measured. Five constants were not covered.
+
+**Chernoff parameter θ = 0.7 of the KEM bound.** Its effect on rejection had never been measured. It is now measured, and the
+value is confirmed: see PROOFS § 2.3 and `test_kem_theta`.
+
+**Rejection of keys with some `c > 15` (`C_MAX`).** The comment in `sillage_kem.py` gave a probability of about 2⁻³⁰ per key. The
+exact union bound is **2⁻¹⁶·⁹ (128) and 2⁻¹²·⁰ (256)**. It is computed as hypergeometric, over 2 secrets × 254 supports × n
+translations. The statements do not change: this rejection is 10⁻⁴ to 4·10⁻³ of the rejection by the bound, and it is
+part of ε_rej. The comment is corrected. New checks in `test_kem_theta`: the rejection is negligible (≤ 1 % of the rejection by
+the bound), and the observed count is compatible with the bound.
+
+**`we` (noise weight of the cascade).** PROOFS § 5 said that `we` is the smallest value keeping the three-block attack at
+the level of the two-block one. The real criterion, and the one that holds, is different: `we` is the smallest value keeping
+the classical level of v0.3. At `we − 1`, the level drops to 137.0 and 264.4 b, against 137.3 and 264.9. The minimality of
+`w`, stated in the same place, had never been checked either: at `w − 1`, 136.7 and 263.6 b. New checks:
+`<level>_w_minimal_au_niveau_v03` and `<level>_we_minimal_au_niveau_v03`.
+
+**SIG rate of 0.7.** PROOFS § 5 said that a rate of 0.7 minimises the witness size `k + 2w·e` at fixed ISD cost. This is
+false. The size decreases as the rate rises, up to the unique-solution limit near 0.727: 3 622 and 7 608 bits, against
+3 700 and 7 811 bits. The 0.70 rate keeps a uniqueness margin of 29.5 and 56 bits. The parameters do not change; the wording
+is corrected.
+
+**Fixed number of words in the constant-time sparse sampler (`sl_creux`).** The Chernoff bound gave “P[insufficient] < 2⁻¹²⁸”
+with no test behind it. The exact binomial tail is between 2⁻³⁵⁵ and 2⁻⁹²³, depending on the call. M is therefore 1.5 to 3
+times larger than needed: 406 words for 217 at w = 75, and 633 for 419 at w = 140. This is a possible speed-up, not a defect.
+New checks: `tirage_creux_M_fixe_suffit_a_2^-128`, with the witness `M/4` insufficient.
+
+**Stale rates.** The README still gave rejection rates of “approximately 5 % and 8 %”, an erratum of 2026-11-03 that was not
+carried over. The measured values are 7.0 % and 6.1 %. The README is corrected.

@@ -24,6 +24,36 @@ def taux_depassement(n, k, D, w, we, theta, seuil, essais=12):
                for _ in range(essais)) / essais
 
 
+# Niveaux classiques de la v0.3 (PROOFS § 5) : w et we sont les plus petites valeurs qui ne descendent pas en dessous.
+NIVEAUX_V03 = {"Sillage-128": 137.3, "Sillage-256": 264.9}
+# Appels de sl_creux (sillage/c/kem.c, sig.c) : (poids, longueur).
+TIRAGES_CREUX = {"kem128_w": (75, 50021), "kem128_we": (25, 28672), "kem256_w": (140, 170003),
+                 "kem256_we": (64, 114688), "sig128_w": (103, 2048), "sig256_w": (206, 4096)}
+
+
+def m_tirage_creux(poids, n):
+    """Nombre fixe de mots consommés par sl_creux (sillage/c/commun.c) : borne de Chernoff inférieure
+    exp(−(μ − poids)²/(2μ)) ≤ 2^-128 résolue en μ = M·p, p = (n − poids)/span. Recopie de la formule du C : ce que
+    le contrôle vérifie est que cette formule donne bien P[insuffisant] < 2^-128 pour la loi exacte."""
+    span = 1
+    while span < n:
+        span <<= 1
+    p, l = (n - poids) / span, 128 * math.log(2)
+    mu = poids + l + math.sqrt((poids + l) ** 2 - poids * poids)
+    return math.ceil(mu / p), p
+
+
+def log2_bin_inf(M, p, t):
+    """log2 P[Bin(M, p) < t], exact (somme en log). L'acceptation d'un tirage a une probabilité ≥ p quels que
+    soient les tirages précédents : le nombre d'acceptations domine Bin(M, p)."""
+    lg = [math.lgamma(M + 1) - math.lgamma(k + 1) - math.lgamma(M - k + 1) + k * math.log(p) + (M - k) * math.log1p(-p)
+          for k in range(min(t, M + 1))]
+    if M < t:
+        return 0.0                                   # moins de t tirages : P = 1
+    mx = max(lg)
+    return (mx + math.log(sum(math.exp(x - mx) for x in lg))) / math.log(2)
+
+
 # CryptographicEstimators, SDEstimator (temps, log2, 2026-10-30) ; régénérer : voir PROOFS § 5
 CE_FIGEES = {(3488, 2720, 64): dict(prange=173.4, stern=151.4, dumer=151.4, bjmm=141.9),
              (2048, 1434, 103): dict(prange=217.1, stern=193.6, dumer=193.2, bjmm=177.6),
@@ -122,6 +152,16 @@ def run():
                                    "taux_avec_D_moins_2": taux_D}
         c[f"{lvl}_n_quasi_minimal"] = sec1 < p["lam"] + 8 or taux > 0.05
         c[f"{lvl}_D_minimal"] = taux_D > 0.05
+        # w et we : plus petites valeurs gardant le niveau classique de la v0.3 (PROOFS § 5), jamais testé jusqu'ici
+        kem = SillageKEM(lvl)
+        moins = {}
+        for cle in ("w", "we"):
+            kem.p = dict(p, **{cle: p[cle] - 1})
+            moins[cle] = kem.security_estimate()["classique_bits"]
+        m[f"{lvl}_minimalite_w_we"] = {"niveau_v03": NIVEAUX_V03[lvl], "retenu": est["classique_bits"],
+                                       "w_moins_1": moins["w"], "we_moins_1": moins["we"]}
+        c[f"{lvl}_w_minimal_au_niveau_v03"] = est["classique_bits"] >= NIVEAUX_V03[lvl] > moins["w"]
+        c[f"{lvl}_we_minimal_au_niveau_v03"] = est["classique_bits"] >= NIVEAUX_V03[lvl] > moins["we"]
     for lvl, p in SIG_PARAMS.items():
         est = SillageSIG(lvl).security_estimate()
         m[lvl] = est
@@ -130,6 +170,16 @@ def run():
         # (l'ancien contrôle « tau_suffisant » répétait mot pour mot forgery_ge_lambda ; la minimalité de τ est
         #  vérifiée par test_sig : <niveau>_tau_minimal)
         c[f"{lvl}_graine_et_haches_ge_lambda"] = est["graine_bits"] >= p["lam"] and est["collision_bits"] >= p["lam"]
+    # tirage creux à temps constant : M mots suffisent avec probabilité ≥ 1 − 2^-128 (commun.c), loi exacte
+    tc = {}
+    for nom, (poids, n) in TIRAGES_CREUX.items():
+        M, pa = m_tirage_creux(poids, n)
+        Mmin = next(x for x in range(poids, M + 1) if log2_bin_inf(x, pa, poids) < -128)
+        tc[nom] = {"M": M, "log2_P_insuffisant": round(log2_bin_inf(M, pa, poids), 1), "M_minimal_exact": Mmin,
+                   "temoin_M_sur_4_log2": round(log2_bin_inf(M // 4, pa, poids), 1)}
+    m["tirage_creux"] = tc
+    c["tirage_creux_M_fixe_suffit_a_2^-128"] = all(v["log2_P_insuffisant"] < -128 for v in tc.values())
+    c["tirage_creux_temoin_M_sur_4_insuffisant"] = all(v["temoin_M_sur_4_log2"] > -128 for v in tc.values())
     out = {"controles": c, "mesures": m}
     sauver("isd_parametres", out)
     return out

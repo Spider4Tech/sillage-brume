@@ -74,6 +74,7 @@ TESTS = [
     ("c:h1p_fourier", "h1p_fourier", "Intensif (C)"),
     ("c:invariants", "invariants", "Intensif (C)"),
     ("c:kem_rejet", "kem_rejet", "Intensif (C)"),
+    ("test_kem_theta", "kem_theta", "Intensif (C)"),
     ("c:brume_gd2", "brume_gd2", "Intensif (C)"),
     ("c:sig_flux", "sig_flux", "Intensif (C)"),
     ("c:sig_kz", "sig_kz", "Intensif (C)"),

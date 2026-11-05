@@ -242,6 +242,37 @@ any key-dependent branch or memory access (Valgrind); only the worst product `M_
 public. `keygen` rejects any key whose bound exceeds `2^{−λ}`. Hence **δ ≤ 2^{−λ} is proved** for the
 distribution of keys produced. Medians measured on raw keys (`resultats/kem.json`): `2^{−146}` and `2^{−289}`; rejections 7.1 % and 5.9 % (`tests/c/kem_rejet.c`).
 
+*Choice of θ (sensitivity, `python3 -m tests.test_kem_theta 3000 1500`, 3 000 and 1 500 raw keys; the battery runs 2 000 and 800).* Theorem 4 holds for every θ > 0, so
+θ affects only the rejection rate and the reported bounds, never the guarantee δ ≤ 2^{−λ} for accepted keys. The sweep
+reuses the per-support histograms of `c` (they do not depend on θ) and reproduces `borne_echec_log2` at θ = 0.7 to
+10^{−13} bits.
+
+| | Sillage-128 | Sillage-256 |
+|---|---|---|
+| rejection at θ = 0.7 | 6.4 % ± 0.45 | 5.8 % ± 0.6 |
+| θ minimising the rejection (grid step 0.01) | 0.68–0.69 (6.33 %) | 0.68 (5.73 %) |
+| window within 1 point of the minimum rejection | 0.65–0.75 | 0.64–0.73 |
+| rejection at θ = 0.6 / 0.8 / 0.9 | 12.5 / 9.3 / 17.0 % | 9.9 / 10.3 / 20.5 % |
+| rejection with θ optimised key by key | 6.30 % | 5.73 % |
+| median bound at θ = 0.7 / per-key θ* | 2^{−147.3} / 2^{−152.3} | 2^{−288.6} / 2^{−293.6} |
+| θ* per key: median (5 %–95 %) | 0.84 (0.68–0.99) | 0.80 (0.68–0.92) |
+| θ* of keys within 8 bits of the threshold: median (5 %–95 %) | 0.71 (0.66–0.75) | 0.69 (0.66–0.71) |
+| rejection with θ chosen per support before the union | 4.97 % | 4.93 % |
+
+The bound is convex in θ, and θ* is where the tilted mean of `T1 + T2 + Te` reaches `|S|/2`. For a typical key,
+`c(s)` is close to Poisson and `e^{θ*} ≈ (|S|/2)/E[T]`, which gives θ* ≈ 0.8. Keys with heavier tails reach the threshold
+at a lower θ. Those keys decide rejection, and their θ* is 0.7: θ = 0.7 sits at the minimum of the rejection rate. It
+costs 0.1 point against a per-key θ (+0.001 keygen draw on average) and about 5 bits on the *median* bound, which no
+guarantee uses. The minimum is sharp. Moving to 0.6 or 0.8 multiplies rejections by 1.5 to 2, and at θ ≤ 0.5 almost every
+key is rejected. Three further facts bound the choice:
+- The integer table `⌈2^{12}·e^{θc}⌉/2^{12}` raises the bound by at most 0.036 bit, always upwards.
+- No key out of 4 500 hit `c > 15`.
+- `sl_kem_borne` stores `T[15]` in a `uint32`, so θ must stay below `ln((2^{32} − 1)/2^{12})/15 = 0.924`. Above that
+  value the conversion overflows.
+
+The only remaining gain allowed by the proof is a θ per support, which takes rejection from 6.3 % to 5.0 % (128) and from
+5.7 % to 4.9 % (256). It would need a few tables in constant time, and it does not change any parameter.
+
 *v0.3 correction.* v0.2 justified correctness with a Gaussian z-score
 (bits assumed independent). The proved bound above shows that the
 old parameters only guaranteed about `2^{−60}` to `2^{−75}`. The
@@ -1369,7 +1400,11 @@ The levels are **classical**. Prange–Grover quantum estimate: 91.7
 and 158.4 bits, below 128 and 256: no quantum level is claimed.
 w goes from 74 to 75 and from 139 to 140 so that every attack cost stays at least that of v0.3 (137.3 and 264.9 b;
 91.1 and 158.0 b): at equal w, reducing n lowers the elimination cost by about one bit. `we` is the smallest value keeping
-the three-block attack at the level of the two-block one.
+the classical level of v0.3: at `we − 1`, the three-block message attack, which sets the level, drops to 137.0 and 264.4 b.
+(An earlier wording said that `we` keeps the three-block attack at the level of the two-block one. That is not what
+happens: at the chosen `we`, the three-block attack is still the cheapest, 138.2 b against 138.6 b for key recovery.)
+`w − 1` gives 136.7 and 263.6 b. Both minimality claims are checked by `test_isd_parametres`
+(`<level>_w_minimal_au_niveau_v03`, `<level>_we_minimal_au_niveau_v03`).
 
 Signature: `[n, k, w] = [2048, 1434, 103]` and `[4096, 2867, 206]`, N = 2¹², τ = 11 / 23, t = 4, `K = GF(2^{44})` and `GF(2^{48})`. Forgery
 cost 2^{128.3} and 2^{264} (§ 3.3); ISD 160.3 / 316.2 bits.
@@ -1380,7 +1415,10 @@ cost 2^{128.3} and 2^{264} (§ 3.3); ISD 160.3 / 316.2 bits.
 | SIG-256 | 186 B | 977 B | **34 867 B** | 536 326 B on average (×15.4) |
 
 *Choice.* The code is near the Gilbert–Varshamov bound, with a unique expected solution (`log₂ C(n, w) < r`). At fixed ISD cost,
-the witness size is `k + 2w·e` bits; a rate of 0.7 minimises it. `n = 2^e` simplifies F. N = 2¹⁶ would give 6.9 KB
+the witness size is `k + 2w·e` bits. It decreases as the rate rises, up to the
+unique-solution limit (`log₂ C(n, w) < r`), reached near a rate of 0.727: 3 622 and 7 608 bits, against 3 700 and 7 811 bits at
+the chosen rate of 0.70. (An earlier wording said that a rate of 0.7 minimises it.) The rate of 0.70 keeps a uniqueness
+margin of 29.5 and 56 bits. At the limit, the margin is 1.2 and 2.7 bits, and the witness would be 2 to 3 % smaller. `n = 2^e` simplifies F. N = 2¹⁶ would give 6.9 KB
 for a running time ×16.
 
 ### ISD comparison (log₂ of operations, code without quasi-cyclic credit)

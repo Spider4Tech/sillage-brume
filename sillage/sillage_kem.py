@@ -87,7 +87,8 @@ for _name, _p in PARAMS.items():
 # où M_y(θ) = moyenne sur s de e^{θ·c(s)}, c(s) = |(S + s) ∩ y|. Union sur les
 # 254 hyperplans et les k/8 blocs. Aucune hypothèse d'indépendance entre positions.
 # Le support d'un bloc translaté donne le même multiensemble : un seul bloc suffit.
-# Clés avec c(s) > C_MAX : rejetées (probabilité ≈ 2^-30 par clé), la table
+# Clés avec c(s) > C_MAX : rejetées. Borne d'union exacte (hypergéométrique, 2 secrets × 254 supports × n
+# translations) : 2^-16,9 (128) et 2^-12,0 (256) par clé, contre ≈ 6 % de rejets par la borne (tests/test_kem_theta.py) ; la table
 # entière T[c] = ⌈2^F·e^{θc}⌉ majore l'exponentielle et le calcul reste identique en C.
 C_MAX, F_TABLE = 15, 12
 
