@@ -10,13 +10,23 @@
  *     C'est plus fin que l'activité (tests/c/structure_miss.c), qui ignore la valeur des coefficients.
  *     Propagation sûre : les corrélations entre nibbles sont oubliées, chaque ensemble est un sur-ensemble.
  *     Contrôle : des différences réelles restent dans les ensembles prédits.
- *     build/brume_attaques [log2 quartets] [combinaisons]   (depuis la racine) → resultats/brume_attaques.json
+ *     build/brume_attaques [log2_quartets] [combinaisons] [seed] [taille_famille]
+ *     Produit resultats/brume_attaques.json et resultats/brume_attaques_boomerang_raw.csv.
+ *
+ *     La campagne boomerang est limitée à RB tours. Aucun contrôle ne prétend
+ *     en déduire la sécurité de la permutation 32 tours.
  */
+#include <errno.h>
 #include <immintrin.h>
+#include <inttypes.h>
+#include <limits.h>
 #include <math.h>
 #include <omp.h>
 #include <stdalign.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "brume_ref.h"
 #include "resultat.h"
@@ -110,12 +120,14 @@ static inline uint64_t suiv(uint64_t *g)
 
 static inline void alea(uint8_t *s, uint64_t *g)
 {
-    for (int i = 0; i < 64; i++) {
-        uint64_t z = i % 16 == 0 ? (g[1] = suiv(g)) : g[1];
-        s[2 * i] = (z >> (8 * (i % 8))) & 15;
-        s[2 * i + 1] = (z >> (8 * (i % 8) + 4)) & 15;
-        if (i % 8 == 7)
-            g[1] = suiv(g);
+    /* Un mot SplitMix64 fournit exactement 16 nibbles indépendants en sortie
+     * (au sens de la permutation de bits du générateur). Aucun mot généré
+     * n'est écrasé ou sauté entre deux blocs.
+     */
+    for (int base = 0; base < BR_N; base += 16) {
+        uint64_t z = suiv(g);
+        for (int k = 0; k < 16; k++)
+            s[base + k] = (uint8_t)((z >> (4 * k)) & 15u);
     }
 }
 
@@ -166,46 +178,89 @@ static void sbox_tables(resultat_t *res)
 
 static double seuil_z(double tests)
 {
-    /* queue gaussienne ≤ 1/(tests·2^10) */
-    double z = 3;
-    while (z < 40 && 0.5 * erfc(z / sqrt(2)) > 1 / (tests * 1024))
-        z += 0.01;
-    return z;
+    /* Seuil bilatéral : P(|Z| > z) = erfc(z/sqrt(2)).
+     * La correction de Bonferroni porte sur toutes les combinaisons, tous les
+     * nibbles observés, tous les tours testés et toutes les S-boxes comparées.
+     * La probabilité familiale visée est <= 1/1024.
+     */
+    if (!(tests > 0.0))
+        return INFINITY;
+    const double target = 1.0 / (tests * 1024.0);
+    double low = 0.0, high = 12.0;
+    for (int k = 0; k < 80; k++) {
+        double mid = (low + high) / 2.0;
+        if (erfc(mid / sqrt(2.0)) > target)
+            low = mid;
+        else
+            high = mid;
+    }
+    return high;
 }
 
-static void boomerang(resultat_t *res, int lq, int nc)
+static void boomerang(resultat_t *res, int lq, int nc,
+                      uint64_t seed_base, int family_size)
 {
-    int64_t n = 1LL << lq;
-    int portee = 0;
-    char txt[2000];
-    size_t o = 0;
-    o += (size_t)snprintf(txt + o, sizeof txt - o, "[");
-    double seuil = seuil_z((double)nc * BR_N * RB);
+    const int64_t n = INT64_C(1) << lq;
+    const int threads = omp_get_max_threads();
+    const double tests_family = (double)nc * (double)BR_N * (double)RB
+                                * (double)family_size;
+    const double seuil = seuil_z(tests_family);
+    int significant[RB + 1] = {0};
     int controle_r1 = 0;
+    uint64_t exact_total[RB + 1] = {0};
+    double zmax_round[RB + 1] = {0};
+    int zmax_combination[RB + 1] = {-1};
+    int zmax_nibble[RB + 1] = {-1};
+
+    FILE *raw = fopen("resultats/brume_attaques_boomerang_raw.csv", "w");
+    int raw_ok = raw != NULL;
+    if (raw) {
+        fprintf(raw,
+                "round,combination,input_nibble,alpha,delta_source_nibble,delta_value,"
+                "output_nibble,zero_count,quartets,exact_returns,threads,"
+                "combination_seed,seed_base,family_size\n");
+    } else {
+        fprintf(stderr,
+                "AVERTISSEMENT: impossible d'ouvrir resultats/brume_attaques_boomerang_raw.csv\n");
+    }
+
     for (int R = 1; R <= RB; R++) {
-        double zmax = 0;
-        int depasse = 0;
         uint64_t retours_exacts = 0;
+        double zmax = 0.0;
+        int depasse = 0;
+
         for (int c = 0; c < nc; c++) {
-            uint64_t gc = 0xB00 + (uint64_t)(c * 1000 + R);
-            int i = (int)(suiv(&gc) % BR_N), j = (int)(suiv(&gc) % BR_N);
-            uint8_t al = (uint8_t)(1 + suiv(&gc) % 15), de = (uint8_t)(1 + suiv(&gc) % 15);
+            uint64_t gc = seed_base + (uint64_t)c * UINT64_C(1000) + (uint64_t)R;
+            const int i = (int)(suiv(&gc) % BR_N);
+            const int j = (int)(suiv(&gc) % BR_N);
+            const uint8_t al = (uint8_t)(1 + suiv(&gc) % 15);
+            const uint8_t de = (uint8_t)(1 + suiv(&gc) % 15);
+            const uint64_t combination_seed = gc;
+
             uint8_t delta[BR_N];
             for (int v = 0; v < BR_N; v++)
                 delta[v] = gf_mul(BM[v][j], de);
-            uint64_t cpt[BR_N];
-            memset(cpt, 0, sizeof cpt);
+
+            uint64_t cpt[BR_N] = {0};
             uint64_t exacts = 0;
+
 #pragma omp parallel
             {
-                uint64_t g[2] = {gc ^ ((uint64_t)omp_get_thread_num() << 40), 0}, loc[BR_N], ex = 0;
-                memset(loc, 0, sizeof loc);
+                const uint64_t thread_id = (uint64_t)omp_get_thread_num();
+                uint64_t g[2] = {
+                    combination_seed ^ (thread_id * UINT64_C(0x9e3779b97f4a7c15)),
+                    0
+                };
+                uint64_t local[BR_N] = {0};
+                uint64_t exact_local = 0;
                 uint8_t x[BR_N], y[BR_N];
+
 #pragma omp for schedule(static)
                 for (int64_t q = 0; q < n; q++) {
                     alea(x, g);
                     memcpy(y, x, BR_N);
                     y[i] ^= al;
+
                     dir(x, R);
                     dir(y, R);
                     for (int v = 0; v < BR_N; v++) {
@@ -214,43 +269,127 @@ static void boomerang(resultat_t *res, int lq, int nc)
                     }
                     inv(x, R);
                     inv(y, R);
-                    int tout = 1;
+
+                    int exact = 1;
                     for (int v = 0; v < BR_N; v++) {
-                        uint8_t dv = x[v] ^ y[v];
-                        loc[v] += dv == 0;
-                        tout &= dv == (v == i ? al : 0);
+                        const uint8_t dv = (uint8_t)(x[v] ^ y[v]);
+                        local[v] += (uint64_t)(dv == 0);
+                        exact &= (dv == (v == i ? al : 0));
                     }
-                    ex += (uint64_t)tout;
+                    exact_local += (uint64_t)exact;
                 }
+
 #pragma omp critical
                 {
                     for (int v = 0; v < BR_N; v++)
-                        cpt[v] += loc[v];
-                    exacts += ex;
+                        cpt[v] += local[v];
+                    exacts += exact_local;
                 }
             }
+
             retours_exacts += exacts;
             for (int v = 0; v < BR_N; v++) {
-                /* nibble i de retour : sans mesure de « zéro » attendu ; on teste tous */
-                double z = ((double)cpt[v] - (double)n / 16) / sqrt((double)n * 15 / 256);
-                if (fabs(z) > zmax)
-                    zmax = fabs(z);
-                depasse |= fabs(z) > seuil;
+                /* Sous le modèle permutation aléatoire, la probabilité
+                 * marginale d'égalité d'un nibble est approximée par 1/16.
+                 */
+                const double expected = (double)n / 16.0;
+                const double variance = (double)n * 15.0 / 256.0;
+                const double z = ((double)cpt[v] - expected) / sqrt(variance);
+                const double abs_z = fabs(z);
+                if (abs_z > zmax) {
+                    zmax = abs_z;
+                    zmax_combination[R] = c;
+                    zmax_nibble[R] = v;
+                }
+                if (abs_z > seuil)
+                    depasse = 1;
+
+                if (raw) {
+                    fprintf(raw,
+                            "%d,%d,%d,%u,%d,%u,%d,%" PRIu64 ",%" PRId64 ",%" PRIu64 ",%d,%" PRIu64 ",%" PRIu64 ",%d\n",
+                            R, c, i, (unsigned)al, j, (unsigned)de, v,
+                            cpt[v], n, exacts, threads, combination_seed,
+                            seed_base, family_size);
+                }
             }
         }
-        if (depasse && R == portee + 1)
-            portee = R;
+
+        exact_total[R] = retours_exacts;
+        zmax_round[R] = zmax;
+        significant[R] = depasse;
         if (R == 1)
             controle_r1 = depasse;
-        o += (size_t)snprintf(txt + o, sizeof txt - o, "%s{\"tours\": %d, \"z_max\": %.1f, \"retours_exacts\": %llu}",
-                              R > 1 ? ", " : "", R, zmax, (unsigned long long)retours_exacts);
     }
-    snprintf(txt + o, sizeof txt - o, "]");
-    res_mesure(res, "boomerang_par_tours", "%s", txt);
-    res_mesure(res, "boomerang", "{\"quartets_par_combinaison\": %lld, \"combinaisons\": %d, \"seuil_z\": %.2f, \"portee_tours\": %d}",
-               (long long)n, nc, seuil, portee);
+
+    if (raw) {
+        if (fclose(raw) != 0) {
+            raw_ok = 0;
+            fprintf(stderr, "AVERTISSEMENT: erreur lors de la fermeture du CSV brut\n");
+        }
+    }
+
+    /* Résultats par profondeur. Le maximum est corrigé sur la famille entière. */
+    char tours_json[4096];
+    size_t used = 0;
+    used += (size_t)snprintf(tours_json + used, sizeof tours_json - used, "[");
+    for (int R = 1; R <= RB; R++) {
+        const int written = snprintf(
+            tours_json + used, sizeof tours_json - used,
+            "%s{\"tours\":%d,\"z_max\":%.6f,\"combinaison_max\":%d,"
+            "\"nibble_max\":%d,\"significatif\":%s,\"retours_exacts\":%" PRIu64 "}",
+            R == 1 ? "" : ",", R, zmax_round[R],
+            zmax_combination[R], zmax_nibble[R],
+            significant[R] ? "true" : "false", exact_total[R]);
+        if (written < 0 || (size_t)written >= sizeof tours_json - used) {
+            if (raw_ok)
+                res_controle(res, "boomerang_csv_brut_ecrit", 1);
+            fprintf(stderr, "Erreur: buffer JSON boomerang trop petit\n");
+            return;
+        }
+        used += (size_t)written;
+    }
+    if (used + 2 >= sizeof tours_json) {
+        fprintf(stderr, "Erreur: buffer JSON boomerang trop petit\n");
+        return;
+    }
+    tours_json[used++] = ']';
+    tours_json[used] = '\0';
+
+    char significant_json[256];
+    size_t sig_used = 0;
+    sig_used += (size_t)snprintf(significant_json + sig_used,
+                                 sizeof significant_json - sig_used, "[");
+    int first = 1;
+    for (int R = 1; R <= RB; R++) {
+        if (significant[R]) {
+            const int written = snprintf(significant_json + sig_used,
+                                         sizeof significant_json - sig_used,
+                                         "%s%d", first ? "" : ",", R);
+            if (written > 0 && (size_t)written < sizeof significant_json - sig_used) {
+                sig_used += (size_t)written;
+                first = 0;
+            }
+        }
+    }
+    snprintf(significant_json + sig_used,
+             sizeof significant_json - sig_used, "]");
+
+    res_mesure(res, "boomerang_par_tours", "%s", tours_json);
+    res_mesure(res, "boomerang",
+               "{\"quartets_par_combinaison\":%" PRId64 ","
+               "\"combinaisons_par_tour\":%d,\"tours_testes\":%d,"
+               "\"tests_famille\":%.0f,\"taille_famille\":%d,"
+               "\"seuil_z_bilateral_bonferroni\":%.6f,"
+               "\"probabilite_familiale_cible\":%.10f,"
+               "\"tours_significatifs\":%s,\"threads_max\":%d,"
+               "\"seed_base\":%" PRIu64 ",\"raw_csv\":"
+               "\"resultats/brume_attaques_boomerang_raw.csv\"}",
+               n, nc, RB, tests_family, family_size, seuil, 1.0 / 1024.0,
+               significant_json, threads, seed_base);
+
     res_controle(res, "boomerang_temoin_detecte_a_1_tour", controle_r1);
-    res_controle(res, "boomerang_bien_en_deca_de_32_tours", portee <= 8);
+    res_controle(res, "boomerang_csv_brut_ecrit", raw_ok);
+    /* Aucune conclusion sur 32 tours : seuls les tours 1..RB sont mesurés. */
 }
 
 /* ---------------- impossibles par ensembles ---------------- */
@@ -450,36 +589,120 @@ static void impossibles(resultat_t *res)
         }
     }
     int cl[2 * RS + 2] = {0}, r1l, rl = recherche(av, ar, ne, &r1l, cl);
-    res_mesure(res, "ensembles_par_valeurs", "{\"differentielle_impossible_tours\": %d, \"coupure\": %d, \"correlation_nulle_tours\": %d, \"coupure_lineaire\": %d, \"motifs\": \"1 nibble, 15 valeurs\", \"paires_par_tour_diff\": [%d, %d, %d, %d, %d, %d, %d]}",
-               rd, r1d, rl, r1l, cd[1], cd[2], cd[3], cd[4], cd[5], cd[6], cd[7]);
-    res_controle(res, "impossibles_bien_en_deca_de_32_tours", rd <= 10 && rl <= 10);
+    res_mesure(res, "ensembles_par_valeurs", "{\"differentielle_impossible_tours\": %d, \"coupure\": %d, \"correlation_nulle_tours\": %d, \"coupure_lineaire\": %d, \"motifs\": \"1 nibble, 15 valeurs\", \"max_tours_par_sens\": %d, \"max_tours_total_testes\": %d, \"paires_par_tour_diff\": [%d, %d, %d, %d, %d, %d, %d]}",
+               rd, r1d, rl, r1l, RS, 2 * RS,
+               cd[1], cd[2], cd[3], cd[4], cd[5], cd[6], cd[7]);
+    /* Les recherches par ensembles sont limitées à RS tours par sens (2*RS au total). */
     free(av);
     free(ar);
 }
 
+static int parse_positive_long(const char *text, long min_value, long max_value,
+                               long *out)
+{
+    char *end = NULL;
+    errno = 0;
+    long value = strtol(text, &end, 10);
+    if (errno || end == text || *end != '\0' || value < min_value || value > max_value)
+        return 0;
+    *out = value;
+    return 1;
+}
+
+static int parse_u64(const char *text, uint64_t *out)
+{
+    if (!text || text[0] == '-')
+        return 0;
+    char *end = NULL;
+    errno = 0;
+    unsigned long long value = strtoull(text, &end, 0);
+    if (errno || end == text || *end != '\0')
+        return 0;
+    *out = (uint64_t)value;
+    return 1;
+}
+
 int main(int argc, char **argv)
 {
-    int lq = argc > 1 ? atoi(argv[1]) : 20, nc = argc > 2 ? atoi(argv[2]) : 16;
-    resultat_t res = {.nom = "brume_attaques", .titre = NULL};
+    long lq_long = 20, nc_long = 16, family_long = 3;
+    uint64_t seed_base = UINT64_C(0xB00);
+
+    if (argc > 5) {
+        fprintf(stderr,
+                "Usage: %s [log2_quartets 1..60] [combinaisons >0] [seed] [taille_famille >0]\n",
+                argv[0]);
+        return 2;
+    }
+
+    if (argc > 1 && !parse_positive_long(argv[1], 1, 60, &lq_long)) {
+        fprintf(stderr, "log2_quartets doit être compris entre 1 et 60\n");
+        return 2;
+    }
+
+    if (argc > 2 && !parse_positive_long(argv[2], 1, 1000000, &nc_long)) {
+        fprintf(stderr, "combinaisons doit être compris entre 1 et 1000000\n");
+        return 2;
+    }
+
+    if (argc > 3 && !parse_u64(argv[3], &seed_base)) {
+        fprintf(stderr, "seed invalide (utiliser un entier décimal ou 0x...)\n");
+        return 2;
+    }
+
+    if (argc > 4 && !parse_positive_long(argv[4], 1, 1000000, &family_long)) {
+        fprintf(stderr, "taille_famille doit être compris entre 1 et 1000000\n");
+        return 2;
+    }
+
+    const int lq = (int)lq_long;
+    const int nc = (int)nc_long;
+    const int family_size = (int)family_long;
+
+    resultat_t res = {
+        .nom = "brume_attaques",
+        .titre = NULL
+    };
+
     if (!bref_init())
         return 1;
-    res_controle(&res, "reference_nibbles_conforme_a_sl_brume_permute", bref_conforme(16));
+
+    res_controle(
+        &res,
+        "reference_nibbles_conforme_a_sl_brume_permute",
+        bref_conforme(16)
+    );
+
     tables_rapides();
+
     {
         uint8_t x[BR_N], y[BR_N];
         uint64_t g[2] = {42, 0};
+
         alea(x, g);
         memcpy(y, x, BR_N);
+
         dir(x, 5);
         bref_perm(y, 5, 0);
-        int ok = !memcmp(x, y, BR_N);
+
+        const int ok = !memcmp(x, y, BR_N);
+
         inv(x, 5);
+
         for (int t = 4; t >= 0; t--)
             bref_tour_inv(y, t);
-        res_controle(&res, "tables_rapides_conformes", ok && !memcmp(x, y, BR_N));
+
+        res_controle(
+            &res,
+            "tables_rapides_conformes",
+            ok && !memcmp(x, y, BR_N)
+        );
     }
+
     sbox_tables(&res);
-    boomerang(&res, lq, nc);
+
+    boomerang(&res, lq, nc, seed_base, family_size);
+
     impossibles(&res);
+
     return res_ecrire(&res);
 }

@@ -27,7 +27,7 @@ import numpy as np
 
 from .sillage_common import (
     shake, random_bytes, ring_mul, sparse_from_seed, sparse_random,
-    hamming_weight, perm_from_seed, apply_perm_int,
+    perm_from_seed, apply_perm_int,
     isd_estimate,
 )
 
@@ -256,15 +256,6 @@ class SillageKEM:
         nb = (n + 7) // 8
         raw = shake(sigma_h, nb, b"SILLAGE-KEM|h")
         h = int.from_bytes(raw, "little") & ((1 << n) - 1)
-        if self.h_mode == "tensor":
-            # --- EXPERIMENTAL (dégradation sûre : jamais requis) ---
-            # h = h1 ⊙ h2 dans l'anneau : structure de rang produit.
-            # Compression de clé supplémentaire ; statut cryptanalytique
-            # OUVERT. En cas d'attaque → h_mode="uniform" (sûr).
-            w1 = 17 if self.p["lam"] <= 128 else 29
-            h1 = sparse_from_seed(sigma_h, w1, n, b"SILLAGE-KEM|h1")
-            h2 = sparse_from_seed(sigma_h, w1, n, b"SILLAGE-KEM|h2")
-            h = ring_mul(h1, h2, n)
         return h
 
     def _byte_perm(self, sigma_h: bytes) -> list:

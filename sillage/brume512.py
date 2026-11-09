@@ -450,9 +450,7 @@ def _te_check(buf: bytearray, off: int, par: bytes):
     if len(nonzero) == 0:
         pos = 0                      # position 0 : hors groupes Hamming
     elif len(nonzero) == 1:
-        pos = nonzero[0]             # tous les plans touchés concordent
-        if pos >= 64:
-            raise Brume512TamperError("syndrome hors bornes")
+        pos = nonzero[0]             # tous les plans touchés concordent (syndromes de 6 bits : pos < 64)
     else:
         raise Brume512TamperError(
             f"altération multiple détectée (plans en désaccord: {nonzero})")
@@ -603,10 +601,7 @@ class Brume512:
                             parities[bi * 7:(bi + 1) * 7])
             if pos is not None:
                 corrections.append(pos)
-        orig_len = int.from_bytes(meta, "big")
-        if orig_len > len(buf):
-            raise Brume512TamperError("métadonnées incohérentes")
-        pt = self.decrypt(nonce, bytes(buf[:orig_len]), tag, aad)
+        pt = self.decrypt(nonce, bytes(buf[:len(ct)]), tag, aad)      # meta = len(ct), vérifié ci-dessus
         return pt, corrections
 
 

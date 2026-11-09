@@ -4,7 +4,8 @@
 Compilation à la demande (gcc -O3 -march=native, cache selon l'empreinte
 des sources dans sillage/c/build/), chargement ctypes. Mêmes encodages que
 le paquet Python (cf. sillage/c/sillage.h) ; conformité vérifiée par
-tests/test_c_impl.py.
+tests/test_c_impl.py. SILLAGE_CFLAGS remplace -O3 (mesure de couverture :
+tests/couverture.py) ; il entre dans l'empreinte du cache.
 """
 import ctypes
 import glob
@@ -15,6 +16,7 @@ import subprocess
 ICI = os.path.join(os.path.dirname(os.path.abspath(__file__)), "c")
 BUILD = os.path.join(ICI, "build")
 SOURCES = ["commun.c", "brume512.c", "brume512_avx2.c", "kem.c", "sig.c", "isd.c"]
+OPTIONS = os.environ.get("SILLAGE_CFLAGS", "-O3").split()
 _lib = None
 
 _p = ctypes.c_char_p
@@ -27,6 +29,7 @@ def _empreinte():
         h.update(open(os.path.join(ICI, f), "rb").read())
     with open("/proc/cpuinfo", "rb") as f:          # -march=native : .so propre à ce CPU
         h.update(next((l for l in f if l.startswith(b"flags")), b""))
+    h.update(" ".join(OPTIONS).encode())
     return h.hexdigest()[:12]
 
 
@@ -37,7 +40,7 @@ def compiler():
         for vieux in glob.glob(os.path.join(BUILD, "libsillage_*.so")):
             os.remove(vieux)
         tmp = f"{so}.{os.getpid()}.tmp"
-        subprocess.run(["gcc", "-O3", "-march=native", "-fopenmp", "-shared", "-fPIC", "-o", tmp]
+        subprocess.run(["gcc", *OPTIONS, "-march=native", "-fopenmp", "-shared", "-fPIC", "-o", tmp]
                        + [os.path.join(ICI, s) for s in SOURCES] + ["-lm"], check=True)
         os.replace(tmp, so)
     return so

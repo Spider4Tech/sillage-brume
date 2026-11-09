@@ -1,0 +1,38 @@
+BRUME-512 paired bench
+LQ=10 NC=4 ROUNDS=3 THREADS=4
+Démarrage graine 9364470c758981694e8e113be4858da370a6b72d866245cc3f2f1d2b33b16095
+Contrôles OK: ChaCha20 RFC 8439, 3 S-boxes bijectives, M inversible, tables rapides conformes, permutation rapide = référence scalaire et inverse.
+Paramètres: quartets=2^10 (1024), combinaisons=4, tours=3, threads=4
+seed 9364470c : tour 1/3 terminé
+seed 9364470c : tour 2/3 terminé
+seed 9364470c : tour 3/3 terminé
+Démarrage graine 04007bd0b96c672bc3e7189b7948dd5e37b8dd3bb5c38eca7da8e94cb13c41d2
+Contrôles OK: ChaCha20 RFC 8439, 3 S-boxes bijectives, M inversible, tables rapides conformes, permutation rapide = référence scalaire et inverse.
+Paramètres: quartets=2^10 (1024), combinaisons=4, tours=3, threads=4
+seed 04007bd0 : tour 1/3 terminé
+seed 04007bd0 : tour 2/3 terminé
+seed 04007bd0 : tour 3/3 terminé
+Démarrage graine a21b5433a7a3b7793a3dc4236dc5ee5486d049bdbdb4904c17de9d4485841aae
+Contrôles OK: ChaCha20 RFC 8439, 3 S-boxes bijectives, M inversible, tables rapides conformes, permutation rapide = référence scalaire et inverse.
+Paramètres: quartets=2^10 (1024), combinaisons=4, tours=3, threads=4
+seed a21b5433 : tour 1/3 terminé
+seed a21b5433 : tour 2/3 terminé
+seed a21b5433 : tour 3/3 terminé
+Démarrage graine aba56d3cae6a3a38ef6dbb0a7b4f72dd33ee7a46d59333832a0861ff1f8ce250
+Contrôles OK: ChaCha20 RFC 8439, 3 S-boxes bijectives, M inversible, tables rapides conformes, permutation rapide = référence scalaire et inverse.
+Paramètres: quartets=2^10 (1024), combinaisons=4, tours=3, threads=4
+seed aba56d3c : tour 1/3 terminé
+seed aba56d3c : tour 2/3 terminé
+seed aba56d3c : tour 3/3 terminé
+Démarrage graine 0088549f6cc5661d6c218dc04845b72faa27965b046fd7bb5c3f7a651157a57d
+Contrôles OK: ChaCha20 RFC 8439, 3 S-boxes bijectives, M inversible, tables rapides conformes, permutation rapide = référence scalaire et inverse.
+Paramètres: quartets=2^10 (1024), combinaisons=4, tours=3, threads=4
+seed 0088549f : tour 1/3 terminé
+seed 0088549f : tour 2/3 terminé
+seed 0088549f : tour 3/3 terminé
+Analyse terminée : /home/hachille/dev/orion/prototypes/brume_sbox6/brume_tests_apparies/resultats/paired_20261108T210528Z
+  graines=5, tours=3, combinaisons=4
+  seuil McNemar par nibble=5.229965 (famille 5760)
+  significatifs appariés=1/5760
+  retours exacts={'BRUME': 23359, 'SBOX6': 23358, 'SBOX_V3': 23267}
+  rapport: /home/hachille/dev/orion/prototypes/brume_sbox6/brume_tests_apparies/resultats/paired_20261108T210528Z/synthese_appariee.md

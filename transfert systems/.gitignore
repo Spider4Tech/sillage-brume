@@ -1,0 +1,8 @@
+# Cache de construction (raylib, objets SILLAGE)
+.deps/
+
+# Binaire produit
+sillage-transfer
+
+# Archive source produite par --package
+sillage-transfer-src.tar.gz

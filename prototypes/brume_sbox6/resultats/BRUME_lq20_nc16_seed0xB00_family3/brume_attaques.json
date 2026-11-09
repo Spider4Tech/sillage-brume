@@ -1,0 +1,19 @@
+{
+ "controles": {
+  "reference_nibbles_conforme_a_sl_brume_permute": true,
+  "tables_rapides_conformes": true,
+  "sbox_ddt_lat_optimales": true,
+  "sbox_bct_ni_triviale_ni_sous_la_ddt": true,
+  "sbox_dlct_au_plus_8": true,
+  "boomerang_temoin_detecte_a_1_tour": true,
+  "boomerang_csv_brut_ecrit": true,
+  "ensembles_contiennent_les_differences_reelles": true
+ },
+ "mesures": {
+  "sbox": {"ddt_max": 4, "lat_max": 8, "bct_max": 10, "bct_moyenne": 1.60, "dlct_max": 8},
+  "boomerang_par_tours": [{"tours":1,"z_max":3965.934947,"combinaison_max":0,"nibble_max":0,"significatif":true,"retours_exacts":16777216},{"tours":2,"z_max":3965.934947,"combinaison_max":0,"nibble_max":0,"significatif":true,"retours_exacts":2475608},{"tours":3,"z_max":13.349689,"combinaison_max":0,"nibble_max":55,"significatif":true,"retours_exacts":0},{"tours":4,"z_max":3.288001,"combinaison_max":14,"nibble_max":25,"significatif":false,"retours_exacts":0},{"tours":5,"z_max":3.578475,"combinaison_max":12,"nibble_max":42,"significatif":false,"retours_exacts":0},{"tours":6,"z_max":3.304139,"combinaison_max":15,"nibble_max":119,"significatif":false,"retours_exacts":0},{"tours":7,"z_max":3.404998,"combinaison_max":6,"nibble_max":45,"significatif":false,"retours_exacts":0},{"tours":8,"z_max":3.546200,"combinaison_max":13,"nibble_max":105,"significatif":false,"retours_exacts":0}],
+  "boomerang": {"quartets_par_combinaison":1048576,"combinaisons_par_tour":16,"tours_testes":8,"tests_famille":49152,"taille_famille":3,"seuil_z_bilateral_bonferroni":5.613145,"probabilite_familiale_cible":0.0009765625,"tours_significatifs":[1,2,3],"threads_max":8,"seed_base":2816,"raw_csv":"resultats/brume_attaques_boomerang_raw.csv"},
+  "impossibles_solidite": {"tests": 9856000, "violations": 0},
+  "ensembles_par_valeurs": {"differentielle_impossible_tours": 5, "coupure": 4, "correlation_nulle_tours": 5, "coupure_lineaire": 1, "motifs": "1 nibble, 15 valeurs", "max_tours_par_sens": 7, "max_tours_total_testes": 14, "paires_par_tour_diff": [7372800, 7372800, 7372800, 3715200, 3460500, 0, 0]}
+ }
+}

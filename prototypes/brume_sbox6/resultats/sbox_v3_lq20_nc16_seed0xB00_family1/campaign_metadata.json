@@ -1,0 +1,29 @@
+{
+  "protocol": "BRUME-SBOX-SEARCH v3-corrige",
+  "git_commit": "0cffdf1438b91a51af95d2a06932cf9d3f398779",
+  "generated_at_utc": "2026-11-08T17:50:01.990660+00:00",
+  "candidate": "SBOX_V3",
+  "log2_quartets_per_combination": 20,
+  "combinations_per_round": 16,
+  "seed_base": "0xB00",
+  "family_size_for_bonferroni": 1,
+  "omp_num_threads": 8,
+  "platform": "Linux-7.2.15-ogc1.1.fc45.x86_64-x86_64-with-glibc2.39",
+  "python_version": "3.12.3",
+  "artifacts_sha256": {
+    "sbox_v3.py": "cae7e50788afa4b2ab67bf6e27a7c08ce7b930856cc404573b719ea89822d3a7",
+    "brume512_tables_sbox_v3.h": "bca8ba7c7b8700c8bc707d68d4235665b9f7551414678b90689cfd6967dfda79",
+    "brume_attaques.json": "74f84a32e456d276a4eaf8d397d163b032f23a077d6e1f1cbc2e72056235e61c",
+    "brume_attaques_boomerang_raw.csv": "9d149795e5f59ff7bef666a7e890b305d156a2f5f901190669101c90ee114128",
+    "build.log": "06af483a86f521da453bc45cf8d3271f01484a08ca1ef505b6618b4aca281675",
+    "run.stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "run.stderr.log": "64d1509b80216dafb18669100b0aab2fe6e92d2fe4a966d20bdeecf278e647c2",
+    "sbox_v3_validation.log": "9970ec0fa8a8de3cabb77bf9007afadb8764fc1b850299ea4002987cf9bb2e0e",
+    "brume_attaques.c": "33eb69e6d97c43fd0d81df6b52bb9627e86eb87669bc203245fd4a9256f0c773",
+    "tests_c_Makefile": "25bfe69c783e40fc231521595a33b28150a8a9bf8cec8b3466a82d2e2d37dd2b",
+    "brume_ref.h": "9b26ab8feb9c109c0ca47d0d030e0693c2226413b52872acffd815f99f3f701b",
+    "resultat.h": "65186d1ad0cf9aa1e9b191277d2f73fffbfc58ef00120f841901bd0cf735d2b1",
+    "compiler_version.txt": "cd00cba2069afd1ce8b5440dd0e489e9931d6533d37bec32ca15ac39a374c77f"
+  },
+  "interpretation": "Reduced-round empirical distinguisher campaign only; not a proof for the 32-round permutation."
+}

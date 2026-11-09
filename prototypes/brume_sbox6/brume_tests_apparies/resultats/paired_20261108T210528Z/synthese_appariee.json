@@ -1,0 +1,27 @@
+{
+  "seed_count": 5,
+  "rounds": 3,
+  "combinations": 4,
+  "familywise_alpha": 0.0009765625,
+  "family_size_paired_zero": 5760,
+  "family_size_marginal_zero": 5760,
+  "family_size_exact_return": 45,
+  "threshold_z_paired_zero": 5.22996503739348,
+  "threshold_z_marginal_zero": 5.22996503739348,
+  "threshold_z_exact_return_normal_reference": 4.246625867537216,
+  "significant_paired_zero_tests": 1,
+  "total_paired_zero_tests": 5760,
+  "significant_paired_zero_tests_round_ge_3": 0,
+  "total_paired_zero_tests_round_ge_3": 1920,
+  "significant_marginal_tests": 3840,
+  "total_marginal_tests": 5760,
+  "significant_marginal_tests_round_ge_3": 0,
+  "total_marginal_tests_round_ge_3": 1920,
+  "significant_exact_tests": 5,
+  "total_exact_tests": 45,
+  "exact_returns_by_candidate": {
+    "BRUME": 23359,
+    "SBOX6": 23358,
+    "SBOX_V3": 23267
+  }
+}

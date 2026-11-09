@@ -1,0 +1,3 @@
+make: Entering directory '/tmp/brume_sbox_v3.frgPhS/tests/c'
+cc -O3 -march=native -fopenmp -Wall -Wextra -I ../../sillage/c -o build/brume_attaques brume_attaques.c ../../sillage/c/commun.c ../../sillage/c/brume512.c ../../sillage/c/brume512_avx2.c ../../sillage/c/kem.c ../../sillage/c/sig.c -lm
+make: Leaving directory '/tmp/brume_sbox_v3.frgPhS/tests/c'

@@ -60,14 +60,6 @@ def ring_mul(a: int, b: int, n: int) -> int:
     return (p & mask) ^ (p >> n)
 
 
-def rotl(x: int, k: int, n: int) -> int:
-    """Rotation circulaire gauche de k positions dans F2^n."""
-    k %= n
-    if k == 0:
-        return x
-    return ((x << k) | (x >> (n - k))) & ((1 << n) - 1)
-
-
 # ------------------------------------------------------------------
 # Vecteurs creux
 # ------------------------------------------------------------------
@@ -109,10 +101,6 @@ def sparse_from_seed(seed: bytes, weight: int, n: int, domain: bytes = b"") -> i
 def sparse_random(weight: int, n: int) -> int:
     """Vecteur creux aléatoire (entropie système) — secrets éphémères."""
     return sparse_from_seed(os.urandom(32), weight, n, domain=b"eph")
-
-
-def hamming_weight(x: int) -> int:
-    return x.bit_count()
 
 
 # ------------------------------------------------------------------
@@ -225,16 +213,8 @@ def _dumer(n, k, w, p_max=400, l_max=1000, inner=None):
     return _deux_listes(n, k, w, lambda l: k + l, p_max, l_max, inner)
 
 
-def isd_stern(n: int, k: int, w: int) -> float:
-    return _stern(n, k, w)[0]
-
-
 def isd_dumer(n: int, k: int, w: int) -> float:
     return _dumer(n, k, w)[0]
-
-
-def isd_stern_dumer(n: int, k: int, w: int) -> float:
-    return min(isd_stern(n, k, w), isd_dumer(n, k, w))
 
 
 def _bjmm(n: int, k: int, w: int, p_max: int = 400, e_max: int = 100, l_max: int = 1500):
@@ -361,9 +341,3 @@ def isd_quantique(n: int, k: int, w: int) -> dict:
     return dict(prange=round(pr, 1), stern=round(st, 1), dumer=round(du, 1), bjmm=round(bj, 1),
                 minimum=round(min(pr, st, du, bj), 1), prange_portes_maxdepth=portes,
                 categorie_nist=categorie_nist(portes))
-
-
-def prange_exponent(n: int, r: int, w: int) -> float:
-    """Itérations de Prange (bits) pour H (r × n), poids w : C(n,w)/C(r,w).
-    Conservé pour référence ; les estimations utilisent isd_estimate()."""
-    return _lb(n, w) - _lb(r, w)

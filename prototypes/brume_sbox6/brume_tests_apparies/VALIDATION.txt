@@ -1,0 +1,20 @@
+Validation effectuée sur les sources du paquet
+=============================================
+
+- Compilation GCC du moteur C en mode AVX2/native et en mode scalaire : OK.
+- Options de compilation : -Wall -Wextra -Werror -fopenmp.
+- Test ChaCha20 : vecteur de conformité RFC 8439 : OK.
+- Matrice GF(16) : inversibilité vérifiée par produit M * M^-1 = I : OK.
+- Tables linéaires rapides : comparées au calcul matriciel scalaire : OK.
+- Permutation optimisée comparée à une implémentation scalaire indépendante :
+  BRUME, SBOX6 et SBOX_V3, aller et retour, 1, 3 et Rmax tours : OK.
+- Sorties AVX2 et scalaire pour une même graine et les mêmes paramètres : CSV identiques.
+- Exécution de fumée via le lanceur : cinq graines, CSV créés, analyse exécutée : OK.
+- Contrôle du nombre de lignes attendu pour chaque CSV : OK.
+- Empreintes SHA-256 des artefacts de la campagne de fumée : OK.
+- Test ASan/UBSan sur une exécution réduite de la version finale : aucun problème signalé.
+
+Cette validation a été effectuée dans l'environnement de génération avec le
+fichier de tables BRUME transmis dans la conversation. Elle ne remplace pas un
+build final dans le dépôt complet de l'utilisateur. La campagne soutenue/lourde
+n'a pas été exécutée ici.

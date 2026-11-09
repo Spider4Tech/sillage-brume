@@ -1,0 +1,68 @@
+{
+  "protocol": "BRUME-512-PAIRED-CHACHA20-v1",
+  "generated_at_utc": "2026-11-08T21:33:40.322329+00:00",
+  "candidates": [
+    "BRUME",
+    "SBOX6",
+    "SBOX_V3"
+  ],
+  "log2_quartets_per_combination": 20,
+  "quartets_per_combination": 1048576,
+  "combinations": 32,
+  "rounds": 8,
+  "threads": 8,
+  "total_paired_quartets": 1342177280,
+  "total_candidate_evaluations": 4026531840,
+  "seed_count": 5,
+  "seeds_hex": [
+    "9364470c758981694e8e113be4858da370a6b72d866245cc3f2f1d2b33b16095",
+    "04007bd0b96c672bc3e7189b7948dd5e37b8dd3bb5c38eca7da8e94cb13c41d2",
+    "a21b5433a7a3b7793a3dc4236dc5ee5486d049bdbdb4904c17de9d4485841aae",
+    "aba56d3cae6a3a38ef6dbb0a7b4f72dd33ee7a46d59333832a0861ff1f8ce250",
+    "0088549f6cc5661d6c218dc04845b72faa27965b046fd7bb5c3f7a651157a57d"
+  ],
+  "random_generator": "ChaCha20 RFC 8439, 256-bit key, 96-bit nonce, counter indexed by quartet",
+  "paired_design": "same input state, input difference and injected intermediate difference for all three S-boxes",
+  "events": {
+    "zero_nibble": "final output difference at a nibble equals zero",
+    "exact_return": "complete 128-nibble difference equals the original one-nibble input difference"
+  },
+  "familywise_alpha": 0.0009765625,
+  "bonferroni_family_sizes": {
+    "paired_zero_mcnemar": 15360,
+    "candidate_zero_vs_1_16": 15360,
+    "paired_exact_mcnemar": 120
+  },
+  "platform": "Linux-7.2.15-ogc1.1.fc45.x86_64-x86_64-with-glibc2.39",
+  "python_version": "3.12.3",
+  "limitations": [
+    "reduced-round empirical test only; no proof for the full 32-round permutation",
+    "McNemar tests compare paired event rates, not cryptographic security in general",
+    "the p=1/16 marginal reference remains an exploratory ideal-permutation model"
+  ],
+  "artifacts_sha256": {
+    "analyse_pairee.py": "d47201afebc9a7f4174aecbde9b2cffee4c23791d11eb80941367077e80e96fb",
+    "brume512_tables.h": "007d80ff07b85d9c8f909c09c965375f8fcd92c81df09c3c54007bf09d856792",
+    "brume_attaques_paired": "b35cbd49cc95141cfe02d2a82523305a10e9d9ee8d9a6ba552350d165adb444e",
+    "brume_attaques_paired.c": "83a95aea76f80765135c3ed440e6fc6c9f171b3aeda9199a29e9cf24d9834154",
+    "candidate_exact_returns.csv": "a2a98676a8b8468cde1c628fdf740adb494db32108eb75d787670df91a1e4ae5",
+    "candidate_zero_marginals.csv": "9a568afbd4830a6887bd00d8a7897d5e1e635a0b703023db0f6f1d7181e8cc17",
+    "compiler_version.txt": "cd00cba2069afd1ce8b5440dd0e489e9931d6533d37bec32ca15ac39a374c77f",
+    "paired_exact_0088549f6cc5661d6c218dc04845b72faa27965b046fd7bb5c3f7a651157a57d.csv": "cd3e54c8aeb9e802b0e576a8b328f7a240d4c5041f155793f686ca0254ba9a29",
+    "paired_exact_04007bd0b96c672bc3e7189b7948dd5e37b8dd3bb5c38eca7da8e94cb13c41d2.csv": "0236fa653093635bb1061612300def0eff832e677548b8c2ea489234b5bab6a3",
+    "paired_exact_9364470c758981694e8e113be4858da370a6b72d866245cc3f2f1d2b33b16095.csv": "717c49d57faf4232a9b7203585a0fad6e8f914ced3f1fe1fe5af650ef56ea2e8",
+    "paired_exact_a21b5433a7a3b7793a3dc4236dc5ee5486d049bdbdb4904c17de9d4485841aae.csv": "0790efa2c975686c1d7e703736010fdb56931ccc05e82b699cd0f616e4dc18a8",
+    "paired_exact_aba56d3cae6a3a38ef6dbb0a7b4f72dd33ee7a46d59333832a0861ff1f8ce250.csv": "71971d0fb129f29672de9da28360c3ed3eb25cdc087d08067f662c9dd503d2e5",
+    "paired_exact_mcnemar.csv": "8c238d3b886e45ace2c13c1a277495e40b9cfe97f17e1ceb9d48cb68b6f7252d",
+    "paired_zero_0088549f6cc5661d6c218dc04845b72faa27965b046fd7bb5c3f7a651157a57d.csv": "07670c665c4c2b0bd929a36cc17a8b6dcd4902d1a272b8c414116370713357a2",
+    "paired_zero_04007bd0b96c672bc3e7189b7948dd5e37b8dd3bb5c38eca7da8e94cb13c41d2.csv": "9d4c6e61ac8099947909a61f5a5f19afad6dda7d4e288a7037329bdfbe36919c",
+    "paired_zero_9364470c758981694e8e113be4858da370a6b72d866245cc3f2f1d2b33b16095.csv": "d75d1bd53a6b82f13ae6b4b927826c6fe14a3adec4de505447d93f05c54dc9d9",
+    "paired_zero_a21b5433a7a3b7793a3dc4236dc5ee5486d049bdbdb4904c17de9d4485841aae.csv": "dc4fdd7e97cdab76fdbcdc6308de27375a92a351032790ee54c3b2a5e75aceec",
+    "paired_zero_aba56d3cae6a3a38ef6dbb0a7b4f72dd33ee7a46d59333832a0861ff1f8ce250.csv": "df26b08b677de5a29a5ec3d0a04eb5e206ba47285e2189bd4b22861f615c5839",
+    "paired_zero_mcnemar.csv": "2721e2ad035d74939cb605d093cd315553581f863a4e11c3810ab23e064fe8fa",
+    "run.log": "11d0c83e893a06c8c0be7e33271a665e54778e14aff2730b22d954144676252b",
+    "seeds.txt": "36f65057c2c905bc7d1fcce7b2a80a1424de60ab9151b3abe5483ad96873c03c",
+    "synthese_appariee.json": "ea69cc0405d86b45834a4c3979f01cf464efffa3baea1dd2cc7bb2230f1ebdb9",
+    "synthese_appariee.md": "dc284043ae516858588c4adb60c286a96efa50c537972dcb32642f7da755e71a"
+  }
+}

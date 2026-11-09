@@ -5,7 +5,9 @@
 This document collects the statements and proofs behind the suite's claims.
 Each statement gives its model (standard model, random oracle model ROM,
 ideal permutation) and its assumptions. The corresponding numerical checks
-are cited (`tests/…`).
+are cited (`tests/…`). Every numerical instantiation in this text (Corollaries 11, 14 bis and 14 ter, Theorems 14-mu
+and 14-p, the tables of § 2.4, § 5 and § 5 bis) is recomputed from the constants of the code by
+`tests/test_bornes_preuves.py`: if the code or the text changes without the other, the check fails.
 
 Notation: `λ` security parameter; `negl` negligible; `wt` Hamming weight;
 `R = F2[z]/(z^n − 1)`; `S_w^n` the set of vectors of weight w.
@@ -136,6 +138,10 @@ by (H2-P), since `s` now follows exactly the distribution of (H2-P). In
 Game 2, `u` depends only on h, and `v = cw(μ_b) ⊕ v'` is uniform and
 independent of b: the advantage is zero. ∎
 
+*Check of the algebra used by the games* (`tests/test_kem_lemme3.py`): on real encapsulations, with the coins recomputed
+from (μ, H(pk)), `v ⊕ (u·x)|_{n2} ⊕ cw(μ)` equals `(r1·y ⊕ r2·x)|_{n2} ⊕ e1 ⊕ π(e2)` bit for bit: the terms `r1·x·h` cancel
+and the noise does not depend on μ.
+
 *Correction (2026-11-02).* The previous version bounded Game 1 by `Adv^{H1-P}/(1 − ε_rej)`, with
 H1-P on uniform secrets. That factor holds for a search event, not for a distinguishing
 advantage (see “Why accepted keys”, § 1): the correct bound would have a non-negligible additive
@@ -217,6 +223,14 @@ S is the whole block, with noise ≥ L/2, and one of the two halves `S_{u,0}`, `
 bits, for every u. Finally, bit j of `r1·y` is the parity of the number of pairs
 `(a, b) ∈ r1 × y` with `a + b ≡ j`: the number of bits set in S is at most the number of pairs that
 fall in it, that is `T1`; likewise for `r2·x`, `e1`, `π(e2)`. ∎
+
+*Check* (`tests/test_kem_lemme3.py`, added on 2026-11-05). P places each value of [0, 128) exactly D times, and the 254 sets
+have 64·D bits. On real encapsulations of both levels, `wt(N ∩ S) ≤ T1 + T2 + Te` holds for each of the 254 sets of each block,
+with T1, T2 and Te counted pair by pair. Without T2 the inequality fails on every encapsulation (witness: the check can fail).
+On blocks with heavy noise (40 to 52 % of the bits), every wrongly decoded block has at least 32·D noise bits on some `S_{u,b}`,
+and the decoder always returns a codeword at minimum distance (brute force over the 256 codewords of the block). A noise of exactly
+32·D bits placed on the difference of two codewords makes decoding fail: the threshold of the lemma is reached. The margin returned
+by `rm_decode` equals `max_S wt(N ∩ S) − 32·D`.
 
 **Theorem 4.** Let `c_{y,S}(s) = |(S + s) ∩ y|`, `M_{y,S}(θ) = (1/n)·Σ_s e^{θ·c_{y,S}(s)}` (likewise
 for x), and `p_e = |S|/n2`. For every `θ > 0`,
@@ -400,6 +414,14 @@ rest. `aux` is masked by its fields `(x_A, Q, P, c)`, α and β by its fields `a
 and independent. The sibling seeds are outputs of `H_a` on hidden ancestors, hence uniform. The deduced
 values agree, since `v_0 + v_1 = 0` for the honest prover. If `i* = N − 1`, `aux` is not transmitted: the simulator sets it to 0. A query targets only one `(salt, rep, node)`, hence at most `q/2^{8·sb}` over the whole execution,
 with no multi-target gain. ∎
+
+*Check* (`tests/test_sig_hvzk.py`, added on 2026-11-05, reduced model of `tests/test_sig_modele.py`: n = 16, w = 2, GF(16) ⊂ GF(256),
+N = 4). The simulator above, with `H_1` and `H_2` programmed on what the verifier computes, is accepted by the **real** verifier,
+for every i*, on a public key with two witnesses and on a public key with no witness of weight ≤ w. At fixed (r, ε, i*), every
+transmitted field (α, β, the fields of aux, the first bytes of the path and of `com_{i*}`, and the pairs (α, β), (α, c_aux)) is
+uniform on its domain. The two witnesses of the same public key are not distinguished, nor the real transcript from the simulated
+one (χ² tests, Bonferroni threshold 10⁻³ over 50 tests). For i* = N − 1 the transmitted aux is 0. Witness: a prover whose mask a
+is zero (α = ε·Q(r) revealed) is detected by the same tests.
 
 Unlike Stern, no hidden point is related to the solution of (H3): the commitments are on seeds
 of full entropy. `attaque_graine_reduite_retrouve_la_cle` runs the attack with 16-bit seeds: enumerating the hidden

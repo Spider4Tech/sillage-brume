@@ -34,6 +34,8 @@ Status: research prototype, not for production. Outputs are frozen for v0.4 (any
 The S-box, the group, the generators and the 128 × 128 coefficient matrix are **frozen tables**, produced once by a seeded search
 (`sillage/select_params.py`) and stored in [`sillage/brume512_tables.py`](../sillage/brume512_tables.py) (SHA-256
 `3c621e2c86896d46b198301afbe41dd374c7d9f7bd7b78473fa4117765c7c111`; the generated C header `sillage/c/brume512_tables.h` holds the same data).
+`tests/test_select_params.py` reruns the search with its seeds and finds exactly these tables. It also checks the stated
+selection criteria, and regenerates the C headers byte for byte.
 
 - **S-box** `S = [8, 9, 1, 10, 12, 4, 0, 6, 13, 15, 3, 7, 14, 2, 11, 5]` (differential uniformity 4, linearity 8, degree 3).
 - **Group** D₁₂₈ = ℤ/64 ⋊ ℤ/2. Element `a` encodes `(a mod 64, ⌊a/64⌋ mod 2)`; the product is
