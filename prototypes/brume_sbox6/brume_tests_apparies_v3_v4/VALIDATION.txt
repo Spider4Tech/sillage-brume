@@ -1,0 +1,17 @@
+Validation effectuée sur la version BRUME / SBOX_V3 / SBOX_V4 du paquet
+=======================================================================
+
+- Vérification syntaxique Python (`analyse_pairee.py`) : OK.
+- Vérification syntaxique shell (`run_comparaison_appariee.sh`) : OK.
+- Compilation GCC : `-O3 -march=native -std=c11 -Wall -Wextra -Werror -fopenmp` : OK.
+- Test ChaCha20 RFC 8439 intégré au binaire : OK lors de l'exécution de fumée.
+- Matrice GF(16) : inversion et vérification interne : OK lors de l'exécution de fumée.
+- Bijectivité des trois tables BRUME, SBOX_V3, SBOX_V4 et construction de leurs inverses : OK.
+- Tables linéaires rapides et aller-retour des permutations : contrôles internes OK.
+- Campagne de fumée : 5 graines, LQ=10, 2 combinaisons, 2 tours, 2 threads : OK.
+- L'analyse a reconnu exactement les trois paires attendues :
+  BRUME_vs_SBOX_V3, BRUME_vs_SBOX_V4, SBOX_V3_vs_SBOX_V4.
+- Métadonnées : candidates BRUME/SBOX_V3/SBOX_V4 ; famille de tests correctement ajustée : OK.
+
+La campagne soutenue et la campagne lourde n'ont pas été exécutées ici.
+Le test ne prouve pas la sécurité de la permutation complète à 32 tours.
