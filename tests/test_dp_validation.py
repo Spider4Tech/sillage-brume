@@ -35,9 +35,13 @@ CAS = [("direct", 3), ("direct", 4), ("direct", 5), ("inverse", 2), ("inverse", 
 EXHAUSTIFS = {("direct", 3), ("direct", 4), ("inverse", 2)}
 
 
+TEMPS = (60, 600)      # première passe, puis reprise des requêtes indécises (v0.5 : la S-box inverse les rend plus longues)
+
+
 def _requete(arg):
-    sens, R, cube, j = arg
-    suf, st = queue(sens, R, 0, cube, j, temps_max=60, bas=False)
+    sens, R, cube, j = arg[:4]
+    t = arg[4] if len(arg) > 4 else TEMPS[0]
+    suf, st = queue(sens, R, 0, cube, j, temps_max=t, bas=False)
     return j, st
 
 
@@ -61,6 +65,9 @@ def run(n_cubes=2):
                     nn = sorted(set(range(NB)) - nul)
                     bits = rng.sample(nn, min(48, len(nn))) + rng.sample(sorted(nul), min(16, len(nul)))
                 st = dict(ex.map(_requete, [(sens, R, cube, j) for j in bits], chunksize=1))
+                reprise = [j for j, s_ in st.items() if s_ == "temps"]
+                if reprise:                              # une requête indécise n'est jamais comptée comme preuve
+                    st.update(dict(ex.map(_requete, [(sens, R, cube, j, TEMPS[1]) for j in reprise], chunksize=1)))
                 prouves = {j for j, s in st.items() if s == "unsat"}
                 pistes = sum(1 for s in st.values() if s == "piste")
                 indecis = sum(1 for s in st.values() if s == "temps")

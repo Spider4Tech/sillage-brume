@@ -3,7 +3,7 @@
 #   make tables   régénère brume512_tables.h depuis sillage/brume512.py
 CC      ?= gcc
 CFLAGS  ?= -O3 -march=native -fopenmp -Wall -Wextra
-SRC      = commun.c brume512.c brume512_avx2.c kem.c sig.c isd.c
+SRC      = commun.c brume512.c brume512_avx2.c kem.c sig.c vole.c isd.c
 
 all: build/libsillage.so build/bench
 

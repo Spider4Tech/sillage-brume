@@ -31,7 +31,7 @@ build/rsd_attaques: rsd_attaques.c resultat.h $(LIB)/isd.c
 	$(CC) $(CFLAGS) -I $(LIB) -o $@ $< $(LIB)/isd.c $(LIB)/commun.c $(LIB)/brume512.c $(LIB)/brume512_avx2.c -lquadmath -lm
 # prototype VOLE-in-the-Head (hors suite) : sources dans prototypes/vole/, binaires ici comme les autres tests
 VOLE    := ../../prototypes/vole
-build/vole_proto: $(VOLE)/vole_proto.c $(VOLE)/vole_kat.h resultat.h $(LIB)/commun.c
+build/vole_proto: $(VOLE)/vole_proto.c $(VOLE)/vole_kat.h $(LIB)/vole.c resultat.h $(LIB)/commun.c
 	@mkdir -p build
 	$(CC) $(CFLAGS) -I . -I $(LIB) -o $@ $< $(LIB)/commun.c $(LIB)/brume512.c $(LIB)/brume512_avx2.c -lm
 build/vole_params: $(VOLE)/vole_params.c resultat.h $(LIB)/isd.c

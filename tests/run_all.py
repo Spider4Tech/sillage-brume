@@ -47,6 +47,8 @@ TESTS = [
     ("test_sig", "sig", "Sillage-SIG"),
     ("test_sig_modele", "sig_modele", "Sillage-SIG"),
     ("test_sig_hvzk", "sig_hvzk", "Sillage-SIG"),
+    ("test_vole", "vole", "Sillage-SIG v0.5 (VOLE)"),
+    ("test_vole_kz", "vole_kz", "Sillage-SIG v0.5 (VOLE)"),
     ("test_isd_parametres", "isd_parametres", "Paramètres"),
     ("test_bornes_preuves", "bornes_preuves", "Paramètres"),
     ("test_select_params", "select_params", "Paramètres"),
@@ -56,6 +58,7 @@ TESTS = [
     ("test_c_fuzz", "c_fuzz", "Implémentation C"),
     ("test_c_sig_valgrind", "c_sig_valgrind", "Implémentation C"),
     ("test_c_kem_valgrind", "c_kem_valgrind", "Implémentation C"),
+    ("test_c_vole_valgrind", "c_vole_valgrind", "Implémentation C"),
     ("test_api_c", "api_c", "Implémentation C"),
     ("test_c_simd", "c_simd", "Implémentation C"),
     ("test_c_limites", "c_limites", "Implémentation C"),
@@ -67,6 +70,7 @@ TESTS = [
     ("test_c_cube_init", "c_cube_init", "Intensif (C)"),
     ("test_c_degre", "c_degre", "Intensif (C)"),
     ("test_c_temps", "c_temps", "Intensif (C)"),
+    ("test_c_vole_temps", "c_vole_temps", "Intensif (C)"),
     ("test_dp_modele", "dp_modele", "Intensif (C)"),
     ("test_dp_tous_cubes", "dp_tous_cubes", "Intensif (C)"),
     ("test_dp_exact", "dp_exact", "Intensif (C)"),
@@ -166,7 +170,7 @@ def main():
         lignes.append(f"| `{nom}` | {len(ctrl) - len(ko)}/{len(ctrl)} | {dt} s | "
                       f"{'OK' if not ko else 'ÉCHEC : ' + ', '.join(ko)} |")
     total = sum(len(s["controles"]) for s in synth.values())
-    tete = (f"# Synthèse de la batterie SILLAGE v0.4\n\n"
+    tete = (f"# Synthèse de la batterie SILLAGE v0.5\n\n"
             f"{total - len(echecs)}/{total} contrôles réussis — "
             f"{len(choix)} tests — {round(time.time() - t0)} s "
             f"({time.strftime('%Y-%m-%d %H:%M')}).\n\n"

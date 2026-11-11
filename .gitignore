@@ -25,3 +25,10 @@ resultats/*
 # Archives de campagnes (journaux et fiches machine) : non publiées
 campagne_*/
 campagne_*.tar.gz
+
+# v0.5 : sorties brutes et binaires du départage des S-box (RAPPORT.md en cite les dossiers), article tiers
+prototypes/brume_sbox6/departage/resultats/
+prototypes/brume_sbox6/departage/build_*/
+prototypes/brume_sbox6/departage/departage
+prototypes/brume_sbox6/departage/departage_dev
+prototypes/vole/*.pdf

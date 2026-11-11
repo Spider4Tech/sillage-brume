@@ -54,7 +54,7 @@ def kat():
 
 
 def main():
-    lignes = ["# Empreintes SHA-256 — SILLAGE v0.4", ""]
+    lignes = ["# Empreintes SHA-256 — SILLAGE v0.5", ""]
     try:
         syn = json.load(open(os.path.join(RESULTATS, "synthese.json")))
         ok = sum(sum(v["controles"].values()) for v in syn.values())

@@ -9,7 +9,7 @@
 #define BR_POLY 0x13
 
 static const uint8_t BR_SBOX[16] = {
-    8, 9, 1, 10, 12, 4, 0, 6, 13, 15, 3, 7, 14, 2, 11, 5
+    10, 13, 4, 1, 2, 6, 5, 0, 11, 15, 14, 12, 7, 8, 9, 3
 };
 
 static const uint8_t BR_RC[32][128] = {

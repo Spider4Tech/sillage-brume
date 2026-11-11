@@ -1,9 +1,0 @@
-  reference_nibbles_conforme_a_sl_brume_permute                OK
-  tables_rapides_conformes                                     OK
-  sbox_ddt_lat_optimales                                       OK
-  sbox_bct_ni_triviale_ni_sous_la_ddt                          OK
-  sbox_dlct_au_plus_8                                          OK
-  boomerang_temoin_detecte_a_1_tour                            OK
-  boomerang_csv_brut_ecrit                                     OK
-  ensembles_contiennent_les_differences_reelles                OK
-brume_attaques : 8 contrôles, tous réussis

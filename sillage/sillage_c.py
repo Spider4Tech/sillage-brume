@@ -15,7 +15,7 @@ import subprocess
 
 ICI = os.path.join(os.path.dirname(os.path.abspath(__file__)), "c")
 BUILD = os.path.join(ICI, "build")
-SOURCES = ["commun.c", "brume512.c", "brume512_avx2.c", "kem.c", "sig.c", "isd.c"]
+SOURCES = ["commun.c", "brume512.c", "brume512_avx2.c", "kem.c", "sig.c", "vole.c", "isd.c"]
 OPTIONS = os.environ.get("SILLAGE_CFLAGS", "-O3").split()
 _lib = None
 
@@ -324,6 +324,44 @@ def sig_verify(niveau, pk, msg, sig) -> bool:
     if len(pk) != sig_tailles(niveau)["pk"]:
         return False
     return lib().sl_sig_verify(NIVEAUX_SIG[niveau], pk, msg, _sz(len(msg)), sig, _sz(len(sig))) == 1
+
+
+# ------------------------------------------------------------------ SIG v0.5 : VOLE-in-the-Head (sillage/c/vole.c)
+PROFILS_VOLE = {"VOLE-128": 0, "VOLE-256": 1, "VOLE-128f": 2, "VOLE-256f": 3}
+
+
+def vole_tailles(profil):
+    t = [ctypes.c_size_t() for _ in range(3)]
+    lib().sl_vole_tailles(PROFILS_VOLE[profil], *[ctypes.byref(x) for x in t])
+    return dict(zip(("pk", "sk", "sig"), (x.value for x in t)))
+
+
+def vole_keygen(profil):
+    t = vole_tailles(profil)
+    pk, sk = _buf(t["pk"]), _buf(t["sk"])
+    _ok(lib().sl_vole_keygen(PROFILS_VOLE[profil], pk, sk))
+    return pk.raw[:t["pk"]], sk.raw[:t["sk"]]
+
+
+def vole_sign(profil, sk, msg, sel=None):
+    t = vole_tailles(profil)
+    _taille(sk, t["sk"], "sk")
+    if sel is not None:
+        _taille(sel, 32, "sel")
+    sig = _buf(t["sig"])
+    _ok(lib().sl_vole_sign_sel(PROFILS_VOLE[profil], sk, msg, _sz(len(msg)), sel, sig))
+    return sig.raw[:t["sig"]]
+
+
+def vole_verify(profil, pk, msg, sig) -> bool:
+    if len(pk) != vole_tailles(profil)["pk"]:
+        return False
+    return lib().sl_vole_verify(PROFILS_VOLE[profil], pk, msg, _sz(len(msg)), sig, _sz(len(sig))) == 1
+
+
+def vole_kat(actif, ctr=0):
+    """Aléa déterministe du KAT (même flux que prototypes/vole/vole_proto.c --kat) ; tests seulement."""
+    lib().sl_vole_kat(int(actif), ctypes.c_uint32(ctr))
 
 
 # ------------------------------------------------------------------ ISD

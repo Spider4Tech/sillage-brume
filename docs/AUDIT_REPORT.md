@@ -667,3 +667,28 @@ New checks: `tirage_creux_M_fixe_suffit_a_2^-128`, with the witness `M/4` insuff
 
 **Stale rates.** The README still gave rejection rates of “approximately 5 % and 8 %”, an erratum of 2026-11-03 that was not
 carried over. The measured values are 7.0 % and 6.1 %. The README is corrected.
+
+## Errata and changes of 2026-11-11 (v0.5: VOLE signature, new S-box)
+
+**Adopted.** The signature becomes VOLE-in-the-Head over regular SD (`sillage/c/vole.c`, SPEC § 4 bis, PROOFS § 3 bis). The BRUME-512
+S-box becomes `AD412650BFEC7893` (SPEC § 2.1). The v0.4 signature is kept as a reference. Every defect below was found by a check
+or a review during this work; each is fixed and covered by a check.
+
+| Finding | How it was found | Fix and check |
+|---|---|---|
+| **Empty blocks.** The tensor encoding had `Π μ = 256` positions for blocks of 245 and 253, so a digit vector pointing past the block gave an empty block. The verifier accepted `x = 0` on `y = 0`; the relation proved was "at most one error per block" | Evaluation of the prototype: a signature with empty blocks, executed | `ctx_init` refuses `bloc ≠ Π μ`, and the parameters were re-chosen on exact blocks (Lemma 17.1). Checks: `blocs_exacts_*`. SDitH v2.0's Table 3 appears to have the same gap (not checked against its code) |
+| **Uniqueness heuristic in the RSD → SD reduction** | Proof review (SDitH v2.0, Theorem 5.1) | Exact reduction, with no row removed (Lemma 17.2); codimension `⌈log₂ C(n, w)⌉`. Measured on small instances: `reduction_exacte_sd_vers_rsd_mesuree` |
+| **The same hash prefix for the short and fast profiles** | Writing SPEC § 4 bis | Profile byte +64 for the f profiles; their KATs changed |
+| **Attack harness inflating successes** (+4 σ on the γ budgets of the transposed Kales–Zaverucha). The fake witness was 2 bits from the real one, and the bit-flip walk of the γ attack sometimes found the real witness again: an honest signature counted as a forgery | The exact-prediction check, at 30 000 trials on the test machine | Attacked keys have no witness (uniform y; a regular preimage exists with probability ≤ 2^−16). The Theorem 17 bound was never exceeded. Checks: `vole_kz`, `reduit_attaque_gamma_*` |
+| **The conditional distribution of challenges** (opening limit, grinding) was not addressed in the proof | External review (Codex) | Lemma 17.5: the bound counts queries, so the filter only rejects outputs. P_open is measured and agrees with the review's estimate: `*_grinding_conforme_a_p_open` |
+| **The constraint system was not normative** | External review (Codex) | SPEC § 4 bis.7, a normative annex. A second implementation written from the annex agrees with the library: `*_contraintes_conformes_a_l_annexe_normative` |
+| Frozen AEAD KAT in `brume512.selftest` | Battery (S-box change) | KAT regenerated, C ≡ Python |
+| Unsigned overflow in `test_aead_parallele` (`uns − 4·len` in uint64): z = 2.5·10^16 when the keystream has slightly fewer ones than zeros | Battery (the new S-box flipped the sign by chance) | Cast to `int` |
+| Fresh trails built as tuples, which the mutation witness of `test_division_property` cannot modify; with the old S-box every trail came from the JSON cache | Battery (the cache was invalidated by the S-box change) | Converted to lists |
+| `dp_validation`: 73 CP-SAT queries undecided within 60 s, all in the inverse direction at 3 and 4 rounds | Battery | Second pass at 600 s for undecided queries; an undecided query is never counted as a proof |
+| **Frobenius not checked**, and an informal argument that wrongly called M "not GF(16)-linear" (it is: its coefficients are in GF(16)). The new S-box has two Frobenius-equivariant points and a Frobenius-XOR table maximum of 5/16 (v0.4: one point, 4/16) | External review (GPT) | The right property is that M does not commute with F: `M ⊕ M⁽²⁾` has full rank 128 over GF(16), so a Frobenius relation costs 512 bits per round; one round measured as random. Checks `M_ne_commute_pas_avec_frobenius` and `frobenius_un_tour_comme_le_hasard` in `test_brume_algebre`, each with a witness that commutes with F (PROOFS § 4.2 bis, Algebraic) |
+
+**Re-established with the new S-box.** Exact division-property reach: 10 rounds per direction and 20 inside-out, for every
+cube (`dp_exact`, `dp_tous_cubes`). Certified properties: U = 4, NL = 4, degree 3, inverse of degree 3, no fixed point. BCT
+maximum 8, against 10. MEDP₂ ≤ 2^−14.99 and MELP₂ ≤ 2^−15.0. No distinguisher beyond the known reach, including GPU cubes up
+to 2^36 inputs.

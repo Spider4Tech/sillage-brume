@@ -5,8 +5,9 @@ La S-box, le graphe de Cayley et les coefficients de diffusion sont publiés com
 graine fixée, sous des critères énoncés (docstring de select_params.py, docs/SPEC.md). Rien ne le vérifiait. Contrôles :
 0. L'empreinte SHA-256 de brume512_tables.py publiée dans docs/SPEC.md est celle du fichier.
 
-1. Reproduction. gen_sbox, gen_graph et gen_coef, relancés avec leurs graines, redonnent exactement SBOX, (GROUP, GENS) et
-   COEF de sillage/brume512_tables.py. Les empreintes CHECK du fichier sont celles de son contenu.
+1. Reproduction. gen_graph et gen_coef, relancés avec leurs graines, redonnent exactement (GROUP, GENS) et COEF de
+   sillage/brume512_tables.py ; gen_sbox redonne la S-box de la v0.4. Depuis la v0.5, SBOX est SBOX_V05, la candidate
+   retenue par le départage (prototypes/brume_sbox6/departage/RAPPORT.md), non rejouable dans la batterie (1 h + GPU). Les empreintes CHECK du fichier sont celles de son contenu.
 2. Critères. La S-box retenue satisfait les critères annoncés : U = 4, NL = 4 (max |LAT| = 4), aucun point fixe,
    degré 3. Le graphe est connexe et 6-régulier, et max_chev ≤ 2 (borne utilisée par le lemme wide-trail).
    Les coefficients ne violent aucune contrainte (a) à (e).
@@ -106,7 +107,12 @@ def run():
     gname, gens, _, gst = S.gen_graph()
     ADJ = S._adjacency(gens, S.GROUPS[gname])
     coef, cst = S.gen_coef(ADJ)
-    c["sbox_reproduite"] = sbox == T.SBOX
+    # v0.5 : la S-box en service est SBOX_V05, issue du départage (règle fixée d'avance, RAPPORT.md) ; gen_sbox doit toujours
+    # redonner celle de la v0.4 (procédure reproductible), et SBOX_V05 doit être la candidate retenue par le rapport.
+    rapport = open(os.path.join(RACINE, "prototypes", "brume_sbox6", "departage", "RAPPORT.md"), encoding="utf-8").read()
+    c["sbox_v04_reproduite_par_gen_sbox"] = sbox == [int(x, 16) for x in "891AC406DF37E2B5"]
+    c["sbox_en_service_est_sbox_v05_du_departage"] = (T.SBOX == S.SBOX_V05
+                                                      and "Meilleure candidate : CAND_A1 = `AD412650BFEC7893`" in rapport)
     c["graphe_reproduit"] = gname == T.GROUP and gens == T.GENS
     c["coefficients_reproduits"] = coef == T.COEF
     c["empreintes_check_du_fichier"] = T.CHECK == {k: S._sha(getattr(T, k)) for k in ("SBOX", "GROUP", "GENS", "COEF")}
@@ -133,7 +139,7 @@ def run():
     c["coefficients_det_gf16_non_nul"] = bool(S._det_gf16_nonnul(M))
 
     # témoins
-    c["temoin_autre_graine_autre_sbox"] = S.gen_sbox(seed=0xA11CF)[0] != T.SBOX
+    c["temoin_autre_graine_autre_sbox"] = S.gen_sbox(seed=0xA11CF)[0] != sbox
     co2 = co.copy()
     j0, i0 = 0, LN[0][1]
     co2[j0, i0] = co2[j0, LN[0][2]]                   # deux coefficients égaux sur une ligne : (a) violée

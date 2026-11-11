@@ -97,6 +97,32 @@ class SillageSIG(_SIG):
         return C.sig_verify(self.level, pk[0] + pk[1].to_bytes(self.rb, "little"), bytes(msg), bytes(sig))
 
 
+class SillageVOLE:
+    """Sillage-SIG v0.5 : VOLE-in-the-Head sur SD régulier (sillage/c/vole.c ; C seulement, sans référence Python ;
+    sécurité : PROOFS § 3 bis ; format : SPEC § 4 bis). Profils : VOLE-128, VOLE-256 (courts), VOLE-128f, VOLE-256f (rapides).
+    pk = graine de H ‖ y ; sk = pk ‖ positions ; signature de longueur fixe."""
+    PROFILS = tuple(C.PROFILS_VOLE)
+
+    def __init__(self, profil: str = "VOLE-128"):
+        if profil not in C.PROFILS_VOLE:
+            raise ValueError(f"profil inconnu : {profil} (attendu : {', '.join(C.PROFILS_VOLE)})")
+        if not disponible():
+            raise RuntimeError("Sillage-SIG v0.5 n'existe qu'en C : bibliothèque indisponible")
+        self.profil = profil
+
+    def sizes(self) -> dict:
+        return C.vole_tailles(self.profil)
+
+    def keygen(self):
+        return C.vole_keygen(self.profil)
+
+    def sign(self, sk: bytes, msg: bytes, salt: bytes = None) -> bytes:
+        return C.vole_sign(self.profil, bytes(sk), bytes(msg), None if salt is None else bytes(salt))
+
+    def verify(self, pk: bytes, msg: bytes, sig: bytes) -> bool:
+        return C.vole_verify(self.profil, bytes(pk), bytes(msg), bytes(sig))
+
+
 class Brume512(_Brume512):
     def _nonce(self, nonce):
         if len(nonce) != self.p["nonce_len"]:

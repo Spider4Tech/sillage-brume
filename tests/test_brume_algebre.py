@@ -3,7 +3,7 @@
   1. Graphe : 4-cycles, voisins communs, expansion, paires rotationnelles et rotationnelles-XOR (quasi-symétrie
      du groupe), sous-corps, Frobenius.
   2. Couche linéaire : polynôme minimal binaire, degrés de ses facteurs, plus petit sous-espace invariant.
-  3. S-box : relations quadratiques, polynôme univarié, sous-corps.
+  3. S-box : relations quadratiques, polynôme univarié, sous-corps ; 3 bis. Frobenius (M ⊕ M⁽²⁾, table Frobenius-XOR, un tour).
   4. Activité : borne basse prouvée par CP-SAT sur r tours (modèle tronqué valide), d'où mieux que 128 à 32 tours.
   5. Algébrique : récupération d'état par SAT sur tours réduits ; estimation de régularité (hypothèse semi-régulière).
   6. Pistes monomiales sur mini-BRUME (resultats/mini_brume_instances.json) : un bit à somme réelle nulle mais qui
@@ -327,6 +327,44 @@ def sbox():
     frob = sum(S[int(GM[x, x])] == int(GM[S[x], S[x]]) for x in range(16))
     return dict(relations_quadratiques=len(mon) - r, degre_univarie=max(i for i, c in enumerate(coefs) if c), termes_univaries=sum(1 for c in coefs if c),
                 images_de_GF4_dans_GF4=sum(S[x] in gf4 for x in gf4), points_frobenius_equivariants=frob)
+
+
+# ---------------- 3 bis. Frobenius ----------------
+
+def frobenius(n_etats=4096, graine=1):
+    """F(x) = x² sur chaque nibble. M est GF(16)-linéaire (coefficients dans GF(16)), mais elle ne commute avec F que si tous ses
+    coefficients sont dans GF(2) : F(M(y)) = M⁽²⁾(F(y)), où M⁽²⁾ élève chaque coefficient au carré. Une relation entre x et F(x)
+    traverse la couche linéaire avec l'écart (M ⊕ M⁽²⁾)·F(y), fonction linéaire de l'état inconnu : son rang sur GF(16) est ce que
+    l'attaquant paie à chaque tour (4 bits par unité de rang). Témoin : coefficients dans GF(2), S-box x ↦ x⁴ et constantes nulles,
+    qui commutent avec F ; le détecteur doit alors voir un rang nul et des écarts nuls partout."""
+    rng = np.random.default_rng(graine)
+    Fr = lambda v: GM[v, v]
+    S = np.array(B.SBOX, dtype=np.uint8)
+    RC0 = np.array(B.RC[0], dtype=np.uint8)
+    y = rng.integers(0, 16, (8, N), dtype=np.uint8)
+    lin16 = all(np.array_equal(np.bitwise_xor.reduce(GM[C, GM[a, v]], axis=1), GM[a, np.bitwise_xor.reduce(GM[C, v], axis=1)])
+                for a in range(16) for v in y)
+
+    def ecart_un_tour(Cm, Sb, rc):
+        X = rng.integers(0, 16, (n_etats, N), dtype=np.uint8)
+        tour = lambda x: np.bitwise_xor.reduce(GM[Cm[None, :, :], Sb[x ^ rc][:, None, :]], axis=2)
+        d = tour(Fr(X)) ^ Fr(tour(X))
+        return float((d == 0).sum(1).mean())
+
+    temoin_C = (C != 0).astype(np.uint8)
+    temoin_S = np.array([int(GM[GM[x, x], GM[x, x]]) for x in range(16)], dtype=np.uint8)
+    # table Frobenius-XOR de la S-box : T[a][b] = #{u : S(F(u) ⊕ a) = F(S(u)) ⊕ b} ; T[0][0] = points équivariants
+    T = np.zeros((16, 16), int)
+    for a in range(16):
+        for u in range(16):
+            T[a, S[Fr(u) ^ a] ^ Fr(S[u])] += 1
+    return dict(M_lineaire_sur_GF16=lin16,
+                coefficients_dans_GF2=int(((C != 0) & (Fr(C) == C)).sum()), coefficients_non_nuls=int((C != 0).sum()),
+                rang_M_xor_M2_sur_GF16=_rang_gf16(C ^ Fr(C)), rang_temoin=_rang_gf16(temoin_C ^ Fr(temoin_C)),
+                table_sbox_max=int(T.max()), table_sbox_points_equivariants=int(T[0, 0]),
+                constantes_dans_GF2=int(sum(int(c) in (0, 1) for r in B.RC for c in r)),
+                nibbles_nuls_un_tour=round(ecart_un_tour(C, S, RC0), 3),
+                nibbles_nuls_un_tour_temoin=round(ecart_un_tour(temoin_C, temoin_S, np.zeros(N, np.uint8)), 3))
 
 
 # ---------------- 4. activité ----------------
@@ -728,6 +766,12 @@ def run():
     c["aucun_vecteur_propre_creux"] = all(v["poids"] >= 64 for v in m["lineaire"]["vecteurs_propres_GF16"])
     m["sbox"] = sbox()
     c["sbox_21_relations_quadratiques"] = m["sbox"]["relations_quadratiques"] == 21
+    fb = m["frobenius"] = frobenius()
+    c["M_lineaire_sur_GF16"] = fb["M_lineaire_sur_GF16"]
+    # rang plein : une relation de Frobenius coûte 4 × 128 = 512 bits par tour ; le témoin (coefficients dans GF(2)) donne 0
+    c["M_ne_commute_pas_avec_frobenius"] = fb["rang_M_xor_M2_sur_GF16"] >= 64 and fb["rang_temoin"] == 0
+    # après un tour, R(F(x)) ⊕ F(R(x)) a 128/16 = 8 nibbles nuls en moyenne, comme au hasard ; le témoin en a 128
+    c["frobenius_un_tour_comme_le_hasard"] = abs(fb["nibbles_nuls_un_tour"] - 8) < 0.5 and fb["nibbles_nuls_un_tour_temoin"] == N
     budget = 30 * INT
     acts = [activite(r, budget) for r in (2, 3, 4, 5, 6)]
     m["activite"] = acts

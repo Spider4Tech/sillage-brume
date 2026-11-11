@@ -77,7 +77,7 @@ def temoins_verifier(cache):
         R = int(R)
         if not verifier(v["piste"], R, sens):
             continue
-        p0 = v["piste"]
+        p0 = json.loads(json.dumps(v["piste"]))          # listes : les pistes neuves sont des tuples (hors cache JSON)
         _, L = _couches(sens)
         mut = {}
         q = copy.deepcopy(p0)

@@ -4,11 +4,11 @@
 [![CodeQL](https://github.com/Spider4Tech/sillage-brume/actions/workflows/codeql.yml/badge.svg)](https://github.com/Spider4Tech/sillage-brume/actions/workflows/codeql.yml)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](LICENSE)
 
-**Experimental cryptographic research project — version 0.4.0**
+**Experimental cryptographic research project — version 0.5.0**
 
 SILLAGE is a research suite built around code-based constructions and noisy decoding. The repository contains a key-encapsulation mechanism, a binary-syndrome-decoding signature scheme, the BRUME-512 permutation, authenticated-encryption modes, hash functions, C implementations, and a collection of tests and cryptanalysis tools.
 
-> **Research prototype — not for production use.** The parameters and constructions are experimental. The v0.4.0 designs have not received a complete independent cryptanalysis. The reductions and computational estimates documented here are conditional on the assumptions and models stated in [`docs/PROOFS.md`](docs/PROOFS.md). Passing the test suite is not evidence that a construction is secure.
+> **Research prototype — not for production use.** The parameters and constructions are experimental. The v0.5.0 designs have not received a complete independent cryptanalysis. The reductions and computational estimates documented here are conditional on the assumptions and models stated in [`docs/PROOFS.md`](docs/PROOFS.md). Passing the test suite is not evidence that a construction is secure.
 
 The measurements and test totals below refer to dated runs committed with the project; they are not live CI results. The documents in `docs/` are in English ([`docs/README.md`](docs/README.md) lists them); a few external review reports are kept in their original French. Code comments, test names and result files are in French. The C implementation and Python package are under `sillage/`.
 
@@ -61,9 +61,10 @@ The repository is intended to make the constructions inspectable and testable. I
 | Sequential AEAD | Keyed duplex over BRUME-512 | `BRUME-512`, `BRUME-512-256` | Ideal-permutation analysis; nonce policy differs by profile |
 | Parallel AEAD | Tree-like duplex with 4 KiB message leaves | `BRUME-512p`, `BRUME-512-256p` | Separate construction and ciphertext format; separate proof and tests |
 | Hash | Sponge and one-level tree hash over BRUME-512 | Variable output length | Generic sponge/tree analysis under the stated model |
-| Sillage-SIG | MPC-in-the-Head over binary syndrome decoding | `Sillage-SIG-128`, `Sillage-SIG-256` | EUF-CMA/SUF-CMA argument in the ROM; QROM analysis remains limited |
+| Sillage-SIG v0.5 | VOLE-in-the-Head over regular syndrome decoding (C only) | `VOLE-128`, `VOLE-256`, `VOLE-128f`, `VOLE-256f` | EUF-CMA/SUF-CMA in the ROM reduced to binary SD (Lemma 17.2); QROM sketch within ≈ 2 bits of Grover; not reviewed |
+| Sillage-SIG v0.4 (reference) | MPC-in-the-Head over binary syndrome decoding | `Sillage-SIG-128`, `Sillage-SIG-256` | Kept unchanged as a reference; superseded by v0.5 |
 
-The profile suffixes `128` and `256` are parameter labels. They must not be read as a blanket claim of 128-bit or 256-bit post-quantum security. The KEM and signature sections give the actual estimates and limitations. The v0.4.0 KEM and signature formats differ from v0.3; keys, ciphertexts and signatures from the earlier format are not assumed to be interoperable.
+The profile suffixes `128` and `256` are parameter labels. They must not be read as a blanket claim of 128-bit or 256-bit post-quantum security. The KEM and signature sections give the actual estimates and limitations. **v0.5.0 changes two formats.** The BRUME-512 S-box is now `AD412650BFEC7893`, which changes every AEAD, hash and TE output. The signature is now VOLE-in-the-Head (`SillageVOLE`, `sl_vole_*`). v0.4 ciphertexts, hashes and KATs are no longer valid; the v0.4 signature code is kept as a reference.
 
 ---
 
@@ -377,38 +378,59 @@ The tree hash is **not interchangeable** with the sequential sponge hash. Applic
 
 ## Sillage-SIG
 
-### Construction
+### v0.5: VOLE-in-the-Head over regular syndrome decoding
 
-Sillage-SIG is a Fiat–Shamir signature scheme built from an MPC-in-the-Head protocol in the style of SDitH. Its underlying relation is binary syndrome decoding:
+The signature proves knowledge of a **regular** vector x, with one error per block of 256 positions, such that `H x = y` and
+`H = [H′ | I]`. Each position is the tensor product of four unit vectors of size 4, which gives degree-4 constraints, checked
+with a single GGM tree, an opening limit and grinding (VOLE-in-the-Head, in the style of FAEST and SDitH v2.0). The format is
+SPEC § 4 bis, with a normative annex for the constraint system; the code is `sillage/c/vole.c`, C only.
 
-$$
-H x = y, \qquad \operatorname{wt}(x) \leq w,
-$$
+| Profile | `(n, k, w)` | τ, κ | Public key | Secret key | Signature | Sign, 12 threads |
+|---|---|---|---:|---:|---:|---:|
+| `VOLE-128` | `(19 456, 18 736, 76)` | 11, 11 | 106 B | 182 B | 4 235 B | 2.9–5.1 ms |
+| `VOLE-256` | `(38 912, 37 480, 152)` | 21, 12 | 211 B | 363 B | 16 122 B | 20–29 ms |
+| `VOLE-128f` | same as VOLE-128 | 16, 8 | 106 B | 182 B | 5 193 B | 1.45 ms |
+| `VOLE-256f` | same as VOLE-256 | 32, 8 | 211 B | 363 B | 20 467 B | 5.4 ms |
 
-with `H = [H' | I]`. The witness is represented using a polynomial relation over finite fields. The protocol checks the relation at four evaluation points using Beaver triples.
+What is established, and how (PROOFS § 3 bis):
+- **Assumption.** Lemma 17.2 is an exact reduction from binary SD to regular SD, with no uniqueness heuristic: the
+  codimension is `⌈log₂ C(n, w)⌉`. In the ROM, the scheme therefore rests on binary SD alone, at rate ≈ 0.96. The reduction
+  guarantees 160.6 and 316.0 bits in our ISD model; the best direct attack costs 264.0 and 525.0 bits (CryptographicEstimators:
+  275.4 and 612.2).
+- **Exact blocks.** Lemma 17.1 shows that a block must have exactly `Π μ = 256` positions. Otherwise empty blocks pass. Our first
+  prototype, and apparently the parameter table of SDitH v2.0, had this gap.
+- **EUF-CMA in the ROM** (Theorem 17): λ bits in the cost/advantage notion, at 0.88 of the budget. Lemma 17.5 shows that the
+  opening limit and grinding do not change the Δ term.
+- **SUF-CMA and binding** (Propositions 17.3 and 17.4). The only malleability is another counter giving the same challenge, at a
+  cost of 2^131 or more.
+- **QROM** (Theorem 17-Q, a sketch based on Theorems 54 and 56 of ePrint 2026/164): 2^61.8 and 2^125.8 quantum queries, within
+  2.2 bits of Grover. It needs the decisional variant of regular SD.
+- **Executed attacks**, against the real verifier:
+  - each soundness term on reduced models: the Δ, γ and VOLE-check challenges;
+  - Kales–Zaverucha transposed to the three rounds of VOLE, at intermediate scale.
 
-The virtual parties are arranged as a hypercube with `N = 2¹² = 4096` leaves. A GGM seed tree derives the shares. Each repetition hides one leaf, and the signature contains the required authentication path, commitment, auxiliary values and responses. Fiat–Shamir is applied in five passes.
+  In each case, the success frequency matches the exact prediction and stays under the bound.
+- **Implementation:**
+  - memory and randomness errors are propagated, with injected failures;
+  - ctgrind on the full profiles, dudect, fuzzing under ASan and UBSan;
+  - KATs are identical on x86-64 and ARM64.
 
-### Parameters and sizes
+**None of these proofs has been reviewed by a third party.**
+
+### v0.4: MPC-in-the-Head (reference)
+
+The v0.4 signature (hypercube MPC-in-the-Head over binary SD, five-pass Fiat–Shamir; `SillageSIG`, `sl_sig_*`, SPEC § 4) is
+kept unchanged as a reference.
 
 | Parameter | Sillage-SIG-128 | Sillage-SIG-256 |
 |---|---:|---:|
 | Binary code `(n, k, w)` | `(2048, 1434, 103)` | `(4096, 2867, 206)` |
-| Repetitions `τ` | 11 | 23 |
-| Evaluation points `t` | 4 | 4 |
-| Public key | 109 bytes | 186 bytes |
-| Secret key | 464 bytes | 977 bytes |
+| Public key / secret key | 109 / 464 bytes | 186 / 977 bytes |
 | Signature | 8,522 bytes | 34,867 bytes |
-| Classical ISD work-factor estimate | 160.3 bits | 316.2 bits |
-| ROM forgery estimate in the stated theorem | 128.3 bits | 264 bits |
+| Classical ISD / ROM forgery estimates | 160.3 / 128.3 bits | 316.2 / 264 bits |
 
-The work factors are estimates under the code-decoding models and parameter search documented in the repository. The signature sizes are fixed by the v0.4.0 format. The protocol and proof are new in v0.4.0; the proof is in [`docs/PROOFS.md`](docs/PROOFS.md), §3.
-
-### Security qualifications
-
-The EUF-CMA argument is in the random-oracle model and depends on the binary syndrome-decoding assumption H3, the hidden-seed entropy and the stated transcript/commitment properties. The repository also analyses strong unforgeability and executes selected attacks on reduced models.
-
-The quantum analysis is not a complete QROM security proof for the instantiated scheme. The documented estimates include Grover-based forgery costs of approximately 64 and 132 bits for the two profiles, while the quantified QROM reductions in the proof document are substantially weaker and have explicit caveats. The profile labels therefore do not imply 128-bit and 256-bit quantum security.
+Its QROM reduction proves only about 32 and 68 bits (Don–Fehr–Majenz). The profile labels do not imply 128-bit or 256-bit quantum
+security for either signature.
 
 ---
 
@@ -499,14 +521,15 @@ The reduced-model tests are useful for checking proof steps and attack code. The
 
 ### Latest committed test summary
 
-The committed [`resultats/SYNTHESE.md`](resultats/SYNTHESE.md) reports the following run:
+The committed [`resultats/SYNTHESE.md`](resultats/SYNTHESE.md) reports the v0.5 run of 11 November 2026: **800 of 800 controls passed, 70 tests**.
 
-- **533 / 534 controls passed**;
-- **53 tests**;
-- **3,530 seconds** total runtime;
-- run timestamp recorded as **31 October 2026, 18:57**.
+The full battery ran from 14:01 to 16:44 in the campaign container (gcc 13.3, Python 3.12, Valgrind included) and gave 783 of 793 controls. All ten failures were in the tests themselves, revealed by the new S-box:
+- a frozen AEAD KAT left in the self-test;
+- an unsigned overflow in a keystream-balance check;
+- trails built as tuples, which a mutation witness could not modify (it crashed `division_property`, and `dp_tous_cubes` after it);
+- CP-SAT queries left undecided by `dp_validation` within 60 s, in the inverse direction at 3 and 4 rounds; a second pass at 600 s now settles them.
 
-The one failed control, `Sillage-256_D_minimal`, was a sampling artifact of the test: it drew only 3 random keys, for a true rate of about 43 %, so it failed by chance about once in 5.5 runs. The test now draws 30 keys and passes when run alone; the full suite has not been rerun since.
+The tests concerned were fixed and rerun, and are marked "relancé" in the summary. `vole_kz` (Kales–Zaverucha transposed to VOLE) was added during the run. `brume_algebre` was rerun after an external review with three Frobenius checks: `M ⊕ M⁽²⁾` has full rank 128 over GF(16), so a Frobenius relation costs 512 bits per round (PROOFS § 4.2 bis).
 
 This is a snapshot of one test run on the machine used to produce the report. It is not a statement that every possible input, compiler, architecture or adversarial strategy has been tested. In particular, the full suite does not prove the hardness assumptions, the security of the full BRUME permutation or the completeness of the QROM arguments.
 
@@ -714,6 +737,8 @@ The repository records earlier design failures and the changes made in response.
 | KEM assumptions | The first decisional assumptions omitted public parity information | Replaced by H1-P/H2-P with parity included; IND-CPA argument rewritten |
 | KEM correctness | A Gaussian estimate overstated the failure bound | Replaced by a certified Chernoff bound evaluated per key |
 | Signature protocol | The Stern-based signature format was too large and had earlier challenge/response issues | Replaced in v0.4.0 by the hypercube MPC-in-the-Head construction; transcript binding and auxiliary-field checks added |
+| Signature protocol (v0.5) | The MPC-in-the-Head signature was 8.5 / 34.9 KB, and its QROM reduction proved only half its bits | Replaced by VOLE-in-the-Head over regular SD: −50 % size, an exact reduction to SD, a QROM sketch close to Grover. Found and fixed on the way: empty blocks when `Π μ` exceeds the block, a shared hash prefix between the short and fast profiles, and a flawed attack harness (the fake witness was 2 bits from the real one) |
+| BRUME S-box (v0.5) | The S-box came from a seeded search; a tie-break among the optimal 4-bit S-boxes found a better one | Replaced by `AD412650BFEC7893` (decision rule fixed beforehand, `prototypes/brume_sbox6/departage/`): BCT 8 against 10, D3, L3, D2 and 3-round boomerang better, exact division-property reach unchanged |
 | C implementation | State-indexed tables and secret-dependent operations produced side-channel concerns | Added AVX2/NEON kernels, masked operations, fixed-work sampling and dedicated timing/control-flow tests |
 | Division property | Earlier upper-bound claims were limited to particular cubes | Extended the trail construction and verification to all 512 bit cubes; exact method reach documented as 10 rounds per direction |
 

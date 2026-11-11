@@ -30,11 +30,11 @@ BLOC, CV = 8192, 32
 FEUILLE, RACINE_D, SEUL = 8, 9, 10
 LONGUEURS = [0, 1, 31, 32, 33, BLOC - 1, BLOC, BLOC + 1, 2 * BLOC, 2 * BLOC + 31, 3 * BLOC - 1,
              33 * BLOC + 5, 40 * BLOC]
-# KAT figés (référence Python, 2026-10-29)
+# KAT figés (référence Python ≡ C ; v0.5, S-box AD412650BFEC7893, 2026-11-11 ; la v0.4 avait 5dd1dcb0… pour « abc »)
 KAT = {
-    "vide": "b12171bb632d2602a3c49f9bc5a6a27b891da98bb0cf9a65efd3947011a42c41",
-    "abc": "5dd1dcb0b955987a48097577392c12507b5c4f5726a5ba73687c45bb4496c115",
-    "motif_3B+7": "4741a5dfa79e432aff03829ce01cd5e40ac3e3d859d6d514ad1d3314f9b1991c"
+    "vide": "09c160e63f64e3f730c0b9d776d36db103f4f9636da9b7797ec4c9dda3a2fc59",
+    "abc": "5dd6ff9f3dd9a66fa43ce2c63cb53301e0bfafca2643cd298604992df9b8d63d",
+    "motif_3B+7": "35cfc1d3fa36fd1cb84735131169b98cb1f66fc6934ba47a3c7e2678d33de7a5"
 }
 
 

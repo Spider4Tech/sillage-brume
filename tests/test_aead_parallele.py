@@ -277,7 +277,7 @@ def run():
         tetes = {ks[i:i + rb] for i in range(0, len(ks), F)}
         c[f"{prof}_aucun_flux_reutilise_entre_feuilles"] = len(tetes) == 64
         c[f"{prof}_separe_du_mode_sequentiel"] = rap.encrypt(NONCE, b"x" * 64)[0] != Brume512(prof[:-1], key=CLE).encrypt(NONCE, b"x" * 64)[0]
-        uns = np.unpackbits(np.frombuffer(ks, dtype=np.uint8)).sum()
+        uns = int(np.unpackbits(np.frombuffer(ks, dtype=np.uint8)).sum())     # int : uns − 4·len déborderait en uint64
         m[f"{prof}_flux_z_bits"] = round(float((uns - 4 * len(ks)) / math.sqrt(2 * len(ks))), 2)
         c[f"{prof}_flux_equilibre"] = abs(m[f"{prof}_flux_z_bits"]) < 5
         # un déchiffrement refusé ne libère rien

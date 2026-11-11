@@ -761,10 +761,10 @@ def selftest(verbose: bool = True) -> dict:
         res["aead_rejet_collision_longueur"] = False
     except Brume512TagError:
         res["aead_rejet_collision_longueur"] = True
-    # 5c) KAT AEAD (régression de la spécification v0.3)
-    kat = {"BRUME-512": "73fd10eb9c0253746ee08c4659573e0b",
-           "BRUME-512-256": "94efc56087f4c85d0cd16e954935d1af"
-                            "0913c29c36ff0b2a227b0707930e4bd1"}
+    # 5c) KAT AEAD (régression ; v0.5 : S-box AD412650BFEC7893, la v0.3/v0.4 avait 73fd10eb… et 94efc560…)
+    kat = {"BRUME-512": "470f26289d424b98aa58ba736cdeb769",
+           "BRUME-512-256": "6a26f99c93361e9978346f63df934bd5"
+                            "8e1c2474d91fdb37aef6a1aa596dbc6e"}
     res["kat_aead"] = all(
         Brume512(pr, key=bytes(range(64))).encrypt(
             bytes(24), b"BRUME-512 KAT")[1].hex() == v for pr, v in kat.items())

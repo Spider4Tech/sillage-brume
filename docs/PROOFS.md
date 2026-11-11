@@ -592,6 +592,376 @@ rules, and extraction reads the oracle table.
 
 ---
 
+## 3 bis. VOLE-in-the-Head signature (prototype, lead 9)
+
+*Status: written on 11 November 2026, **not reviewed by a third party**; human review is a condition of adoption. The
+prototype is not a SILLAGE format. Code: `prototypes/vole/vole_proto.c`; parameters: `prototypes/vole/vole_params.c`. The check
+names below are those of `resultats/vole_proto.json`.*
+
+The construction follows the VOLE-in-the-Head line (FAEST: Baum et al., Crypto 2023; single GGM tree with `T_open` and
+grinding: Baum et al., Asiacrypt 2024; SDitH v2.0 for the degree-d PIOP on regular SD). The arguments below are written for
+the code as it is, term by term; nothing is imported from those papers as a black box.
+
+### 3 bis.1 Relation, witness, assumption
+
+Public key `(seed_H, y)`, `H = [H′ | I] ∈ F_2^{r×n}` expanded from `seed_H`, `n = w·b`. Secret: positions `p_1, …, p_w ∈ [0, b)`,
+`x = Σ_i e_{(i−1)b + p_i}`, `Hx = y`.
+
+*Witness.* The position p of a block is written in mixed radix `(μ_1, …, μ_d)`. Digit t is the unit vector `e_{δ_t} ∈ F_2^{μ_t}`;
+its first `μ_t − 1` coordinates are committed, the last one is `1 ⊕ Σ` of the others. The block of x is the tensor product
+`⊗_t e_{δ_t} ∈ F_2^{Π μ_t}`, of degree d in the committed bits.
+
+*Constraints* (degree ≤ d, homogenised to degree d): for every block and digit, `b_v·b_{v′} = 0` for `v < v′ < μ_t − 1`; for every
+row, `Σ_q H_{rq} x_q = y_r`, where `x_q` runs over the coordinates of the tensor products.
+
+**Lemma 17.1 (exact blocks).** If `b = Π μ_t`, a binary assignment satisfies every constraint if and only if it encodes a regular
+vector x of weight w with `Hx = y`. If `b < Π μ_t`, the satisfying assignments are exactly the vectors with at most one non-zero
+coordinate per block and `Hx = y`; this includes `x = 0` when `y = 0`.
+
+*Proof.* The pair constraints leave at most one committed bit at 1 per digit, and the last coordinate is 1 exactly when none is:
+each digit vector is one-hot, so the tensor product is one-hot in `F_2^{Π μ}`. If `b = Π μ`, every coordinate is a column of the
+block, hence exactly one non-zero per block. Otherwise, the syndrome constraint drops the coordinates `≥ b` (they multiply no column),
+and a block whose one-hot coordinate is `≥ b` is empty. ∎
+
+*History.* The first prototype had blocks of 245 and 253 positions for `Π μ = 256`. On 11 November 2026, the verifier
+accepted signatures with empty blocks, all of them included, and `x = 0` on `y = 0`. There was no attack on an honest key (about
+2^−14.3 and 2^−10.9 extra solutions per key), but the relation proved was not regular SD. `ctx_init` now refuses `b ≠ Π μ`, and
+the profiles were re-chosen on a grid of exact blocks. Checks: `blocs_exacts_ancien_profil_245_refuse`,
+`*_blocs_exacts_positions_extremes_acceptees` (positions 0 and 255 are real columns).
+
+**(H3-R) Regular syndrome decoding.** For H as above and x regular of weight w with blocks of `b = 256`, finding a regular `x′`
+with `Hx′ = Hx` is hard. Lemma 17.2 shows that, at the codimension chosen, this follows from (H3).
+
+**Lemma 17.2 (exact reduction from (H3) to (H3-R), no heuristic).** Let `b = n/w`, and let `r ≥ log₂ C(n, w)` be the
+codimension. Let A solve (H3-R) on instances `([H′ | I], y)` of codimension r with probability ε in time t. Then there is B that
+solves (H3), with the same `(n, n − r, w)` and uniform H, in time t + O(n·r²) with probability
+
+```
+ε_SD ≥ (b^w / C(n, w)) · Π_{i=1..r} (1 − 2^{−i}) · ε  ≥  0.2887 · (b^w / C(n, w)) · ε .
+```
+
+*Proof.* B receives `(H, y = Hx)`, with x of weight w uniform and H uniform. B draws a uniform permutation σ of the columns and sets
+`Ĥ = H·σ`, with `x̂ = σ^{−1}(x)` uniform of weight w. B brings the last r columns of Ĥ to the identity by row operations S, giving
+`(SĤ, Sy) = ([H″ | I], y″)`. If those columns are dependent, B gives up; this happens with probability
+`1 − Π (1 − 2^{−i})`, independently of x. B then runs A on `([H″ | I], y″)`. Conditioned on `x̂` being regular (probability
+exactly `b^w/C(n, w)`), `x̂` is uniform among regular vectors and independent of H″, which is uniform: this is exactly the
+distribution of the key generator. Any regular solution x′ returned by A satisfies `[H″ | I]x′ = y″`, hence `H·σ(x′) = y`
+with `wt(σ(x′)) = w`, which is a solution of (H3). **No uniqueness is needed**, because no row is removed. ∎
+
+This differs from Theorem 5.1 of SDitH v2.0, which removes `k_rsd − k_sd` rows and relies on a heuristic step (uniqueness of the
+solution of the truncated system). The cost of rigour is a larger codimension, `⌈log₂ C(n, w)⌉` instead of `w·log₂ b + log₂ θ`:
+the public key gains a few bytes and γ a few elements, while **the signature size does not change** (the witness has `w·Σ(μ_t − 1)`
+bits whatever the codimension). The loss in bits is `log₂(C(n, w)/b^w) + 1.79`.
+
+*Hypotheses, stated explicitly.*
+- **Matrix.** H′ is expanded from `seed_H` by SHAKE256 (domain `H`). In the ROM, these are uniform independent outputs: H′ is a
+  uniform matrix, exactly the one of (H3), and the reduction B programs it with its instance. Outside the ROM, it would be an extra
+  assumption, the same as for the current signature.
+- **No θ.** Unlike Theorem 5.1 of SDitH v2.0, Lemma 17.2 removes no row. It has no density parameter θ, and no uniqueness hypothesis
+  (Codex review, point 3: the condition `k_rsd ≤ n − w·log₂(n/w) − log₂ θ` does not apply). Its only hypothesis is
+  `r ≥ log₂ C(n, w)`, which also guarantees that the SD solution is unique in expectation (`C(n, w)/2^r ≤ 1`).
+- **Profiles f.** They share (n, r, w) with the short profiles, so the same estimates apply.
+
+The values of the parameters (`docs/LEADS.md`, lead 9) are those of `tests/c/rsd_attaques.c` from 11 November 2026:
+`(19 456, 720, 76)` and `(38 912, 1 432, 152)`, best direct attack 264.0 and 525.0 bits. The version published before that date
+still had the old instances.
+
+*Measured* (`vole_params`, control `reduction_exacte_sd_vers_rsd_mesuree`): B is run with an exhaustive regular solver on random SD
+instances. Its success rate matches the exact prediction of the lemma, including on instances that have several regular solutions.
+
+*Consequence.* With the parameters below, **(H3-R) is no longer a separate assumption**: it follows from (H3), the binary
+syndrome decoding problem of the current signature, here at rate `k/n ≈ 0.96` with a unique solution. What remains is the cost
+of ISD on these instances, i.e. the estimators.
+
+| Profile | μ | b | w | n | r = n − k | Witness | Guaranteed by Lemma 17.2 (our ISD) | Best direct attack (ours / CryptographicEstimators) |
+|---|---|---|---|---|---|---|---|---|
+| VOLE-128, VOLE-128f | (4,4,4,4) | 256 | 76 | 19 456 | 720 | 912 bits | 160.6 b | 264.0 / 275.4 |
+| VOLE-256, VOLE-256f | (4,4,4,4) | 256 | 152 | 38 912 | 1 432 | 1 824 bits | 316.0 b | 525.0 / 612.2 |
+
+*On SDitH v2.0.* Its text requires `μ_1···μ_d = n/w` (§ 2), but its Table 3 has n/w = 185, 252 and 191 for `Π μ` = 192, 256 and
+192. If implemented as written, the encoding then has positions past the block, and the relation proved would be "at most one
+error per block" (Lemma 17.1). This was not checked against its reference implementation.
+
+### 3 bis.2 The protocol, as coded
+
+Hashes: `ℓ = 2λ` bits, with the prefix `SILLAGE-VOLE ‖ version ‖ profile ‖ domain` (`H_x` below names domain x). Seeds have
+`λ + 8` bits, and the salt has 32 bytes. `E ⊂ GF(2^λ)` is the subspace spanned by `X^0, …, X^{τκ−1}`, of size `2^{τκ}`.
+
+1. `hm = H_m(pk, m)`, random `salt`, root `= H_r(pos, salt, hm)`. A single GGM tree (`H_n`) over `L = τN` leaves, interleaved
+   (leaf `L + i·τ + e`). Leaf: `(com, r) = H_l(salt, idx, seed)`, with `com` of 2λ bits and `r` of `nb` bytes.
+2. Per repetition: `u_e = Σ_i r_{e,i}`, `v_{e,b} = Σ_i i_b·r_{e,i}`; `aux_e = u_0 ⊕ u_e` (e ≥ 1).
+   `h1 = H_A(H_C(salt, hm, (H_c(salt, e, com_{e,·}))_e), aux)`.
+3. VOLE check: `M = H_M(h1) = [M′ | I]`, with `λ + B` rows; `ut = M·u_0`, `ht_{e,b} = M·v_{e,b}`, `hv = H_v(h1, ht)`.
+4. `dw = wit ⊕ u_0|_wit`, `h2 = H_2(hv, ut, dw)`, `γ = H_g(h2) ∈ GF(2^λ)^m`.
+5. `C(X) = Σ_j γ_j F_j(X)`, where `F_j` is constraint j evaluated on `p(X) = w·X + V`. Mask `Σ_t (a_t X + b_t) X^{t−1}`, from the
+   `d − 1` mask sections of `u_0` and their V. `α` = coefficients of degree `< d`; `h3 = H_3(h2, α)`.
+6. Grinding: `H_d(h3, ctr)` gives `τκ` bits (`Δ ∈ E`, i.e. the hidden leaf of each repetition) and `wpow` bits that must be zero.
+   The number of nodes to open must be `≤ T_open`.
+7. `σ = salt ‖ h3 ‖ aux ‖ ut ‖ dw ‖ α ‖ opened nodes (T_open slots, zero padding required) ‖ hidden coms ‖ ctr`, of fixed length.
+
+The verifier rebuilds `q_{e,b} = v_{e,b} ⊕ Δ_{e,b}·u_e` (corrected by `aux`), recomputes `ht`, `hv`, `h2` and `h3`, compares
+`h3`, then checks `Σ_l α_l Δ^l = M(Δ) + Σ_j γ_j F_j(q)`.
+
+### 3 bis.3 Theorem 17 (EUF-CMA, ROM)
+
+**Theorem 17.** Let F be a forger making at most q oracle queries in total, signing queries included. F is normalised to
+evaluate every point the verifier evaluates on its forgery, which adds at most one query per oracle. Among these queries, `q_1`
+go to `H_A`, `q_2` to `H_2`, `q_3` to `H_d`, `q_P` to the seed derivations `H_n, H_l`, and `q_S ≤ 2^{64}` are signing queries.
+There is a solver B of (H3-R) such that
+
+```
+Adv^{EUF-CMA}(F) ≤ q_1·C(τ, 2)·2^{−(λ+B)}            VOLE check
+                   + q_2·2^{−λ}                          γ: invalid witness, degree-d term cancelled
+                   + q_3·d·2^{−(τκ+wpow)}                Δ: root of the residual (guessed repetitions included)
+                   + q_P/2^{λ+8}                         hidden seeds
+                   + q·(q + τN(q_S + 1))/2^{2λ}          collisions and late preimages (2λ-bit hashes)
+                   + 3·q_S·q/2^{2λ}                      programming of h1, h2 and (h3, ctr)
+                   + 2·Adv^{H3-R}(B)
+```
+
+and, by Lemma 17.2, `Adv^{H3-R}(B) ≤ 3.47·(C(n, w)/b^w)·Adv^{H3}(B′)`: the scheme rests on (H3) alone.
+
+B runs in the time of F, plus one evaluation of the constraints per query to `H_2`. The reduction does not use the forking lemma
+and loses no factor in q.
+
+*Proof.* **Game 0** is the real game. B receives `(H′, y)` and programs the expansion of `seed_H`.
+
+**Game 1: simulated signatures.** Signing queries are memoised on `(salt, H_m)`: the real signer is deterministic once `salt` and
+`m` are fixed, so a repeated salt costs nothing. For a fresh query, the simulator:
+- draws `salt`, and draws the challenges by running the real `ctr` loop on fresh uniform outputs, programming
+  `H_d(h3, j)` for `j ≤ ctr`;
+- draws the opened nodes (λ + 8 bits) and the hidden `com` of each repetition uniformly, and derives the verifier's `q`;
+- draws `aux`, `dw`, `ut` and `α_1, …, α_{d−1}` uniformly, and solves `α_0` from the verification equation;
+- computes the hashes and programs `H_A`, `H_2` and `H_3`.
+
+Each of these values is uniform in Game 0 as well:
+- `u_0` and `u_e` contain the `r` of the hidden leaf of their repetition, which is pseudo-random under a hidden seed, so `aux` and
+  `dw` are uniform;
+- the last `λ + B` bits of `u_0` appear only in `ut`, since `M = [M′ | I]`, so `ut` is uniform;
+- `α_l`, for `l ≥ 1`, contains the mask coefficient `a_l`, a section of `u_0` used nowhere else;
+- `α_0` is fixed by the equation.
+
+The two games differ only in the following cases:
+1. F queries a hidden seed. Each query names a single `(salt, idx)`, so the probability is `q_P/2^{λ+8}`.
+2. F queries the root input `(pos, salt, hm)`. This gives pos, a solution that B recognises: the first `Adv^{H3-R}(B)`.
+3. A programmed point was already defined. This costs `q_S·q/2^{2λ}` for each of the three programmed oracles, since their inputs
+   contain a fresh 256-bit salt or a fresh 2λ-bit hash.
+
+**Analysis of a forgery** `(m*, σ*)` with m* never signed. A collision of `H_m` with a signed message is counted in the collision
+term. Otherwise, the inputs of `H_A`, `H_2` and `H_3` are not programmed, and F queried them in this order, barring a late preimage.
+
+*(a) Extraction at the `H_A` query.* For each repetition, B reads the preimages of the commitments in the oracle table. A
+preimage that appears later costs a collision or a late preimage. If every leaf of repetition e has a preimage, e is *open*: B
+computes `ũ_e = Σ_i r_{e,i}`, `ũ′_e = ũ_e ⊕ aux_e` (with `aux_0 = 0`) and `ṽ_{e,b}`. If two leaves lack a preimage, the repetition
+cannot pass. If exactly one lacks a preimage, it passes only if `ch_e` designates that leaf, and e is then *guessed*.
+
+*(b) VOLE check.* `M = H_M(h1*)` is uniform and independent of the `ũ′`. For `z ≠ 0`, `[M′ | I]·z = 0` forces the head of z to be
+non-zero (otherwise `Mz` is its non-zero tail), so the probability is `2^{−(λ+B)}`. A union over the pairs of open repetitions
+gives `C(τ, 2)·2^{−(λ+B)}` per `H_A` query. Outside this event, the open repetitions with `M·ũ′_e = ut` share one value `u*`.
+
+On repetition e, the verifier computes `ht_{e,b} = M·ṽ_{e,b} ⊕ Δ_{e,b}·(M·ũ′_e ⊕ ut)`. F fixed `hv` before Δ. For an open
+repetition with `M·ũ′_e ≠ ut` (*inconsistent*), F must therefore have predicted all κ bits of `Δ_e`.
+
+Let S be the set of guessed and inconsistent repetitions. A forgery requires `Δ|_S` to equal values fixed before the `H_d`
+queries.
+
+*(c) γ.* The extracted witness is `w′ = dw* ⊕ u*|_wit`. It is fixed when F queries `H_2`, because `dw*` is part of that input and
+`u*` is fixed since h1. If `w′` is a solution, Lemma 17.1 gives the second `Adv^{H3-R}(B)`. Otherwise, by Lemma 17.1, the
+constraint vector `f(w′) ∈ F_2^m` is non-zero, and the leading coefficient of `C` is `C_d = Σ_j γ_j f_j(w′)`. Since γ is uniform,
+`Pr[C_d = 0] = 2^{−λ}` per `H_2` query.
+
+*(d) Δ.* There remains the case `C_d ≠ 0`. For `e ∈ S`, the verifier's values on repetition e are `ṽ ⊕` a constant fixed by the
+guess, which is absorbed into V. For the other repetitions, `q_j = Ṽ_j ⊕ Δ·w′_j`. The check then reads `P(Δ) = 0`, where P has
+degree d and leading coefficient `C_d`: the mask and the terms `α_l Δ^l` have degree at most `d − 1`. P therefore has at most d
+roots. Each `H_d` query gives Δ uniform in E and `wpow` independent bits, so it succeeds with probability at most
+`d·2^{−τκ}·2^{−wpow}`. The guesses on S only restrict which roots are usable, and `T_open` only removes challenges. ∎
+
+**Lemma 17.5 (grinding and the opening limit do not change the Δ term).** Let `A(ch)` be the acceptance rule: the wpow bits that
+follow the challenge must be zero, and the opening must have at most `T_open` nodes. A challenge accepted by the honest signer is
+uniform over the admissible set, of proportion `P_open` (measured below). Its min-entropy is therefore `τκ + log₂ P_open`, and not
+τκ. **The bound of Theorem 17 does not depend on it.** In the ROM, each query `H_d(h3, ctr)` returns a fresh uniform output. Whatever
+the guesses and the d roots fixed beforehand, the forger wins only if the challenge is one of the roots (probability at most
+`d·2^{−τκ}`) **and** the next wpow bits are zero (`2^{−wpow}`, independent). The opening condition can only reject: it removes outputs
+and adds none. The optimal forger puts its roots in the admissible set, and its success per query is then exactly
+`d·2^{−(τκ+wpow)}`; roots outside the set only lower it. The bound counts queries, not accepted challenges, so the conditional
+entropy does not enter: the cost of grinding, `2^{wpow}/P_open` queries for the honest signer, gives the forger no shortcut. The
+same reasoning holds for the RBR error of the Δ round (Theorem 17-Q) and for the "another ctr" term of Proposition 17.3.
+
+Two consequences must be stated, and are:
+1. **Zero knowledge.** The simulator of Game 1 must reproduce the conditional distribution. It does, because it runs the real `ctr`
+   loop on fresh outputs and programs every point it tried. Acceptance depends only on the challenge, which is public: the
+   rejection leaks nothing about the witness.
+2. **Cost and entropy, measured** (`vole_proto`, 10^6 uniform challenges, the opening count of `ouverts()`, itself equal to
+   `marquer()`). An independent Monte-Carlo estimate (external review, 3·10^5 tuples) agrees.
+
+| Profile | P_open | Expected grinding `2^{wpow}/P_open` (measured over 40 signatures) | min-entropy of the accepted challenge |
+|---|---|---|---|
+| VOLE-128 | 0.1376 ± 0.0003 (review: 0.1376) | 7 441 (7 523) | 118.1 of 121 bits |
+| VOLE-256 | 0.00517 ± 0.00007 (review: 0.00489) | 24 782 (26 893) | 244.4 of 252 bits |
+| VOLE-128f | 0.00973 ± 0.0001 (review: 0.00994) | 823 (814) | 121.3 of 128 bits |
+| VOLE-256f | 0.00364 ± 0.00006 (review: 0.00374) | 2 196 (2 589) | 247.9 of 256 bits |
+
+Check: `*_grinding_conforme_a_p_open`. An exact count of the admissible tuples (dynamic programming over the interleaved tree)
+would replace the estimate; it is not needed by the bound.
+
+**Security level** (cost/advantage notion of § 3.3: λ bits if `Adv ≤ 2q/2^λ + 2·Adv^{H3-R}` for every `q ≤ 2^{λ−2}`).
+
+| Term, coefficient of q | VOLE-128 (τκ = 121, wpow = 10) | VOLE-256 (τκ = 252, wpow = 7) | VOLE-128f (τκ = 128, wpow = 3) | VOLE-256f (τκ = 256, wpow = 3) |
+|---|---|---|---|---|
+| VOLE check, `C(τ,2)·2^{−(λ+16)}` | 2^{−138.2} | 2^{−264.3} | 2^{−137.1} | 2^{−263.0} |
+| γ, `2^{−λ}` | 2^{−128} | 2^{−256} | 2^{−128} | 2^{−256} |
+| Δ, `4·2^{−(τκ+wpow)}` | 2^{−129} | 2^{−257} | 2^{−129} | 2^{−257} |
+| hidden seeds | 2^{−136} | 2^{−264} | 2^{−136} | 2^{−264} |
+| collisions, `q ≤ 2^{λ−2}` | ≤ 2^{−130} | ≤ 2^{−258} | ≤ 2^{−130} | ≤ 2^{−258} |
+| programming | 2^{−190.4} | 2^{−446.4} | 2^{−190.4} | 2^{−446.4} |
+| **Total / (2·2^{−λ})** | **0.877** | **0.879** | **0.878** | **0.881** |
+| with `wpow − 1` | 1.127 (fails) | 1.129 (fails) | 1.128 (fails) | 1.131 (fails) |
+
+The "f" profiles take `N = 2^8` (τ = 16 and 32, `T_open` = 101 and 207, the values of SDitH2-fast): 5 to 10 times fewer leaves, a larger
+signature, the same theorem.
+
+The γ term cannot be reduced by grinding: going below 2^{−λ} would need a larger field or two draws of γ. Forging therefore costs
+about 2^λ queries, as for Theorem 8. With 2^{λ−1} queries, the γ term contributes 1/2 and the Δ term 1/4 (q_3 at the same rate), so
+the advantage stays below 1. One `H_2` query is far more expensive than one `H_d` query: it requires the m field elements of γ
+and `γᵀH`. Checks: `*_theoreme_17_atteint_lambda`, `*_wpow_minimal`.
+
+*See also.* QROM: § 3 bis.5. SUF-CMA, binding and several keys: § 3 bis.6.
+
+### 3 bis.4 The three terms against executed attacks (reduced models)
+
+`build/vole_proto`, on one thread, with reduced profiles: n = 128, blocks of 16 = 2^4, τ = 2, κ = 6. Every forgery is submitted to
+the real verifier.
+
+| Attack | Term | Measured | Prediction |
+|---|---|---|---|
+| Δ: no witness, α cancels the residual at d = 4 points of E, then grinding | `q_3·d·2^{−τκ}` | 600/600 accepted; 1 026 ± 39 then 961 ± 41 Δ queries (two runs) | 2^{12}/4 = 1 024 |
+| γ (profile with γ in a subgroup of 2^{10} elements): no witness, the committed witness changes until `C_d = 0` | `q_2·2^{−λ}` (λ → 10) | 200/200 accepted; 1 044 ± 69 then 1 063 ± 71 h2 queries | 1 024 |
+| VOLE check: inconsistent `aux` on repetition 1, its challenge guessed in advance, honest grinding | the inconsistency passes only on the guess | 119 then 77 accepted out of 6 400 | 6 400·2^{−6} = 100 (z = +1.9, −2.3) |
+| same, grinding until the challenge equals the guess | cost ×2^κ | 300/300 accepted, 67.9 then 62.6 queries | 64 |
+
+The measurements match the exact prediction of each strategy, not just the bound, so a weakened harness would show. With a
+real witness and no attack, the reduced γ profile is accepted, and a false witness is rejected.
+Checks: `reduit_attaque_delta_*`, `reduit_attaque_gamma_*`, `reduit_controle_vole_*`.
+
+### 3 bis.5 Quantum random oracle (Theorem 17-Q)
+
+Source: Baum, Beullens, Braun, Delpech de Saint Guilhem, Klooß, Majenz, Mukherjee, Orsini, Ramacher, Rechberger, Roy, Scholl,
+*Shorter, Tighter, FAESTer: Optimizations and Improved (QROM) Analysis for VOLE-in-the-Head Signatures*, IACR ePrint 2026/164
+(full version of the IACR 2025 paper; read on 11 November 2026). The same proof appears in FAEST v2, § 9.7.
+
+**The tool: their Theorem 54** (round-by-round soundness ⇒ soundness of Fiat–Shamir in the QROM). Let IP be an interactive proof
+with ℓ challenges, where the challenges indexed by S have round-by-round (RBR) error 0 and the others have error ε. Suppose the
+challenges of S are derived by a function f^{H1} that preserves collision resistance and is sensitive (L queries), and the
+others by `H2^i`. Then a static quantum adversary making `Q̃` queries satisfies
+
+```
+Adv^{Snd}(FS[IP]) ≤ 30·Q³·2^{−ℓ_out} + 10·Q²·ε,      Q = Q̃ + 2ℓ + 2(L − 1)·|S|.
+```
+
+The proof relies on a compressed-oracle search bound (their Lemma 25, from CFHL21 and AHJ+23).
+
+**Application to this signature.** Their § 6.1 recasts the signature as a *non-standard* Fiat–Shamir transform of an interactive
+proof IP+ in which **every oracle call is a challenge**. Its toy example is exactly our case: the commitment
+`com_i = H(s_i, r_i)` becomes a challenge with RBR error 0, with no idealised commitment. For our protocol, the following are
+challenges with RBR error 0, derived by parallel or sequential applications of the oracle:
+- the GGM tree (`H_n`), the leaves (`H_l`, 4-way), `H_c`, `H_C`, `H_A`;
+- `H_M`, `H_v` and `H_2` for the parts that only hash.
+
+Three challenges have a non-zero error:
+- the universal-hash key `M`: `C(τ,2)·2^{−(λ+B)}`;
+- γ: `2^{−λ}`;
+- Δ with grinding: `d·2^{−(τκ+wpow)}`, the guessed repetitions being included in the state function.
+
+Hence `ε = 2^{−λ}`, and `ℓ_out = 2λ`.
+
+**Theorem 17-Q (EUF-CMA, QROM, sketch).** With lossy keys (their § 5.1 and Theorem 56: the public key is replaced by a uniform
+syndrome, at the cost of `Adv^{D-H3-R}`; a uniform y has a regular preimage with probability at most `b^w/2^r` = `2^{−112}` and
+`2^{−216}`), and the reprogramming of the signing oracle by quantum-list unpredictability (their § 6.3):
+
+```
+Adv^{EUF-CMA} ≲ 2·[ Adv^{D-H3-R} + (30·Q³·2^{−2λ} + 10·Q²·2^{−λ}) / (1 − 2^{w·log₂ b − r}) ] + q_S·2·√(3Q)·2^{−λ} + (smaller terms)
+```
+
+| Proved level, log₂ Q where the bound reaches 1 (q_S = 2^{64}) | VOLE-128 / 128f | VOLE-256 / 256f |
+|---|---|---|
+| Theorem 17-Q | **61.8** | **125.8** |
+| Best quantum attack (Grover on γ) | 64 | 128 |
+| Theorem 8 (current SIG, Don–Fehr–Majenz, § 5 bis) | 32.2 | 68.2 |
+
+The quantum proof is therefore almost tight, within 2.2 bits of Grover. The reduction available for the current signature
+loses half of its bits. The quantum level remains about λ/2: no NIST quantum category is claimed for VOLE-128.
+Check: `*_qrom_a_moins_de_3_bits_de_grover` (`vole_proto`).
+
+*Limitations.*
+- This is a sketch, **not reviewed**. The RBR soundness of our IP+ (their Lemma 57 for FAEST) is not re-proved line by line;
+  the errors are those of the classical proof of § 3 bis.3.
+- It needs **(D-H3-R)**, the decisional version (`(seed, y)` indistinguishable from `(seed, uniform)`), which is one more
+  assumption than in the ROM. Its best known distinguishers are the search attacks.
+- Their constants assume all oracles are instantiated from one oracle by domain separation, as here (prefix ‖ domain).
+
+### 3 bis.6 Strong unforgeability, binding, several keys
+
+**Proposition 17.3 (SUF-CMA, ROM).** For every F as in Theorem 17,
+
+```
+Adv^{SUF-CMA}(F) ≤ Adv^{EUF-CMA}(F) [Theorem 17 bound] + (q_3 + 1)·2^{−(τκ + wpow)}
+```
+
+*Proof.* Let `(m*, σ*)` be valid, where m* was signed and σ* is none of its responses. If m* was never signed, Theorem 17 applies.
+We exclude the collisions already counted.
+
+*Unique encoding.* σ has a fixed length. Each of its fields is either compared or hashed:
+- `salt`: hashed in `H_C`, in `H_c` and in every `H_n` and `H_l`;
+- `aux`: in `H_A`;
+- `ut` and `dw`: in `H_2`, with the padding of `dw` required to be zero;
+- α: in `H_3`;
+- `h3`: compared;
+- the hidden commitments: in `H_c`;
+- the opened nodes: they go through `H_n` and then `H_l` into the commitments. Every revealed node has leaves below it, and the
+  unused slots must be zero.
+
+The only field that enters no hash is `ctr`, and it acts only through the challenge `ch = H_d(h3, ctr)`.
+
+Let `σ_i = (salt, h3, …)` be a response for m*. Three cases:
+1. **The input of `H_A` is that of no response.** The analysis of Theorem 17 applies unchanged. A repetition that reuses
+   simulated commitments has a leaf with no preimage, the hidden one: it is "guessed".
+2. **`h1* = h1_i` but the input of `H_2` or of `H_3` is new.** Every repetition then has a leaf with no preimage, so all are
+   guessed, and Δ* must equal `Δ_i` on all τκ bits. A query to `H_d` on the new `h3*` succeeds with probability
+   `2^{−(τκ+wpow)}`.
+3. **`h3* = h3_i`.** Everything up to α is identical. If `ctr* ≠ ctr_i`, the challenge must be the same (otherwise the hidden
+   leaves change and their seeds are unknown, at a cost of `q_P/2^{λ+8}`), which costs `2^{−(τκ+wpow)}` per `H_d` query. If
+   `ctr* = ctr_i`, the openings are fixed by the challenge, and another opening would give other leaves, i.e. a collision on
+   `h1`. Hence `σ* = σ_i`. ∎
+
+The term is `2^{−131}` (128 and 128f) and `2^{−259}` (256 and 256f): it does not change the level. **It is reached by an executed
+attack.** On the reduced model (τκ = 12, wpow = 0), searching for another `ctr` that gives the same challenge costs 3 939 queries
+on average, against 4 096 predicted (z = −0.52, 200 trials), and the modified signature is accepted. All 7 744 signatures that
+differ by one bit are rejected. This malleability is intrinsic to grinding with a free counter, as in FAEST and SDitH. Removing it
+would require the verifier to check that no smaller `ctr` passes, i.e. to redo the grinding.
+Check: `suf_encodage_unique_et_seule_malleabilite_ctr_au_cout_predit`.
+
+**Proposition 17.4 (binding to the key and the message).** A signature valid for `(pk, m)` is valid for `(pk′, m′) ≠ (pk, m)`,
+even with `pk′` chosen by the attacker, only at the cost of a collision of `H_m`, `H_C` or `H_A`.
+
+*Proof.* `hm = H_m(enc(pk) ‖ m)`, where `enc` has a fixed length per profile (the profile is in the prefix) and the message comes
+last, so the input is injective in `(pk, m)`. `h1 = H_A(H_C(salt, hm, …), aux)` is recomputed at verification, and the equality of
+`h3` forces that of h1 and then of `hm`, barring a collision. The cost is `2^{ℓ/2} = 2^λ`. ∎
+
+This is the exclusive-ownership property (CEO, DEO) of Cremers et al. (2021), as for Proposition 10. Non-re-signability is not
+claimed: m enters only through `H_m(pk ‖ m)`.
+
+*Randomness failure.* The root is `H_r(pos, salt, hm)`. With a fixed salt, the same message gives the same signature (the
+simulator of Theorem 17 relies on this memoisation), and two messages share no seed. Measured with an imposed salt on VOLE-128:
+identical signature, and 0 common opened seeds out of 107 × 107 pairs. Check: `liaison_cle_message_et_alea_defaillant`, which also
+covers rejection under another key (another seed, with its own H), another message, and a modified y.
+
+**Corollary 17-mu (μ keys).** As in Corollary 8-mu. `hm` carries `pk`, so a query to `H_C` and to the challenges that follow
+targets a single key, barring a collision. The hidden points carry a fresh salt, and each key has its own `seed_H`. The terms in q
+take no factor μ; the last term becomes `2·μ·Adv^{H3-R}`, i.e. `μ·3.47·(C(n, w)/b^w)·Adv^{H3}` by Lemma 17.2, plus
+`μ²/2^{ℓ+1}` for a collision of keys.
+
+---
+
 ## 4. BRUME-512
 
 **Theorem 9 (wide trail by pairs).** If
@@ -843,8 +1213,8 @@ counted twice). Against the measured spread, the same cases give z = 1.8 and 1.9
 reach thresholds of the test (H_max > 24, LP > 40/N, boomerang > 24/N) are now checked on the random permutation as well
 (16, 31.2/N and 6/N).
 
-**Boomerang** (`tests/c/brume_attaques.c`). S-box: max BCT = 10 out of 16, so a pass through the middle costs `2^{−0.7}` per active S-box, against `2^{−4}` for DDT². Measured, with δ = M·(one nibble):
-**3 rounds** (z = 14.8 at 2²⁰ quartets, 16 combinations), nothing at 4 rounds and beyond at this scale. A first version, with δ on a single nibble, only saw 2 rounds: the dense M⁻¹ immediately activated more than
+**Boomerang** (`tests/c/brume_attaques.c`). S-box (v0.5, `AD412650BFEC7893`): max BCT = 8 out of 16, so a pass through the middle costs `2^{−1}` per active S-box (v0.4, max BCT = 10: `2^{−0.7}`), against `2^{−4}` for DDT². Measured, with δ = M·(one nibble):
+**3 rounds** (z = 6.9 at 2²⁰ quartets, 16 combinations; z = 14.8 with the v0.4 S-box, at the same scale), nothing at 4 rounds and beyond at this scale. A first version, with δ on a single nibble, only saw 2 rounds: the dense M⁻¹ immediately activated more than
 100 S-boxes. In the Markov model with the certified activities, `p²q² ≤ 2^{−4(A(r0) + A(r1))}`: with a single free middle round, `2^{−484}`; 2²⁵⁶ quartets only cover 16 rounds of trails. Rectangle and
 amplified boomerang do no better here: they lose `2^{−b}`, b = 512.
 
@@ -867,7 +1237,11 @@ activity alone: **5 rounds** in both cases, no contradiction at 6 rounds or beyo
   L = identity instead of M, W falls back to span(D), of dimension 30. Outside the criterion: invariants that change from round to round and
   closed-loop invariants (Beyne, ASIACRYPT 2018).
 
-**Algebraic.** S-box: 21 quadratic relations, univariate polynomial of degree 14 with 15 terms over GF(16), a single Frobenius-equivariant point. State recovery (rate known at input and output, c unknown bits):
+**Algebraic.** S-box (v0.5): 21 quadratic relations, univariate polynomial of degree 14 with 13 terms over GF(16), two Frobenius-equivariant points (v0.4: 15 terms, a single point). 21 is forced, not a property of the candidate: 37 monomials of degree ≤ 2 in (x, y) on 16 points leave at least 21 relations, and the split by type is the same for both S-boxes (9 bilinear, 15 explicit in y, 15 explicit in x, 0 affine); the two S-boxes are not affine-equivalent (exhaustive over the 322 560 affine maps).
+
+**Frobenius** (`F(x) = x²` on each nibble). M has its coefficients in GF(16), so it is GF(16)-linear; what matters is that it does not commute with F: `F(M(y)) = M⁽²⁾(F(y))`, where `M⁽²⁾` squares each coefficient, and only 59 of the 896 coefficients lie in GF(2). A relation between x and F(x) therefore crosses the linear layer with the gap `(M ⊕ M⁽²⁾)·F(y)`, a linear function of the unknown state, and **`M ⊕ M⁽²⁾` has full rank 128 over GF(16)** (trivial kernel): any prescribed gap costs 4 × 128 = 512 bits per round. The constants add `c ⊕ c²`, non-zero for 3 579 of the 4 096 nibbles. The S-box Frobenius-XOR table `T[a][b] = #{u : S(F(u) ⊕ a) = F(S(u)) ⊕ b}` has maximum 5/16 (v0.4: 4/16); this local difference does not survive the linear layer. Measured over one round on 4 096 states: `R(F(x)) ⊕ F(R(x))` has 7.99 zero nibbles out of 128 on average, as for random values (8). Witness: GF(2) coefficients, S-box x ↦ x⁴ and zero constants commute with F; the check then sees rank 0 and 128 zero nibbles. This is separate from the rotational criterion above (rank 126 of `M ⊕ T_h M T_h⁻¹`), which moves nibble positions, whereas F acts on nibble values (`test_brume_algebre`, `frobenius`).
+
+State recovery (rate known at input and output, c unknown bits):
 - **1 round: broken**, 256 bits recovered by linear solving (rate-capacity block of rank 64), without a solver;
 - SAT, 20 to 25 s per case: up to 128 unknown bits at 2 rounds, 16 bits at 3 and 4 rounds, nothing at 5 rounds; no case at 256 bits, even at 1 round, where the dedicated attack does better. **SAT therefore underestimates dedicated attacks.**
 - **2 rounds: the whole capacity (256 bits) recovered in ≈ 2^97**, by guess-and-determine (`tests/c/brume_gd2.c`). Every generator
@@ -1638,6 +2012,10 @@ depth 48; a seed oracle of one Keccak; total depth limited to MAXDEPTH via N·g�
 - SIG: the MPC-in-the-Head protocol and Theorem 8 are new in v0.4, neither audited nor reviewed by a third party. They reuse
   published constructions (SDitH, hypercube, Kales–Zaverucha bound) and are run on a reduced model (`tests/test_sig_modele.py`),
   but the binary instance with rate 0.7 and n = 2^e has no dedicated third-party analysis, beyond generic ISD.
+- VOLE-in-the-Head signature (§ 3 bis, prototype, lead 9). Theorem 17 (ROM), Propositions 17.3 (SUF-CMA) and 17.4 (binding) and
+  Lemmas 17.1 and 17.2 were written on 11 November 2026, and **have not been reviewed by a third party**. With the exact reduction
+  of Lemma 17.2, the scheme rests on (H3) alone in the ROM; the QROM sketch (Theorem 17-Q) needs the decisional version (D-H3-R).
+  The three soundness terms are matched by executed attacks on reduced models.
 - Trail aggregation beyond 2 rounds: measurements and a
   margin are available, without a proved bound.
 - Division property: the reach of the method is exact (10 rounds per

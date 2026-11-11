@@ -1,4 +1,4 @@
-# SILLAGE v0.4 — Specification
+# SILLAGE v0.5 — Specification
 
 *Normative description of the algorithms, encodings and parameters, written for reviewers and for independent
 re-implementation. Written on 2026-11-03 from the reference implementation (`sillage/*.py`), and cross-checked with the C library
@@ -6,7 +6,7 @@ re-implementation. Written on 2026-11-03 from the reference implementation (`sil
 implementation defines v0.4 and the discrepancy is a bug in this document. Security arguments are not repeated here: see
 [`PROOFS.md`](PROOFS.md).*
 
-Status: research prototype, not for production. Outputs are frozen for v0.4 (any change alters the known-answer vectors).
+Status: research prototype, not for production. Outputs are frozen for v0.5 (any change alters the known-answer vectors). v0.5 changes the BRUME-512 S-box (§ 2.1) and the signature (§ 4 bis).
 
 ## 1. Conventions
 
@@ -31,13 +31,19 @@ Status: research prototype, not for production. Outputs are frozen for v0.4 (any
 
 ### 2.1 Frozen tables
 
-The S-box, the group, the generators and the 128 × 128 coefficient matrix are **frozen tables**, produced once by a seeded search
-(`sillage/select_params.py`) and stored in [`sillage/brume512_tables.py`](../sillage/brume512_tables.py) (SHA-256
-`3c621e2c86896d46b198301afbe41dd374c7d9f7bd7b78473fa4117765c7c111`; the generated C header `sillage/c/brume512_tables.h` holds the same data).
-`tests/test_select_params.py` reruns the search with its seeds and finds exactly these tables. It also checks the stated
-selection criteria, and regenerates the C headers byte for byte.
+The S-box, the group, the generators and the 128 × 128 coefficient matrix are **frozen tables**, stored in
+[`sillage/brume512_tables.py`](../sillage/brume512_tables.py) (SHA-256
+`c792bdd3fe405c471127651fec515cfa33f8b69c5d11f03f8f2a295bbb048667`; the generated C header `sillage/c/brume512_tables.h` holds the same data).
+The group, the generators and the coefficients come from a seeded search (`sillage/select_params.py`), which
+`tests/test_select_params.py` reruns to find exactly these tables. It also checks the stated selection criteria, and regenerates
+the C headers byte for byte.
 
-- **S-box** `S = [8, 9, 1, 10, 12, 4, 0, 6, 13, 15, 3, 7, 14, 2, 11, 5]` (differential uniformity 4, linearity 8, degree 3).
+- **S-box (v0.5)** `S = [10, 13, 4, 1, 2, 6, 5, 0, 11, 15, 14, 12, 7, 8, 9, 3]` (`AD412650BFEC7893`; differential uniformity 4,
+  linearity 8, degree 3, inverse of degree 3, no fixed point). This is candidate CAND_A1 of the S-box tie-break of 11 November 2026
+  (`prototypes/brume_sbox6/departage/`, decision rule fixed in `PROTOCOLE.md` before any computation, results in `RAPPORT.md`). It
+  is in the same optimal family as the v0.4 S-box `891AC406DF37E2B5` (still reproduced by `gen_sbox`), and better at 2 and 3 rounds:
+  D3 86 against 83 bits, L3 40 against 39, D2 2^−16.000 against 2^−15.989, 3-round boomerang 2^−8.753 against 2^−8.476.
+  **Changing it changes every BRUME-512 output** (AEAD, hashing, TE): the v0.4 KATs and ciphertexts are no longer valid.
 - **Group** D₁₂₈ = ℤ/64 ⋊ ℤ/2. Element `a` encodes `(a mod 64, ⌊a/64⌋ mod 2)`; the product is
   `(a₀, a₁)·(b₀, b₁) = (a₀ + (−1)^{a₁}·b₀ mod 64, a₁ ⊕ b₁)`.
 - **Generators** `GENS = [85, 64, 71, 109, 72, 126]` (six reflections, hence involutions).
@@ -118,16 +124,17 @@ syndromes, then verifies the AEAD tag, which remains the only integrity guarante
 
 | Input | Output (hex) |
 |---|---|
-| `BRUME-512(0⁶⁴)` (all-zero state) | `2f886ce9014208dbb42ab871d3a95c7e80dfe9d1929b748b3465cb22582b8242881d0ac0af878e6f67d2308f1fb9ce7fa968c68fba9413a5b5ba606661cbd194` |
-| `brume512_hash("", 32)` | `32880959113386339394dd1f4f4642f4a2468b4d95fd54ee2efbe2f5eacb3aac` |
-| `brume512_hash("abc", 32)` | `ce516e8c2af5a81909dbfb9d59225809c86dfcb8e13998392962fd65691dd7bd` |
-| `brume512_hash_arbre("abc", 32)` | `5dd1dcb0b955987a48097577392c12507b5c4f5726a5ba73687c45bb4496c115` |
-| `brume512_hash_arbre("A" × 20000, 32)` | `a0794d96a006a9723120b7ac10b8105d11dcec41033937421a82539ce239757c` |
-| BRUME-512, key `00…3f`, nonce `00…17`, AAD `"kat"`, plaintext `"SILLAGE"`: `ct ‖ tag` | `1e27b2f1c1e6f77ee42d609bce1c6643ec0525ab11e3fc` |
-| BRUME-512-256, same inputs | `427ff953fff1f93cbef77913e008c9177ca55a11000c8ce385a4f05600ff1b2061a1c2caad70f6` |
-| BRUME-512p, same inputs | `2bd5853b6dc2c65ab7b555e169695de65ecb2c365eaffa` |
+| `BRUME-512(0⁶⁴)` (all-zero state) | `c80a7134946249362217cd150258d08ad18001e0b769873f0ae4607d7a179edc1fd2d7d6491ed67a571b2bbc5955298efe13aa5d1549cba8354634dadd825062` |
+| `brume512_hash("", 32)` | `add8e16009589a20c5a6a90d6ff9b2d58916eaeb75601a82844f95ee55874c91` |
+| `brume512_hash("abc", 32)` | `ee435ab11261ec3e85af77ef4564a7c2cf7bf98a804348768d94500ac1341aa1` |
+| `brume512_hash_arbre("abc", 32)` | `5dd6ff9f3dd9a66fa43ce2c63cb53301e0bfafca2643cd298604992df9b8d63d` |
+| `brume512_hash_arbre("A" × 20000, 32)` | `106d008621c2e91067cdca7de5bcc450342fe62885a764048dc55e5ce99dff1d` |
+| BRUME-512, key `00…3f`, nonce `00…17`, AAD `"kat"`, plaintext `"SILLAGE"`: `ct ‖ tag` | `341aa9cfc83ccfa47b21aa53bfe914b7ccefed8fd2bac8` |
+| BRUME-512-256, same inputs | `966f3c5af2b9518187e7b80760743312caafa965a5098de50221fede692b6ff2d9b900d5daa64b` |
+| BRUME-512p, same inputs | `4d7340d7dde902573da0192c7cd75ff77ed52fe9c97482` |
 
-All eight are produced identically by the Python reference and by the C library.
+All eight are produced identically by the Python reference and by the C library (v0.5, S-box `AD412650BFEC7893`; the v0.4 values
+are in the git history).
 
 ## 3. Sillage-KEM
 
@@ -171,7 +178,10 @@ Reed–Muller code RM(1, 7), each evaluation point repeated D times). `cw(μ)` c
   `ct' = Enc(σ_h ‖ s, μ')` and set `ok = 0` if `ct' ≠ ct`. Output `Hd("SILLAGE-KEM|ss", μ', ct; ss)` if ok, otherwise
   `Hd("SILLAGE-KEM|rej", σ_rej, ct; ss)`. The re-encryption is always computed and the choice is made by masking (constant time).
 
-## 4. Sillage-SIG
+## 4. Sillage-SIG v0.4 (reference, superseded by § 4 bis)
+
+*Since v0.5, the signature of the suite is § 4 bis. This section and its code (`sillage/sillage_sig.py`, `sillage/c/sig.c`,
+`sl_sig_*`, `SillageSIG`) are kept unchanged as a reference.*
 
 MPC-in-the-Head over binary syndrome decoding, hypercube sharing, five-pass Fiat–Shamir. This section fixes the parameters,
 the hashing, the tree and the encodings. The share arithmetic of step 3 is given as formulas in PROOFS § 3.2; its exact
@@ -234,6 +244,163 @@ Reject unless: the length is exact; the padding bits of `y`, and the unused bits
 from the signature) and `hs_rep`; for each `d`, simulate the side that does not contain `i*` and deduce the other
 (`α_{1−s} = α ⊕ α_s`, `β_{1−s} = β ⊕ β_s`, and `v₀ ⊕ v₁ = 0`); recompute h₁ and h₂ and accept if and only if both equal the
 signature's values (compared in constant time).
+
+## 4 bis. Sillage-SIG v0.5: VOLE-in-the-Head over regular syndrome decoding
+
+Implementation `sillage/c/vole.c` (C only, no Python reference); API `sl_vole_*` (`sillage.h`), `SillageVOLE` (`sillage/rapide.py`).
+Security: PROOFS § 3 bis (Lemmas 17.1 and 17.2, Theorems 17 and 17-Q, Propositions 17.3 and 17.4). The exact bit layout of the
+constraint polynomials (step 5) is the one of `contraintes_poly` / `contraintes_val` in `vole.c`; everything else is fixed below.
+
+### 4 bis.1 Parameters
+
+| Profile | id | λ | n | r = n − k | w | block b = Π μ | μ | d | τ | κ (N = 2^κ) | wpow | T_open | B | pk | sk | signature |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| VOLE-128 | 0 | 128 | 19 456 | 720 | 76 | 256 | (4,4,4,4) | 4 | 11 | 11 | 10 | 107 | 16 | 106 | 182 | 4 235 |
+| VOLE-256 | 1 | 256 | 38 912 | 1 432 | 152 | 256 | (4,4,4,4) | 4 | 21 | 12 | 7 | 216 | 16 | 211 | 363 | 16 122 |
+| VOLE-128f | 2 | 128 | 19 456 | 720 | 76 | 256 | (4,4,4,4) | 4 | 16 | 8 | 3 | 101 | 16 | 106 | 182 | 5 193 |
+| VOLE-256f | 3 | 256 | 38 912 | 1 432 | 152 | 256 | (4,4,4,4) | 4 | 32 | 8 | 3 | 207 | 16 | 211 | 363 | 20 467 |
+
+`r = ⌈log₂ C(n, w)⌉` rounded up to a multiple of 8 (Lemma 17.2). Field `GF(2^128) = F₂[x]/(x^128 + x^7 + x^2 + x + 1)`,
+`GF(2^256) = F₂[x]/(x^256 + x^10 + x^5 + x^2 + 1)`; a byte string of λ/8 bytes is an element, bit i (little-endian within and across
+bytes) being the coefficient of `x^i`. Seeds have `sb = λ/8 + 1` bytes, hashes `hb = 2λ/8`, the salt 32 bytes.
+
+### 4 bis.2 Hashing
+
+Every hash is SHAKE256 of `P ‖ dom ‖ fields`, with the 14-byte prefix `P = "SILLAGE-VOLE" ‖ 0x02 ‖ c`, where the profile byte is
+`c = λ/64 + 64·[f profile]` (0x02, 0x04, 0x42, 0x44). Field lengths are fixed per profile and domain; the message is always last.
+
+| dom | input fields | output |
+|---|---|---|
+| `H` | `seed_H` (λ/8), LE32(j), `seed_H` | column j of H′, r/8 bytes (j < k) |
+| `m` | `enc(pk)`, message | `hm`, hb |
+| `r` | positions (LE16 each), salt, `hm` | root seed, sb |
+| `n` | salt, LE32(node), seed | the two child seeds, 2·sb |
+| `l` | salt, LE32(leaf node), seed | `com` (hb) ‖ `r` (nb) |
+| `c` | salt, LE32(e), the N commitments of repetition e | hb |
+| `C` | salt, `hm`, the τ hashes of `c` | t, hb |
+| `A` | t, `aux` | `h1`, hb |
+| `M` | `h1` | the rows of M′ |
+| `v` | `h1`, `ht` | `hv`, hb |
+| `2` | `hv`, `ut`, `dw` | `h2`, hb |
+| `g` | `h2` | γ: m elements of λ/8 bytes, `m = r + w·Σ_t (μ_t − 1)(μ_t − 2)/2` |
+| `3` | `h2`, α | `h3`, hb |
+| `d` | `h3`, LE32(ctr) | challenge: τκ bits, then wpow bits |
+
+### 4 bis.3 Keys
+
+`H = [H′ | I_r]`, `H′` expanded column by column from `seed_H` (domain `H`). The secret positions `p_1, …, p_w ∈ [0, 256)` are
+drawn uniformly (16-bit draws, rejection below `65 536 mod b`), and `x` has a 1 at `(i − 1)·b + p_i`. `pk = seed_H ‖ y` with
+`y = Hx` (r/8 bytes, row i = bit i); `sk = pk ‖ p_1 ‖ … ‖ p_w` (one byte each).
+
+*Witness bits.* For block i, `p_i` is written in mixed radix `(μ_1, …, μ_d)`, most significant digit first. Digit t is
+committed as `μ_t − 1` bits (bit k = [digit = k]). The bits of block i are at offset `i·Σ(μ_t − 1)`, digit-major. That is
+`witb = w·Σ(μ_t − 1)` bits (912 and 1 824), padded with zeros to `witB` bytes.
+
+### 4 bis.4 Signing
+
+1. `salt` uniform; `hm = H_m(enc(pk) ‖ m)`; root `= H_r(pos, salt, hm)`.
+2. **Tree.** Heap of `2L` nodes, with `L = τ·N`: node x has children `2x` and `2x + 1`, and the root is node 1. Children
+   come from `H_n`. The leaf of repetition e and index i is node `L + i·τ + e`. Each leaf gives `(com, r) = H_l(salt, node, seed)`,
+   where r has `nb = witB + (d − 1)·λ/8 + (λ + B)/8` bytes.
+3. **VOLE.** `u_e = ⊕_i r_{e,i}`, `v_{e,b} = ⊕_{i : bit b of i = 1} r_{e,i}`. `aux_e = u_0 ⊕ u_e` for `1 ≤ e < τ`.
+   `h1 = H_A(H_C(salt, hm, (H_c(salt, e, com_{e,0..N−1}))_e), aux)`.
+4. **Consistency check.** M is read from `H_M(h1)`: `λ + B` rows of `⌈(8·nb − λ − B)/8⌉` bytes. Row ρ of `M·z` is
+   `parity(row_ρ ∧ z[0, 8nb − λ − B)) ⊕ z[8nb − λ − B + ρ]`. `ut = M·u_0`, `ht_{e,b} = M·v_{e,b}`, `hv = H_v(h1, ht)`.
+   `dw = wit ⊕ u_0[0, witb)`, with zero padding. `h2 = H_2(hv, ut, dw)`.
+5. **Constraints.** `V_j = Σ_{e,b} bit_j(v_{e,b})·x^{eκ+b}`. The constraints of § 3 bis.1 are evaluated on `p_j(X) = w_j X + V_j`,
+   homogenised to degree d and mixed by γ. The mask is `Σ_{t=1}^{d−1} (a_t X + b_t) X^{t−1}`, where `a_t` is section t of
+   `u_0` after the witness and `b_t = Σ_l x^l V_{o_t + l}`. α is the d coefficients of degree `< d` (d·λ/8 bytes), and
+   `h3 = H_3(h2, α)`.
+6. **Grinding.** ctr is the smallest counter such that `H_d(h3, ctr)` has its wpow bits after the τκ challenge bits equal to zero,
+   and the opening needs at most `T_open` nodes. Then `ch_e` = bits `[eκ, eκ + κ)` (the hidden leaf of repetition e), and
+   `Δ = Σ bit_{eκ+b}·x^{eκ+b}`. The nodes to open are the siblings of the union of the hidden paths, in increasing order; their
+   number is `|M| − 2τ + 1`.
+7. **Signature** (fixed length): `salt (32) ‖ h3 (hb) ‖ aux ((τ − 1)·nb) ‖ ut ((λ + B)/8) ‖ dw (witB) ‖ α (d·λ/8)`
+   `‖ opened nodes (T_open × sb, zero padding) ‖ hidden commitments (τ × hb) ‖ LE32(ctr)`.
+
+### 4 bis.5 Verification
+
+The verifier first rejects any of the following:
+- a wrong length;
+- a challenge that fails the grinding or opening rule;
+- non-zero padding in `dw` or in the node slots.
+
+It then rebuilds the opened subtree. For each repetition, it takes `q_{e,b} = ⊕_i ((i ⊕ ch_e)_b)·r_{e,i}`, with the hidden
+leaf at zero, corrects it by `ch_{e,b}·aux_e` (e ≥ 1), and recomputes `h1`, `ht_{e,b} = M·q_{e,b} ⊕ ch_{e,b}·ut`, `hv`, `h2` and `h3`. It
+rejects unless `h3` is equal. Finally, it checks `M(Δ) + Σ_j γ_j F_j(q) = Σ_l α_l Δ^l` with `q_j = V_j′ ⊕ Δ·dw_j`.
+
+### 4 bis.6 Known answers
+
+`tests/test_vole.py` and `prototypes/vole/vole_proto.c --kat`. The deterministic randomness is
+`SHAKE256("SILLAGE-VOLE|kat" ‖ LE32(counter))`, starting from counter 0, for keygen and then the salt. The message is `"kat"`.
+The answer is the first 16 bytes of `SHAKE256(enc(pk) ‖ σ)`:
+VOLE-128 `8fabe81d59149d399137b2ee2726026a`, VOLE-256 `4de2f87cc8e8f3a7c8d62f6cf0aa536f`, VOLE-128f
+`80bb49defc6b099c30746594c8a225cb`, VOLE-256f `677048f63679d5518fc4f5813821cc73`. They are identical on x86-64 and ARM64, with 1 and 12
+threads.
+
+### 4 bis.7 Normative annex: the constraint system
+
+This annex defines step 5 of § 4 bis.4 and the final check of § 4 bis.5 completely. A second implementation, written from this
+text only (`contraintes_annexe` in `prototypes/vole/vole_proto.c`, which uses neither the incremental tensor product nor the γᵀH
+table of `vole.c`), gives the same coefficients as the library on valid and invalid witnesses, for the four profiles (control
+`*_contraintes_conformes_a_l_annexe_normative`).
+
+**Notation.** Arithmetic is in `F = GF(2^λ)` (§ 4 bis.1), where addition is XOR. `sw = Σ_t (μ_t − 1)` (12). Block
+`i ∈ [0, w)` owns the witness bits `o_{i,t} + v`, with `o_{i,t} = i·sw + Σ_{t' < t} (μ_{t'} − 1)` for digit t and `v ∈ [0, μ_t − 1)`.
+The witness bit is `b_j ∈ {0, 1}`; for the signer, `V_j ∈ F` is the VOLE tag of bit j (`V_j = Σ_{e,b} bit_j(v_{e,b})·x^{eκ+b}`).
+
+**Digit polynomials.** These are degree-1 polynomials in F[X]:
+
+```
+P_{i,t,v}(X)      = b_{o+v}·X + V_{o+v}                          (v < μ_t − 1, o = o_{i,t})
+P_{i,t,μ_t−1}(X)  = (1 ⊕ Σ_{v<μ_t−1} b_{o+v})·X + Σ_{v<μ_t−1} V_{o+v}
+```
+
+The last coordinate is not committed. On the verifier side, `P_{i,t,μ_t−1}(Δ) = Δ + Σ_v q_{o+v}`.
+
+**Positions.** For `q ∈ [0, b)`, the digits are `δ_t(q) = ⌊q / Π_{t'>t} μ_{t'}⌋ mod μ_t` (most significant first). The polynomial of
+position `j = i·b + q` is `Q_j(X) = Π_{t<d} P_{i,t,δ_t(q)}(X)`, of degree ≤ d, whose leading coefficient is the j-th bit of x when the
+digits are one-hot.
+
+**The m constraints and the order of γ.** `γ = (γ_0, …, γ_{m−1})` is read from `H_g(h2)`, λ/8 bytes per element, in this order:
+1. `γ_ρ` for `ρ < r`: syndrome row ρ, `F_ρ(X) = Σ_{j<n} H_{ρ,j}·Q_j(X) + y_ρ·X^d`, where `H_{ρ,j}` is bit ρ of column j of H′
+   for `j < k`, and `[ρ = j − k]` for `j ≥ k`;
+2. then, for `i = 0, …, w − 1`, `t = 0, …, d − 1`, `0 ≤ v < x < μ_t − 1` (in this nested order), one element per pair:
+   `F_{i,t,v,x}(X) = X^{d−2}·P_{i,t,v}(X)·P_{i,t,x}(X)`.
+
+So `m = r + w·Σ_t (μ_t − 1)(μ_t − 2)/2` (1 632 and 3 256); every element of γ is used exactly once (checked: the count equals m).
+All constraints are homogeneous of degree d. Their leading coefficients are `(Hx + y)_ρ` and `b_v·b_x`.
+
+**Combined polynomial.** `C(X) = Σ_{k<m} γ_k·F_k(X) = Σ_{l=0}^{d} C_l X^l`, and `C_d = Σ_k γ_k·f_k(b)`, where `f_k` is the leading
+coefficient of `F_k`.
+
+**Mask.** Let `ω = 8·witB` be the first bit after the witness. For `t = 1, …, d − 1`:
+- `a_t ∈ F` is the λ bits `u_0[ω + (t − 1)λ, ω + tλ)`, read as a field element;
+- `b_t = Σ_{l<λ} x^l·V_{ω+(t−1)λ+l}`.
+
+The mask is `M(X) = Σ_{t=1}^{d−1} (a_t X + b_t)·X^{t−1}`, of degree `≤ d − 1`.
+
+**Response.** `α_l` = the coefficient of `X^l` in `C(X) + M(X)`, for `l = 0, …, d − 1`.
+
+**Verification.** With `q_j` the verifier's tags (`q_j = V_j + Δ·b_j` for the witness bits, after the correction by `dw`;
+`q_j = V_j + Δ·u_{0,j}` for the mask bits):
+
+```
+Σ_k γ_k·F_k(Δ; q) + Σ_{t=1}^{d−1} (Σ_l x^l·q_{ω+(t−1)λ+l})·Δ^{t−1}  =  Σ_{l<d} α_l·Δ^l
+```
+
+Here `F_k(Δ; q)` replaces each `P_{i,t,v}(Δ)` by `q_{o+v}`, and `P_{i,t,μ−1}(Δ)` by `Δ + Σ_v q_{o+v}`. The left-hand side equals
+`C(Δ) + M(Δ)`. The check is therefore `C_d·Δ^d = 0`, i.e. `C_d = 0`, since `Δ ≠ 0` except with probability `2^{−τκ}`.
+
+**What this guarantees** (proofs in PROOFS § 3 bis):
+- *Completeness.* A valid witness gives one-hot digits, so `f_k(b) = 0` for every k and `C_d = 0`.
+- *Soundness of the system (Lemma 17.1).* `f(b) = 0` for every k if and only if each block of x is one-hot over its 256 positions
+  and `Hx = y`, i.e. x is regular of weight w.
+- *γ.* γ is the output of the random oracle `H_g` on h2, which is fixed after the witness (`dw` is in its input): it is uniform and
+  independent of `f(b)`. For `f(b) ≠ 0`, `Pr[C_d = 0] = 2^{−λ}`. This is the γ term of Theorem 17, executed on a reduced model.
+- *Mask and zero knowledge.* `a_t` is uniform and used only here. `α_1, …, α_{d−1}` are therefore uniform, and `α_0` is fixed by the
+  equation.
+- *No unbound constraint.* Every one of the m constraints has its own coefficient, and γ is bound to the transcript through h2.
 
 ## 5. Conformance
 

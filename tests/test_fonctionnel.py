@@ -8,7 +8,7 @@ from sillage import (SillageKEM, SillageSIG, Brume512, brume512_hash,
                      BRUME512_PROFILES)
 from sillage import brume512 as B
 
-KAT_HASH = "b49eb4ded7a37ce8578885ecc6652cb772b33d1a6bf3cd6413a215884159cce9"
+KAT_HASH = "fefe446dbb192f2f28617b91d53cbda00625bf7f5212f5b88c3d80cc728c5d5c"   # v0.5 (S-box AD412650BFEC7893)
 
 
 def run():

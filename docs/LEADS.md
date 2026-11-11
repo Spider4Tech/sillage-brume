@@ -184,52 +184,73 @@ only gains the padding bits, 16 B at most on SIG-128.
 
 The gain is small for that time, and each variant breaks the format: not adopted.
 
-**Signature, change of protocol: VOLE-in-the-Head over regular SD**, in the style of SDitH v2.0. It is the only lever of this magnitude. Measured prototype (`prototypes/vole/vole_proto.c`, Ryzen 5 5600G):
+**Signature, change of protocol: VOLE-in-the-Head over regular SD — ADOPTED in v0.5 (11 November 2026)** as the signature of the suite (`sillage/c/vole.c`, SPEC § 4 bis); the v0.4 signature is kept as a reference. In the style of SDitH v2.0. It is the only lever of this magnitude. Prototype `prototypes/vole/vole_proto.c`, version 2 of 11 November 2026; security in **PROOFS § 3 bis** (Theorems 17 and 17-Q, Lemmas 17.1 and 17.2). Medians over 50 runs, one key, Ryzen 5 5600G (`build/vole_proto --bench 50`); current SIG from the dossier:
 
-| | Current SIG-128 | VOLE-128 | Current SIG-256 | VOLE-256 |
-|---|---|---|---|---|
-| Signature | 8 522 B | **4 112 B (−52 %)** | 34 867 B | **15 906 B (−54 %)** |
-| Public key | 109 B | 93 B | 186 B | 185 B |
-| Sign, one core | 34.4 ms | 16.4 ms | 121 ms | 117.8 ms |
-| Verify, one core | 34.3 ms | 13.2 ms | 121 ms | 93.5 ms |
-| Sign, 12 threads | 5.5 ms | 6.4 ms | 18.4 ms | 43.9 ms |
-| Verify, 12 threads | 6.5 ms | 4.6 ms | 17.8 ms | 23.8 ms |
+| | Signature | Public key | Sign, 1 core | Sign, 12 threads | Verify, 1 core | Verify, 12 threads |
+|---|---|---|---|---|---|---|
+| Current SIG-128 | 8 522 B | 109 B | 38.5 ms | 5.9 ms | 38.4 ms | 5.9 ms |
+| **VOLE-128** | **4 235 B (−50 %)** | 106 B | 16.6 ms | 2.9 ms | 13.6 ms | 2.4 ms |
+| **VOLE-128f** | 5 193 B (−39 %) | 106 B | 7.0 ms | **1.45 ms** | 4.9 ms | **1.0 ms** |
+| Current SIG-256 | 34 867 B | 186 B | 139 ms | 21.1 ms | 138 ms | 20.7 ms |
+| **VOLE-256** | **16 122 B (−54 %)** | 211 B | 94 ms | 19.8 ms | 83 ms | 17.5 ms |
+| **VOLE-256f** | 20 467 B (−41 %) | 211 B | 27 ms | **5.4 ms** | 20 ms | **4.2 ms** |
 
-Averages over 5 keys × 8 messages; medians, p90, keygen and a 1 MiB message in `resultats/vole_proto.json`. Exploratory measurements, not a statistical characterisation. Public key: a λ-bit seed ‖ y. H is cached per key; otherwise, add 2.1 and 10.1 ms on one core. Signing time varies because of grinding, on public values.
+H is cached per key (2.6 and 10 ms otherwise). The "f" profiles take N = 2^8 (τ = 16 and 32, T_open from SDitH2-fast, wpow = 3): 5 to 10 times fewer leaves. The 12-thread figures vary by 30 to 70 % from one run to another (another run gave 5.1, 29, 1.8 and 7.0 ms for signing); 6 threads give about the same, since the machine has 6 cores.
 
-*Parameters.* The reduction (SDitH, Theorem 5.1) maps RSD `(n, k_rsd, w)` to SD `(n, k_sd, w)`, with a loss of `log2(C(n, w)/(n/w)^w)`. With our ISD estimator (free memory), the reduction only guarantees the SDitH2 instances
-108.7 / 155.6 / 198.1 bits, against 143 / 207 / 272 targeted (`prototypes/vole/vole_params.c`). These are guarantees by reduction, not attack costs (see below). For the reduction to hold in our model, longer codes are needed: `(18620, 18004, 76)` and `(38456, 37232, 152)`, which keep the margins of the current signature (160 and 316 bits), blocks of 245 and 253, d = 4, μ = (4, 4, 4, 4). τ, κ, T_open and the grinding come from SDitH (τκ = 121 and 252).
+*What was done on 11 November 2026.*
+1. **Exact blocks** (Lemma 17.1). The first prototype had blocks of 245 and 253 positions for Π μ = 256. The verifier accepted empty blocks, and x = 0 on y = 0. `ctx_init` now refuses `bloc ≠ Π μ`. SDitH v2.0's own Table 3 has the same gap (n/w = 185, 252 and 191 for Π μ = 192, 256 and 192), while its text requires equality; this was not checked against its code.
+2. **Regular SD reduced exactly to SD** (Lemma 17.2). The codimension is `⌈log₂ C(n, w)⌉` and no row is removed, so any regular solution is an SD solution. There is no uniqueness heuristic, unlike Theorem 5.1 of SDitH v2.0; the loss is `log₂(C(n, w)/b^w) + 1.79` bits. The cost is a few bytes of public key (93 → 106 and 186 → 211); the signature does not change, since the witness does not depend on the codimension. Measured on small instances: the success rate is above the bound of the lemma and matches the refined prediction (z = +0.31 and +1.34). (H3-R) is therefore no longer a separate assumption in the ROM.
+3. **Executed attacks on the three challenges** (Δ, γ, VOLE check): the measurements match the exact predictions.
+4. **Theorem 17** (ROM): λ bits in the cost/advantage notion, at 0.877 to 0.881 of the budget. This requires seeds of λ + 8 bits, a 32-byte salt and the minimal wpow; one bit less fails.
+5. **Theorem 17-Q** (QROM, sketch based on Theorems 54 and 56 of Baum et al., ePrint 2026/164): proved level 2^61.8 and 2^125.8 quantum queries, within 2.2 bits of Grover. Theorem 8 only proves 2^32.2 and 2^68.2. It needs the decisional assumption (D-H3-R), as FAEST does with lossy keys.
+6. **Hardened code**:
+   - errors are propagated, with no partial signature;
+   - each allocation and each random draw is injected as a failure in turn, also under ASan and LeakSanitizer;
+   - ctgrind finds nothing on the full VOLE-128 and VOLE-256 profiles, and its control is detected;
+   - dudect gives |t| ≤ 0.95, and its control is detected;
+   - KATs (5 profiles) are identical on x86-64 and ARM64, with 1 and 12 threads.
+7. **Speed without changing the outputs** (KATs unchanged by these changes):
+   - the grinding looks for the smallest valid `ctr` in parallel, in batches of 4 SHAKE (sl_shake4);
+   - the opening count no longer walks the tree, using `|M| − 2τ + 1` (checked against `marquer`);
+   - the VOLE folding is split into parallel chunks;
+   - the tables of γᵀH are built in parallel, and the VOLE universal hash is parallel;
+   - the witness preparation is parallel per block.
 
-*Checked.* Exact sizes against the SDitH formula, alterations rejected, false witness rejected, and an attack run on a reduced model: without a witness, α cancels the residue at d points of E, Δ is searched among them, and the verifier accepts, at a measured cost of 1 235 trials against N^τ/d = 1 024.
-The specification stores the leaves at `e·N + i`: with this layout, paths never merge and T_open is never reached. The prototype interleaves (`i·τ + e`), which recovers the stated probability (0.19 for 0.2).
+   On 12 threads, the grinding drops from 4.1 to 0.2 ms (128) and from 30 to 1.4 ms (256). Signing goes from 7.0 to 2.9–5.1 ms and from 45 to 20–29 ms. Byte tables beat nibble tables (tried and dropped).
 
-**Conditions before adoption** (none is met):
-- **An EUF-CMA theorem** to be written for this protocol, with its own terms; nothing from § 3 of PROOFS carries over. Human review is indispensable.
-- **Forgery cost.** The γ term is q/2^λ, and cannot be tuned by grinding. With the current grinding, the cost is 2^127; one more bit gives 2^127.4. Getting past 2^128 requires a larger field or two draws of γ, to be costed.
-- **Regular SD.** § 3 of PROOFS currently excludes restricted errors, and the reduction contains a heuristic step (unique solution). Direct attacks: see the table below. They do not threaten these parameters in our models, but these models still need to be checked against the full papers.
-- **Rules of the current signature**: seeds of λ + 8 bits, 32-byte salt. The prototype follows SDitH (λ bits). Aligning with them gives about 4 235 and 16 122 B.
-- **Constant time**: `keygen` and the witness now walk through every block under a mask. ctgrind detects nothing on the reduced model only (μ = 2, so without pair constraints); its branching control is detected. Neither the full profile, nor dudect, nor the machine code of other compilers is checked.
-- **Production implementation**: errors propagated instead of `abort` (memory, randomness), injection of those failures, dudect, an independent reference. **QROM**: not analysed.
-- **Parameters**: this is the best point of a grid (d = 4, n ≤ 40 000), not a global optimum; monotonicity is only sampled. Refining around the minimum only gains 0.3 % (4 101 B, w = 75): parameters unchanged.
+*Further speed would change the format* (not done; it is a decision):
+- **PRG-based leaf commitments** (ePrint 2026/164, § 3):
+  - The "Full" variant takes an AES-CTR PRG and a universal hash of 3λ bits. It is statistically binding in the ROM without idealising AES (their Lemma 26), but the hidden commitments grow to 3λ bits, i.e. +176 B (128) and +672 B (256).
+  - Measured there: leaf commitments 7× faster than SHAKE at λ = 128 and 2.4× at λ = 256; the vector commitment takes 27 % and 83 % of the SHAKE time.
+  - Here, the leaves are 30 to 40 % of the signing time.
+  - Cost: AES would enter SILLAGE as an assumption (PRG security), and the binding proof would have to be redone.
+- Hashing the commitments in a tree.
 
-*Code review (`docs/VOLE_CODE_REVIEW.md`).* Addressed: V-01 (93-byte public key now exact: λ-bit seed and canonical encoding), V-02 and V-06 (a single grammar, little-endian integers, H4 equal to four scalar calls), V-03 (`siglen`), V-05 (secret paths above), V-07 (cached H bound to its seed), V-08 (erasures), V-09 (exit code: 1 if a check fails, 2 if the results are not written), V-10 (see below), V-11, V-12, V-14. Partial: V-04 and V-13, allocations checked with a hard stop, without error propagation or failure injection. The file remains in one piece.
-Checks added: `fmul` against a bit-by-bit reference, exhaustive reduced trees, signer and verifier constraints equal on valid and invalid witnesses, every field boundary, invalid lengths, identical KATs on x86-64 and ARM64 (qemu), fuzzing under ASan and UBSan (`--fuzz`).
+*Parameters.* The VOLE parameters are the smallest of the exact-block grid for which Lemma 17.2 keeps the margins of the current signature (160 and 316 bits): `(19 456, 18 736, 76)` and `(38 912, 37 480, 152)`, μ = (4, 4, 4, 4). The grid is not a global optimum, and monotonicity in w is only sampled. τ, κ and T_open come from SDitH. With our ISD estimator, the SDitH2 instances are only guaranteed 108.7 / 155.6 / 198.1 bits by their own reduction, against 143 / 207 / 272 targeted. The specification stores the leaves at `e·N + i`, so paths never merge and T_open is never reached. The prototype interleaves them (`i·τ + e`), which recovers the stated probability.
 
-**Direct attacks on regular SD** (`tests/c/rsd_attaques.c`, log₂ of operations, free memory):
+**Conditions before adoption** (still open):
+- **Human review** of Theorem 17, Theorem 17-Q, Propositions 17.3 and 17.4, and Lemmas 17.1 and 17.2. An AI-written proof is not a guarantee.
+- **(D-H3-R)** for the QROM, and (H3) at rate ≈ 0.96, a regime that the current SIG (rate 0.7) does not use: both rest on the ISD estimators.
+- ~~SUF-CMA and binding~~ done on 11 November 2026 (Propositions 17.3 and 17.4, PROOFS § 3 bis.6). The only malleability is another `ctr` giving the same challenge, at a cost of 2^(τκ+wpow) = 2^131; it is executed on the reduced model at its predicted cost. Binding: CEO and DEO at 2^λ.
+- **Implementation**:
+  - the file is a single piece of about 1 900 lines;
+  - dudect was measured on Zen 3 with gcc 16 only;
+  - the machine code of other compilers was not inspected.
+- **Format decision**: short or fast profile, new KATs, the full battery.
+
+*Code review (`docs/VOLE_CODE_REVIEW.md`).* All points are addressed except V-14 (single file). Checks in `vole_proto` (78, including SUF and binding): field, trees, KATs, the four profiles, exact blocks, Theorem 17 and minimal wpow, the QROM level, the three attacks, failure injection and the opening count. Checks in `vole_params` (3): SDitH2 sizes, the measured exact reduction, monotonicity.
+
+**Direct attacks on regular SD** (`tests/c/rsd_attaques.c`, log₂ of operations, free memory, parameters of version 2):
 
 | Family | VOLE-128 (target 160) | VOLE-256 (target 316) | SDitH2-L1 (target 143) |
 |---|---|---|---|
-| Regular ISD: Prange / Dumer / depth-2 BJMM | 384.6 / 300.0 / 282.4 | 756.0 / 601.3 / 564.4 | 269.1 / 209.8 / 196.4 |
-| ISD without structure / with the w regularity equations | 269.2 / **266.1** | 539.5 / **532.8** | 188.4 / **185.5** |
-| Combinatorial: meet in the middle | 301.6 | 606.7 | 210.9 |
-| Hybrid algebraic (ω = 2) | 373.2 | 746.5 | 258.8 |
-| **Best, margin over the target** | **266.1, +106** | **532.8, +217** | **185.5, +43** |
+| Regular ISD: Prange / Dumer / depth-2 BJMM | 374.3 / 299.7 / 278.5 | 727.9 / 596.5 / 551.9 | 269.1 / 209.8 / 196.4 |
+| ISD without structure / with the w regularity equations | 267.3 / **264.0** | 531.7 / **525.0** | 188.4 / **185.5** |
+| **Best, margin over the target** | **264.0, +104** | **525.0, +209** | **185.5, +43** |
 
-The generalised birthday attack has no lists large enough: the instance has a unique solution. Structure: H comes from SHAKE, without quasi-cyclic structure; the form `[H' | I]` has no measured effect (3 138 iterations of real regular Prange against 2 846 on a dense H, model 2 557); distinct and dense columns.
+*Independent cross-check* (CryptographicEstimators `RegSDEstimator`, free memory): 275.4 for VOLE-128, 612.2 for VOLE-256 (CCJ excluded, overflow), 196.1 for SDitH2-L1, all above our figures. The generalised birthday attack has no lists large enough, since the solution is unique. H comes from SHAKE and has no quasi-cyclic structure.
 
-*Reading.* The reduction limits these parameters, not the direct attacks: the margins exceed the published gains (≈ 30 bits for the regular ISD of Esser–Santini and for the hybrid algebraic attack of Kim et al., on other parameters). SDitH2 therefore also holds against known attacks; it is its guarantee by reduction that does not hold in our cost model, which is more favourable to the attacker.
-
-*Limitations.* These models were written from the papers' abstracts: the full papers were not read, and neither the non-uniform distribution of guesses (Kim et al.) nor depth 3 is included. Real validation: regular Prange, and linearisation on 8 small instances, all of degree 2, whereas VOLE-256 predicts degree 3. The cost of regular BJMM and Dumer is not checked against a real attack.
+*Limitations.* The attack models were written from the papers' abstracts; the full papers of Esser–Santini and Kim et al. were not read, and depth 3 is not modelled. Real validation covers regular Prange and linearisation on small instances.
 
 **KEM** (`tests/c/compression_kem.c`, the real δ bound on real keys, variable D, w and θ, no attack cost below v0.3). With the current selection criterion (at most 5 % of keys
 beyond 2^−(λ+8)), the gain ranges from 0 to 0.6 % depending on the run, since keys are drawn at random. Accepting up to 10 % rejections at the 2^−λ threshold: about 9 710 B (−1.3 %, D = 12, θ = 0.8) and 34 800 B (−2 %, D = 22 to 24), but n and hence pk increase

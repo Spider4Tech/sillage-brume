@@ -28,6 +28,13 @@ Sélectionne (de façon déterministe, seed fixée) :
        (e) det(M) ≠ 0 sur GF(16).
 
 Produit tables_figees.py (avec empreintes SHA-256 de contrôle).
+
+v0.5 (11 nov. 2026) : la S-box n'est plus la sortie de gen_sbox (v0.4 : 891AC406DF37E2B5, toujours reproduite par
+gen_sbox et contrôlée par tests/test_select_params.py), mais SBOX_V05 = AD412650BFEC7893, la candidate CAND_A1 du
+départage (prototypes/brume_sbox6/departage, PROTOCOLE.md fixé avant les calculs, RAPPORT.md) : même famille optimale
+(U = 4, NL = 4, degré 3, sans point fixe, mêmes nombres d'entrées maximales du DDT et du LAT), meilleure en D3 (86 contre
+83 bits), L3 (40 contre 39), D2 (2^−16,000 contre 2^−15,989) et boomerang à 3 tours (2^−8,753 contre 2^−8,476), sans
+régression. Le graphe et les coefficients (étapes 2 et 3) ne dépendent pas de la S-box et sont inchangés.
 """
 import hashlib
 import random
@@ -77,6 +84,10 @@ HALF = [((X16 >> k) & 1).astype(bool) for k in range(4)]
 # ---------------------------------------------------------------------------
 # 1) S-box
 # ---------------------------------------------------------------------------
+
+
+# S-box de la v0.5 : candidate CAND_A1 du départage (voir l'en-tête) ; gen_sbox redonne celle de la v0.4
+SBOX_V05 = [int(c, 16) for c in "AD412650BFEC7893"]
 
 
 def gen_sbox(n_trials=60000, seed=0xA11CE):
@@ -538,7 +549,7 @@ def main():
     cache = os.path.join(_ici, "..", "resultats", "cache_params.json")
     os.makedirs(os.path.dirname(cache), exist_ok=True)
     if etape in ("1", "tout"):
-        sbox, sstats = gen_sbox()
+        sbox, sstats = gen_sbox()                    # S-box de la v0.4, reproduite ; remplacée ci-dessous (v0.5)
         print(f"[1/3] S-box : U=4, NL=4, sans point fixe, deg=3, IA>=2 — "
               f"{sstats['candidats_valides']} candidates, score "
               f"{sstats['score(nDDT4,nLAT4)']}", flush=True)
@@ -552,7 +563,7 @@ def main():
         if etape == "1":
             return
     d = json.load(open(cache))
-    sbox, gname, gens = d["SBOX"], d["GROUP"], d["GENS"]
+    sbox, gname, gens = SBOX_V05, d["GROUP"], d["GENS"]
     ADJ = _adjacency(gens, GROUPS[gname])
     coef, cstats = gen_coef(ADJ)
     print(f"[3/3] Coefficients : contraintes (a)-(e) satisfaites "

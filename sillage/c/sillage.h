@@ -121,7 +121,18 @@ int sl_sig_sign(int niveau, const uint8_t *sk, const uint8_t *pk, const uint8_t 
 int sl_sig_sign_sel(int niveau, const uint8_t *sk, const uint8_t *pk, const uint8_t *msg, size_t len,
                     const uint8_t sel[32], uint8_t *sig, size_t *siglen);
 int sl_sig_verify(int niveau, const uint8_t *pk, const uint8_t *msg, size_t len,
-                  const uint8_t *sig, size_t siglen);           /* 1 valide, 0 sinon */
+                  const uint8_t *sig, size_t siglen);
+
+/* Sillage-SIG v0.5 : VOLE-in-the-Head sur SD régulier (vole.c, PROOFS § 3 bis, SPEC § 4 bis). Profils : 0 VOLE-128,
+ * 1 VOLE-256, 2 VOLE-128f, 3 VOLE-256f. pk = graine de H (λ bits) ‖ y ; sk = pk ‖ positions (un octet par bloc) ;
+ * signature de longueur fixe. Retour 0 (succès) ou −1 (profil invalide, mémoire ou aléa indisponibles : signature remise
+ * à zéro). sl_vole_verify : 1 acceptée, 0 rejetée, −1 mémoire indisponible. sl_vole_kat : aléa déterministe (tests, KAT). */
+void sl_vole_tailles(int profil, size_t *pk, size_t *sk, size_t *sig);
+int sl_vole_keygen(int profil, uint8_t *pk, uint8_t *sk);
+int sl_vole_sign(int profil, const uint8_t *sk, const uint8_t *msg, size_t len, uint8_t *sig);
+int sl_vole_sign_sel(int profil, const uint8_t *sk, const uint8_t *msg, size_t len, const uint8_t *sel, uint8_t *sig);
+int sl_vole_verify(int profil, const uint8_t *pk, const uint8_t *msg, size_t len, const uint8_t *sig, size_t siglen);
+void sl_vole_kat(int actif, uint32_t ctr);           /* 1 valide, 0 sinon */
 
 /* ---- Estimateur ISD (log2 du coût, miroir de sillage_common.py) ---- */
 double sl_isd_prange(int n, int k, int w);
