@@ -330,28 +330,32 @@ through `brume1024.c`. Median of 9 series, machines at rest.
 | | 64 B | 1480 ns | 762 ns | **×1.94** | 3473 ns | 1701 ns | **×2.04** |
 | | 1 KiB | 12.6 µs | 9.8 µs | ×1.29 | 29.4 µs | 21.8 µs | ×1.35 |
 | | 4 KiB | 48.4 µs | 39.5 µs | ×1.23 | 112.7 µs | 87.1 µs | ×1.29 |
-| AEAD vs BRUME-512 (c = 256), 16 B of AAD | 0 B | 2.67 µs | 3.08 µs | ×0.87 | 6.17 µs | 6.75 µs | ×0.91 |
-| | 64 B | 3.41 µs | 3.07 µs | ×1.11 | 7.91 µs | 6.79 µs | ×1.17 |
-| | 1 KiB | 14.5 µs | 12.2 µs | ×1.19 | 33.9 µs | 27.0 µs | ×1.26 |
-| AEAD vs BRUME-512-256 (c = 384), 16 B of AAD | 0 B | 4.53 µs | 3.08 µs | **×1.47** | 10.53 µs | 6.75 µs | **×1.56** |
-| | 64 B | 6.02 µs | 3.07 µs | **×1.96** | 13.99 µs | 6.79 µs | **×2.06** |
-| | 1 KiB | 28.4 µs | 12.2 µs | **×2.34** | 66.0 µs | 27.0 µs | **×2.44** |
+| AEAD vs BRUME-512 (c = 256), 16 B of AAD | 0 B | 2.64 µs | **2.31 µs** | **×1.15** | 6.17 µs | 6.75 µs ⁽ᵃ⁾ | ×0.91 ⁽ᵃ⁾ |
+| | 64 B | 3.36–3.51 µs | **2.32 µs** | **×1.45–1.53** | 7.91 µs | 6.79 µs ⁽ᵃ⁾ | ×1.17 ⁽ᵃ⁾ |
+| | 1 KiB | 14.4 µs | 11.5 µs | ×1.25 | 33.9 µs | 27.0 µs ⁽ᵃ⁾ | ×1.26 ⁽ᵃ⁾ |
+| AEAD vs BRUME-512-256 (c = 384), 16 B of AAD | 0 B | 4.62 µs | 2.31 µs | **×2.00** | 10.53 µs | 6.75 µs ⁽ᵃ⁾ | **×1.56** ⁽ᵃ⁾ |
+| | 64 B | 6.04 µs | 2.32 µs | **×2.60** | 13.99 µs | 6.79 µs ⁽ᵃ⁾ | **×2.06** ⁽ᵃ⁾ |
+| | 1 KiB | 28.7 µs | 11.5 µs | **×2.49** | 66.0 µs | 27.0 µs ⁽ᵃ⁾ | **×2.44** ⁽ᵃ⁾ |
 | Sequential sponge, 1 core | 1 MiB | 86.5 MB/s | 106.1 MB/s | ×1.23 | 37.0 MB/s | 47.8 MB/s | ×1.29 |
 | Tree, 1 core | 16 MiB | 163.5 MB/s | 249.3 MB/s | **×1.52** | 73.7 MB/s | 181.0 MB/s | **×2.46** |
 | Tree, all threads (12 / 16) | 64 MiB | 879.0 MB/s | 1045.4 MB/s | ×1.19 | 497.6 MB/s | 1005.4 MB/s | **×2.02** |
 | AEAD, 1 core, vs c = 256 / vs c = 384 | 1 MiB | 87.2 / 43.3 MB/s | 105.7 MB/s | ×1.21 / ×2.44 | 36.1 / 18.4 MB/s | 47.5 MB/s | ×1.32 / ×2.58 |
 
+⁽ᵃ⁾ 2700X: measured before the length block was merged (4 permutations per short message); to be remeasured. The 5600G
+AEAD rows are measured with the merge (14 November, 3 permutations); before it they were 3.08 µs (0 B), 3.07 µs (64 B)
+and 12.2 µs (1 KiB).
+
 **Reading:**
 - **Where 1024q wins.** It is faster than the classical suite, which is weaker against a quantum adversary, on:
   - every hash from 64 bytes up (×1.2 to ×2), and the sequential sponge;
-  - AEAD from 64 bytes up (×1.11 to ×1.32);
+  - the AEAD at every size on the 5600G since the merge of the length block (×1.15 at 0 B, ×1.45–1.53 at 64 B);
   - the tree on both machines (×1.19 to ×2.46).
 - **At equal capacity**, its AEAD runs ×1.47 to ×2.6 faster than BRUME-512-256, from 0 bytes.
-- **Where it loses.** Only the AEAD of an empty message against BRUME-512 at c = 256 (×0.87 and ×0.91). Its fixed cost is 4
-  permutations of 1 024 bits. Merging the length block (`ROADMAP.md` § 1, after the AE step, decision of the author) would bring it
-  to 3.
+- **Where it loses.** Nowhere on the 5600G since the length block was merged (14 November): the fixed cost of the AEAD
+  went from 4 permutations of 1 024 bits to 3, and the empty message from ×0.87 to ×1.15 against BRUME-512 at c = 256.
+  The 2700X column is still the measurement before the merge (×0.91 at 0 B).
 - **What changed since the first version:**
-  - the AEAD at 64 B went from ×0.87 to ×1.11 (full-state keyed initialisation);
+  - the AEAD at 64 B went from ×0.87 to ×1.11 (full-state keyed initialisation), then to ×1.45–1.53 (length block merged);
   - the tree went from ×0.87 to ×1.52 on one core of the 5600G (bitsliced kernel).
 
 ## 5. Security of the profile (summary; details in `../WIDTH_ANALYSIS.md`)

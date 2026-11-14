@@ -701,7 +701,8 @@ wrongly. That defect is already caught by the KATs, by the decoder check and by 
   it adds a field the proof does not use and that must be specified and tested.
 - **Recommendation: option A** (plain removal).
 
-**Gain** (to be measured; estimated from the cost in permutations). A query costs 3 + ⌈(|A|+1)/80⌉ + ⌊|M|/80⌋
+**Gain** (estimated first from the cost in permutations; **measured after the change**, 5600G: 0 B 3.08 → 2.31 µs, 64 B
+3.07 → 2.32 µs, 1 KiB 12.2 → 11.5 µs; empty message ×1.15 against BRUME-512 at c = 256, 64 B ×1.45–1.53). A query costs 3 + ⌈(|A|+1)/80⌉ + ⌊|M|/80⌋
 permutations instead of one more: −25 % below 80 bytes of A and of M, −20 % up to 159 bytes, about −6 % at 1 KiB, nothing
 for long messages. One 1 024-bit permutation is about 0.55 µs on Zen 3 (README § 4.1). Against BRUME-512 at c = 256,
 the empty message would go from ×0.87–0.91 to about ×1.16–1.21, the only case where BRUME-1024q still loses, and 64 bytes
