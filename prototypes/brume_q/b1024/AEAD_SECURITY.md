@@ -538,7 +538,7 @@ probability 2^−2r and stops the search: Σ_{i ≤ G} 2^−c(1 − 2^−2r)^{i�
 - **Dobraunig–Mennink 2019** (ASIACRYPT 2019; restated as Mennink's Theorem 2, a different proof) has the term
   ν^M_{r,c}·(L+Ω)/2^c: the controlled queries multiplied by the multicollision of the other outer parts. **That is exactly
   the term F2 finds missing from DMV17's Lemma 2.** So F2 agrees with an independent bound. Mennink also corrects a typo in
-  it (footnote 1, p. 14: a missing max). DM19 itself is not read.
+  it (footnote 1, p. 14: the max in max{(ν_fix − 1)/2, 0}, for ν_fix = 0). DM19 itself was read afterwards (below).
 - **Mennink's Theorem 1** restates DMV17's bound unchanged. Remark 4 discusses the draws without replacement of the
   multicollision function, but not the real-world issue of F3. **F3 is not mentioned.**
 - **His Theorem 7** is our AE step (§ 4 bis), with a tighter L that we now use.
@@ -559,7 +559,12 @@ ePrint 2019/225, PDF provided by the author of this project). It is an independe
 then bad events col_cc, col_cp, mc_in, mc_out and key, all analysed directly in the real world.
 - **F2 is handled correctly there.** When a "fix" query (flag, or sibling of an earlier call) chooses its outer part, the
   proof counts "at most ν … queries of type full whose outer part equals left_r(T_l)" and at most ν_fix − 1 fixed ones
-  (proof of Lemma 2, p. 20). This gives the term ν^M_{r,c}(L+Ω)/2^c, exactly what DMV17's count misses. **F2 is therefore
+  (proof of Lemma 2, p. 20). This gives the term ν^M_{r,c}(L+Ω)/2^c, exactly what DMV17's count misses.
+  **Replayed numerically (14 November, `dmv17_verif/f2_dm19.py`):** the exact collision probability of the F2 adversary
+  (`f2_exact.py`, r = 4, c = 16, six (Mu, Ω) cases), which exceeds DMV17's written bound by ×1.03 to ×1.18, is **0.36 to
+  0.62 times** the corresponding DM19 terms ([C(Mu,2) + Mu·Ω]/2^b + [ν·Ω + max{(ν_fix − 1)/2, 0}·Ω]/2^c + 2ν/2^c, with
+  ν_fix = Ω, read in Mennink 2023, Theorem 2, (6a)). The ν_fix term is needed for that: without it, the case Mu = 24,
+  Ω = 16 would exceed. **F2 is therefore
   a flaw of the DMV17 proof that the later DM19 proof does not have.** Neither DM19 nor Mennink 2023 points it out as a
   flaw of DMV17.
 - **F3, the same writing, without consequence.** DM19 (18c) bounds Pr(mc) ≤ 2ν/2^c with no condition: "the state values T_i
@@ -593,9 +598,9 @@ the proposition does NOT give", for its consequences for our mode.
 - **Novelty** of F2 and F3 is established only with respect to these four texts.
 - Telling the authors is an author decision. A human review should come first.
 
-**Literature (first note, 13 November).** Mennink, *Understanding the Duplex and Its
-Security*, ToSC 2023(2), pp. 1–46 (ePrint 2022/1340), reportedly says there is "a certain issue in the proof of Daemen et
-al.". We have not read it:
+**Literature (first note, 13 November; superseded: all four texts were read on 14 November, above).** Mennink,
+*Understanding the Duplex and Its Security*, ToSC 2023(2), pp. 1–46 (ePrint 2022/1340), reportedly says there is "a
+certain issue in the proof of Daemen et al.". At the time it was not read:
 - the journal site and ePrint both refuse automated fetches, and they are not circumvented;
 - the full version of DMV17 (ePrint 2017/498) has not been read either.
 

@@ -1,0 +1,6 @@
+Mu=16 Om= 8 : exact 9.1707e-04 | DM19 (19)+(18c) 1.7319e-03 (sans mc 1.5182e-03) | ν=7 | exact/DM19 = 0.530
+Mu=16 Om= 1 : exact 1.6140e-04 | DM19 (19)+(18c) 4.5013e-04 (sans mc 2.3651e-04) | ν=7 | exact/DM19 = 0.359
+Mu=32 Om= 4 : exact 8.5905e-04 | DM19 (19)+(18c) 1.6022e-03 (sans mc 1.2970e-03) | ν=10 | exact/DM19 = 0.536
+Mu= 4 Om= 8 : exact 5.9744e-04 | DM19 (19)+(18c) 1.0738e-03 (sans mc 9.5177e-04) | ν=4 | exact/DM19 = 0.556
+Mu= 8 Om= 8 : exact 7.0555e-04 | DM19 (19)+(18c) 1.2779e-03 (sans mc 1.1253e-03) | ν=5 | exact/DM19 = 0.552
+Mu=24 Om=16 : exact 3.0626e-03 | DM19 (19)+(18c) 4.9324e-03 (sans mc 4.6577e-03) | ν=9 | exact/DM19 = 0.621
