@@ -25,7 +25,7 @@ belongs to the author: c = 384 for 128 quantum bits, with a wider permutation to
 | `agregation2.c` | Exact 2-round differentials and linear hulls (all characteristics aggregated, branch and bound), against the best characteristic and Park et al.'s bound, confirmed empirically on the real permutation |
 | `cubes_degre.c`, `campagne_portable.sh` | Cube and zero-sum experiments (degree reached after r rounds), checked against `perm1`; resumable campaign of the cryptanalysis benches on an extra machine |
 | `SPEC.md`, `kat_b1024.txt`, `spec_ref.c` | Self-contained specification (draft v0.6-1), test vectors as text, and a second implementation written from the spec alone (portable C), which reproduces the 18 vectors |
-| `AEAD_SECURITY.md` | Security model of the AEAD against Daemen–Mennink–Van Assche 2017: exact mode, hypothesis-by-hypothesis mapping, bounds, verdict (not demonstrated), proposed change |
+| `AEAD_SECURITY.md` | Security model of the AEAD against Daemen–Mennink–Van Assche 2017: exact mode, hypothesis-by-hypothesis mapping, bounds, AE reduction (§ 4 bis) to DMV17 Theorem 1 as repaired (Theorem 1′, § 4 quater), classical ideal-permutation model only; Q1 open |
 | `DOMAINS.md` | Initial states, modes, domains and padding of every construction, and what is checked |
 
 ```bash
@@ -70,7 +70,7 @@ The design is the BRUME-512 rule (`sillage/select_params.py`) transposed to 256 
 |---|---|---|---|
 | 1 | M with B = 8 certified, full diffusion in 5 rounds, λ\* ≤ 4, asymmetric | **B_diff = B_lin = 8 exact.** Weight ≤ 3 on both sides for M, M⁻¹, Mᵀ, (Mᵀ)⁻¹: 8/13/17, 230/221/215, 8/13/17, 231/222/216. Balls 7, 37, 127, 224, 256; the effective diffusion through the permutation is the same. λ\* = 3.796. No invariant translation, 256 WL colours out of 256, order of M > 256. M⁻¹ density 93.7 %. max overlap 2. | **met** |
 | 2 | One-state AVX2 kernel at most 2.3 × BRUME-512 | 773 ns against 388 ns at 32 rounds: **×1.99** | **met** |
-| 3 | Measured structural reach at most BRUME-512 + 2 rounds | Impossible differentials and zero correlations: **5 rounds, as at 512** (same code). Degree (Boura–Canteaut, γ = 3): 11 rounds per direction against 10, so **+2 inside-out, at the limit**. Boomerang and exact division property: **not measured** | partly met |
+| 3 | Measured structural reach at most BRUME-512 + 2 rounds | Impossible differentials and zero correlations: **5 rounds, as at 512** (same code). Degree (Boura–Canteaut, γ = 3): 11 rounds per direction against 10, so **+2 inside-out, at the limit**. Boomerang: 3 rounds 2^−19.41 (best quartet, 2^30), 4 rounds running. Cubes: observed integral reach 5 rounds. Exact division property: search running | partly met |
 | 4 | Certified C3 at least that of BRUME-512 (21) | **C3 ≥ 18 and C3 ≥ 21 certified** (§ 3) | **met** |
 
 ## 3. The 3-round bound (certified)
@@ -111,7 +111,7 @@ This hints at a larger C3 at 1024, but nothing is proved beyond 21.
     Until 13 November the rate received the plaintext, the orientation of the suite. The change follows
     `AEAD_SECURITY.md`; the 4 AEAD KATs with text changed, and the 14 others did not.
   - **Cost:** 4 permutations for a short message, against 5 when the key was absorbed through the rate.
-  - **Security: not demonstrated.** An earlier version of this README gave an informal argument:
+  - **Security: a classical reduction, not reviewed.** An earlier version of this README gave an informal argument:
     - Grover on the 512-bit key;
     - then the bound of c = 384;
     - rate-only absorption as "a special case" of DMV17.
@@ -122,8 +122,13 @@ This hints at a larger C3 at 1024, but nothing is proved beyond 21.
       log₂(blocks) bits;
     - the SpongeWrap orientation, adopted on 13 November at no cost in speed, removes this loss.
 
-    The AE step is not written, the best regime rests on an assertion of DMV17 (no-RUP), and Q1 is heuristic only.
-    Verdict: **not demonstrated**.
+    Since 13–14 November, **the AE step is written** (`AEAD_SECURITY.md` § 4 bis): a reduction of the AE game
+    (nonce-respecting, no release of unverified plaintext, multi-user) to DMV17 Theorem 1, **as repaired** (Theorem 1′,
+    § 4 quater: two steps of the published proof, F2 and F3, are false as written and are repaired). Bound:
+    Adv ≤ (2σ_D + 5)·N/2^384 + 2·q_iv·N/2^512 + q_d/2^256 + negligible terms, under the conditions listed in `SPEC.md`
+    § 5. What it is **not**: a proof for the concrete permutation (ideal-permutation model), a quantum proof (Q1 open,
+    Q2 not claimed), nor a reviewed result. The repairs (F2, F3) and the partial-flag extension (§ 4 ter) need an
+    independent review.
   - **Batched version (`aead_multi`).** It uses the same scheduling as the tree (bitsliced batches of 256 messages, then
     batches of 32, then one message at a time), and is checked equal to the one-message AEAD.
   - **`aead_ouvrir`** is the only decryption to expose: it compares the tags in constant time and wipes the output on
@@ -378,14 +383,16 @@ permutation):
 - **At 32 rounds**, with the certified C3 ≥ 21: at least 218 active S-boxes, so 2^218 quantum on characteristics, and 2^190
   after 4 free rounds.
 - **Structural margin.** The guaranteed zero-sum reach is at least 22 rounds inside-out (Boura–Canteaut), against 20 at 512,
-  so the margin is 10 rounds instead of 12. The exact division property is not computed.
+  so the margin is 10 rounds instead of 12. The exact division-property reach is being computed (`dp1024/`).
 
 ## 6. Limitations
 
 - A new permutation, **not reviewed**: its cryptanalysis is only beginning.
-  - Done: B, C3, diffusion, degree bound, impossible differentials and zero correlations.
-  - Missing: boomerang, exact division property, cube and zero-sum experiments, truncated and aligned differentials, GPU bench,
-    statistical tests.
+  - Done: B, C3, diffusion, degree bound, impossible differentials and zero correlations, 2-round aggregation, cube and
+    zero-sum experiments (observed reach 5 rounds), boomerang at 3 rounds (GPU), statistical battery (conforming; it is
+    not a cryptographic proof).
+  - Running: boomerang at 4 rounds, exact division property.
+  - Missing: truncated and aligned differentials beyond 2 rounds, aggregation of the other 2-round shapes.
 - 32 rounds were decided for BRUME-512, whose permutation is the suite's. Here the structural margin is 2 rounds smaller
   (§ 5). Raising the rounds would cost speed linearly.
 - Constant time is **measured, not proved** (dudect, `temps1024.c`, 12 November 2026, Ryzen 7 2700X at rest). No leak was

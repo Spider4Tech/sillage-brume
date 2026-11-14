@@ -137,9 +137,11 @@ leading term.
 
 **(c) Multi-user.**
 - The key-guessing term is q_iv N/2^512, with q_iv at most the number of users that reuse the same nonce.
-- The key-collision term is C(u, 2)/2^512.
+- The key-collision term is C(u, 2)/2^512 in Theorem 1 (keys drawn with replacement), doubled to 2·C(u, 2)/2^512 in the
+  AE bound (§ 4 bis); it is 0 when the keys are drawn without replacement.
 
-**(d) Quantum, model Q1. Not demonstrated** (DMV17 is classical). Heuristic costs:
+**(d) Quantum, model Q1. Not demonstrated** (DMV17 is classical). The 2^128 of `SPEC.md` § 5 is the generic BHT cost
+of a collision search on the sponge (c = 384); it is **not** a 128-bit quantum guarantee for the AEAD. Heuristic costs:
 
 | Attack | Cost | Status |
 |---|---|---|
@@ -157,7 +159,10 @@ the same key and nonce of (A, M) and (A', M'):
   coincide;
 - consequence: c ⊕ c' = m ⊕ m' on every block **up to and including the first block whose entry differs**, and nothing
   after it. In particular, if M' is a prefix of M with ⌊|M'|/80⌋ = j, then C' is the prefix of C up to block j included;
-- the tags are equal if and only if (A, M) = (A', M') (determinism).
+- the tags: (A, M) = (A', M') implies T = T' (determinism). The converse does **not** hold in general: T has 256 bits,
+  so distinct pairs can share a tag (a collision, probability about 2^−256 per pair in the ideal model). The check observes
+  that the tags of the distinct pairs of its grid differ; that is an observation on a finite grid, not a proof of
+  injectivity, and the reduction of § 4 bis does not use it (it uses equality of paths and the decoding of the final path).
 
 Check `nonce_reutilise_fuite_exacte_flux_egal_ssi_chemin_egal_aux_frontieres`. It measures the real `aead()` and predicts
 with the paths recorded by `aead_kd_chemin()`. The grid: AAD of 0, 79 and 80 bytes, crossed (equal or different); texts of
@@ -303,7 +308,7 @@ How to read it, classically, in the ideal-permutation model:
   RUP, decryption queries could only test guesses one at a time, so that the generic attack would cost about q_d/2^c with
   no factor N. **This is wrong.** Gilbert, Heim Boissier, Khati and Rotella, *Generic Attack on Duplex-Based AEAD Modes
   Using Random Function Statistics* (EUROCRYPT 2023), give a generic attack using many decryption queries, of total time
-  2^{3c/4}, with N ≈ σ_d ≈ 2^{3c/4}. We know it as cited by Mennink 2023, § 9.3; the paper itself is not read. Mennink notes
+  2^{3c/4}, with N ≈ σ_d ≈ 2^{3c/4}. First known through Mennink 2023, § 9.3; the paper itself was read on 14 November (below). Mennink notes
   that the attack does not contradict the duplex bound.
   - So decryption queries do help an offline attacker.
   - The σ_D·N term cannot be dropped in general, and the regime L = Ω = 0 is out of reach for this kind of mode: Mennink
@@ -327,10 +332,15 @@ How to read it, classically, in the ideal-permutation model:
   - **Length.** The published attack needs ciphertexts of ℓ = 3·2^{c/2} ≈ 2^193.6 blocks. BRUME-1024q encodes |M| on
     8 bytes (le64), so |M| < 2^64 bytes, about 2^57.7 blocks. **The published version therefore does not apply as is.**
     Variants for bounded lengths have not been studied.
-    - `SPEC.md` does not state the maximum length explicitly. **Proposed, an author decision:** write |A|, |M| < 2^64
-      bytes in `SPEC.md`, and have the implementation reject longer inputs.
-  - **This is consistent with the bound.** The attack has σ_d·N ≈ 2^488 ≫ 2^383. Even without the length limit it would
-    stay above 2^256, while our key has 512 bits.
+    - Since 14 November `SPEC.md` § 3.5 states |A|, |M| < 2^64 bytes and the implementation rejects longer inputs (bound
+      2^63 − 1 in this implementation). **This is a rule of use that keeps the published form out of reach, not a
+      security proof:** a variant adapted to bounded lengths is not excluded.
+  - **This is consistent with the bound.** The attack has σ_d·N ≈ 2^488 ≫ 2^383.
+  - **What the cost does and does not say.** 2^292.4 is a **classical** cost. It must be compared with classical
+    targets: it is above the classical AEAD level that the bound gives (≈ 2^256, set by the tag and by σ_D·N ≈ 2^383),
+    and **below** classical key search (2^512). It must **not** be compared with Grover (2^256): that is a quantum
+    cost, in another model, and the comparison says nothing about which attack is the more dangerous. A quantum version
+    of this attack is not studied (Q1, § 4 (d)).
 - The variant suggested on p. 614 (encrypt as C = P + M·Z with M + I invertible) would make Ω = 0. It would not remove L,
   because a decryption that keeps the prefix of an encryption repeats its paths. So it **would not remove σ_D from this
   bound**: it changes the format for no gain here, and is not proposed.

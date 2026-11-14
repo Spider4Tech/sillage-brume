@@ -1502,8 +1502,9 @@ int main(int argc, char **argv)
         /* réutilisation de nonce, fuite exacte (AEAD_SECURITY.md § 4 (e)) : même clé et même nonce, (A, M) et (A', M').
          * Le flux du bloc de texte t ne dépend que du chemin qui le précède : il est le même pour les deux messages SI ET
          * SEULEMENT SI les entrées σ̃ (A et blocs de texte bourrés) coïncident jusqu'au bloc t − 1. Donc c ⊕ c' = m ⊕ m' sur
-         * tous les blocs jusqu'au premier bloc dont l'entrée diffère, celui-ci compris, puis plus rien ; tags égaux ssi
-         * (A, M) = (A', M'). Mesuré sur aead() (l'implémentation), prédit par les chemins de aead_kd_chemin(). */
+         * tous les blocs jusqu'au premier bloc dont l'entrée diffère, celui-ci compris, puis plus rien. Tags : (A, M) = (A', M') ⇒ T = T'
+         * (déterminisme) ; la réciproque n'est pas vraie en général (tag de 256 bits, collision ≈ 2^−256 par paire) : la
+         * grille ci-dessous observe seulement que ses paires distinctes ont des tags distincts. Mesuré sur aead() (l'implémentation), prédit par les chemins de aead_kd_chemin(). */
         int oknr = 1, nprev = 0;
         {
             const size_t AL[] = {0, 79, 80}, LL[] = {0, 1, 79, 80, 81, 159, 160, 161, 200};

@@ -163,10 +163,10 @@ The full values are in the files.
 
 | Claim | Status | Where |
 |---|---|---|
-| Generic quantum level of the sponge, c = 384: 2^128 (BHT) | generic attack cost, not a proof | README § 5 |
+| Generic quantum level of the sponge, c = 384: 2^128 (BHT, collision search) | generic attack cost, not a proof; **not** a quantum guarantee for the AEAD (Q1 open, Q2 not claimed) | README § 5, `AEAD_SECURITY.md` § 4 (d) |
 | Bound on characteristics: C3 ≥ 21, 218 active S-boxes over 32 rounds | certified (two LRAT checkers) | README § 3 |
 | Aggregation at 2 rounds: max DP 2^−16, max hull 2^−7.83 | exact, confirmed empirically | `agregation2.c` |
-| AEAD (classical, ideal permutation): Adv ≤ (2σ_D + 5)·N/2^384 + 2·q_iv·N/2^512 + q_d/2^256 + negligible terms | AE step written; DMV17 Theorem 1 checked for our parameters and repaired (Theorem 1′); agrees with Mennink 2023 Th. 7 / Dobraunig–Mennink 2019; not peer reviewed | `AEAD_SECURITY.md` §§ 4 bis–4 quater |
+| AEAD (classical queries, ideal permutation, nonce-respecting, no release of unverified plaintext, u users): Adv ≤ (2σ_D + 5)·N/2^384 + 2·q_iv·N/2^512 + q_d/2^256 + 2·C(u, 2)/2^512 (keys drawn with replacement; 0 without) + negligible terms; valid for σ = σ_E + σ_D ≤ 2^127, N + M ≤ 0.1·2^384 and M − L ≤ 2^127 (M = number of keyed-duplex calls, DMV17 notation), uniform independent 512-bit keys; the negligible terms are listed in `AEAD_SECURITY.md` § 4 bis | AE step written; DMV17 Theorem 1 checked for our parameters and repaired (Theorem 1′); agrees with Mennink 2023 Th. 7 / Dobraunig–Mennink 2019; not peer reviewed | `AEAD_SECURITY.md` §§ 4 bis–4 quater |
 | Constant time | measured (dudect, ctgrind) on two machines, AVX2 kernels | README |
 
 Not claimed:
