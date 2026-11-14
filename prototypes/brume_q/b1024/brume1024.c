@@ -912,6 +912,24 @@ static int decoder_chemin(const uint8_t (*ch)[128], size_t n, uint8_t *A, size_t
     *mlen = lm;
     return 0;
 }
+/* contrôles : decoder_chemin sur une copie de taille exacte (n entrées ; A et M reçus dans des tampons de cap octets
+ * exactement, ASan voit toute lecture ou écriture hors limites). Rend −1 (rejet), 0 (décodé en (A, M)), 1 (décodé, mais
+ * en autre chose), ou la valeur rendue par le décodeur si elle n'est ni 0 ni −1. */
+static int dec_essai(const uint8_t (*ch)[128], size_t n, size_t cap, const uint8_t *A, size_t la, const uint8_t *M,
+                     size_t lm)
+{
+    uint8_t(*cp)[128] = malloc(n ? n * 128 : 1), *dA = malloc(cap ? cap : 1), *dM = malloc(cap ? cap : 1);
+    if (n)
+        memcpy(cp, ch, n * 128);
+    size_t a = 0, b = 0;
+    int r = decoder_chemin((const uint8_t(*)[128])cp, n, dA, &a, dM, &b, cap);
+    if (r == 0 && !(a == la && b == lm && !memcmp(dA, A, la) && !memcmp(dM, M, lm)))
+        r = 1;
+    free(cp);
+    free(dA);
+    free(dM);
+    return r;
+}
 
 /* lot de nm ≤ 32 messages (indices d .. d + nm − 1), noyau vertical à 32 états */
 static void aead_lot32(size_t d, size_t nm, const uint8_t *cles, const uint8_t *nonces, const uint8_t *aad, size_t aadlen,
@@ -1499,6 +1517,89 @@ int main(int argc, char **argv)
                 }
             }
         res_controle(&res, "etape_ae_chemin_du_dechiffrement_egal_au_chiffrement_decodable_et_roles", okch);
+        /* décodeur du chemin final, branche par branche (trous de la 3e passe de mutation, 14 novembre) : chaque forme
+         * invalide rend EXACTEMENT −1 ; tampons de taille exacte ; longueurs ≥ 256 et ≥ 65 536 (octets 1 et 2 du bloc de
+         * longueur) ; capacité exacte acceptée, capacité − 1 refusée ; l'enregistrement du chemin s'arrête à nch (garde) */
+        int okd = 1, ndec = 0;
+        {
+            const size_t DA[] = {0, 81}, DL[] = {0, 79, 80, 300, 70000};
+            for (size_t ia = 0; ia < 2; ia++)
+                for (size_t il = 0; il < 5; il++) {
+                    const size_t A = DA[ia], L = DL[il], na = A / RB + 1, nm = L / RB + 1, ne = na + nm + 2, n0 = ne - 1;
+                    const size_t cap = A > L ? A : L;
+                    const uint8_t *vA = m + 500, *vM = m + 1000;
+                    uint8_t(*ce)[128] = malloc((ne + 1) * 128), (*x)[128] = malloc((ne + 1) * 128), *c = malloc(L + 1),
+                        t[32];
+                    size_t nr = 0;
+                    memset(ce, 0xA5, (ne + 1) * 128);
+                    aead_kd_chemin(perm1, m + 3, m + 70, vA, A, vM, L, 0, c, t, ce, ne, &nr);
+                    for (int k = 0; k < 128; k++)          /* garde : rien d'écrit après nch entrées */
+                        okd &= ce[ne][k] == 0xA5;
+                    okd &= nr == ne;
+                    memset(x, 0xA5, (ne + 1) * 128);       /* nch plus petit que le nombre d'appels : 2 entrées seulement */
+                    aead_kd_chemin(perm1, m + 3, m + 70, vA, A, vM, L, 0, c, t, x, 2, &nr);
+                    okd &= nr == ne && !memcmp(x, ce, 2 * 128);
+                    for (size_t e = 2; e <= ne; e++)        /* rien d'écrit au-delà de nch */
+                        for (int k = 0; k < 128; k++)
+                            okd &= x[e][k] == 0xA5;
+                    okd &= dec_essai((const uint8_t(*)[128])ce, n0, cap, vA, A, vM, L) == 0;
+                    int nok = 0, ntot = 0;
+#define DEC_REJET(nlig)                                                                                                \
+    do {                                                                                                               \
+        nok += dec_essai((const uint8_t(*)[128])x, (nlig), cap, vA, A, vM, L) == -1;                                   \
+        ntot++;                                                                                                        \
+        memcpy(x, ce, (ne + 1) * 128);                                                                                 \
+    } while (0)
+                    memcpy(x, ce, (ne + 1) * 128);
+                    if (cap) {                                  /* capacité − 1 */
+                        nok += dec_essai((const uint8_t(*)[128])ce, n0, cap - 1, vA, A, vM, L) == -1;
+                        ntot++;
+                    }
+                    DEC_REJET(n0 - 1);                          /* bloc de longueur absent */
+                    DEC_REJET(n0 - 2);
+                    memcpy(x[n0], ce[n0 - 1], 128);             /* une entrée de trop */
+                    DEC_REJET(n0 + 1);
+                    for (size_t e = 0; e < n0; e++) {
+                        const int KC[] = {RB, 100, 126, 9};
+                        for (int i = 0; i < 4; i++) {           /* capacité non nulle (et octet 9 du bloc de longueur) */
+                            if (KC[i] == 9 && e != n0 - 1)
+                                continue;
+                            x[e][KC[i]] ^= 0x01;
+                            DEC_REJET(n0);
+                        }
+                        x[e][127] ^= 0x01;                      /* nibble bas de l'octet 127 */
+                        DEC_REJET(n0);
+                    }
+                    x[na - 1][127] = DOM_TEXTE << 4;            /* domaine du texte dans la phase AAD */
+                    DEC_REJET(n0);
+                    x[na + nm - 1][127] = DOM_AAD << 4;         /* domaine AAD dans la phase texte */
+                    DEC_REJET(n0);
+                    x[n0 - 1][127] = DOM_TEXTE << 4;            /* bloc de longueur sans DOM_FINAL */
+                    DEC_REJET(n0);
+                    if (na > 1) {                               /* bloc plein de A marqué DOM_FINAL */
+                        x[0][127] = DOM_FINAL << 4;
+                        DEC_REJET(n0);
+                    }
+                    x[na - 1][A % RB] = 0x02;                   /* bourrage 0x01 remplacé */
+                    DEC_REJET(n0);
+                    x[na + nm - 1][L % RB] = 0x02;
+                    DEC_REJET(n0);
+                    x[n0 - 1][8] ^= 0x01;                       /* bloc de longueur : 0x01 de l'octet 8, longueur */
+                    DEC_REJET(n0);
+                    for (int k = 0; k < 3; k++) {
+                        x[n0 - 1][k] ^= 0x01;
+                        DEC_REJET(n0);
+                    }
+#undef DEC_REJET
+                    okd &= nok == ntot;
+                    ndec += ntot;
+                    free(ce);
+                    free(x);
+                    free(c);
+                }
+        }
+        res_mesure(&res, "decodeur_formes_invalides_essayees", "%d", ndec);
+        res_controle(&res, "decodeur_chemin_rejette_exactement_chaque_forme_invalide_et_garde_nch", okd && ndec > 0);
         /* réutilisation de nonce, fuite exacte (AEAD_SECURITY.md § 4 (e)) : même clé et même nonce, (A, M) et (A', M').
          * Le flux du bloc de texte t ne dépend que du chemin qui le précède : il est le même pour les deux messages SI ET
          * SEULEMENT SI les entrées σ̃ (A et blocs de texte bourrés) coïncident jusqu'au bloc t − 1. Donc c ⊕ c' = m ⊕ m' sur
@@ -1745,6 +1846,20 @@ int main(int argc, char **argv)
             aead_multi(300, m, m + 20000, m + 100, 9, m + 30000, 81, oo, gg);
             free(oo);
             res_controle(&res, "cache_piv_aucun_recalcul_apres_preparation_arbre_et_aead_multi", IV_CALCULS == avant);
+            /* le compteur lui-même : +2 (P(IV) et ses plans de bits) quand le nombre de tours change, +1 (les plans de
+             * bits, toujours refaits par prepare_iv) quand le cache de P(IV) est valide */
+            const int R0 = R1;
+            const long c0 = IV_CALCULS;
+            R1 = R0 - 1;
+            prepare_iv();
+            const long c1 = IV_CALCULS;
+            prepare_iv();
+            const long c2 = IV_CALCULS;
+            R1 = R0;
+            prepare_iv();
+            const long c3 = IV_CALCULS;
+            res_controle(&res, "compteur_piv_exact_2_au_changement_de_tours_1_sinon",
+                         c1 - c0 == 2 && c2 - c1 == 1 && c3 - c2 == 2);
         }
         /* trous comblés après le score de mutation du 13 novembre (resultats/mutants_20261113.txt) */
         {

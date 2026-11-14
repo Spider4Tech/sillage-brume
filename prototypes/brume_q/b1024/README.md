@@ -22,6 +22,9 @@ belongs to the author: c = 384 for 128 quantum bits, with a wider permutation to
 | `campagne_aead.c`, `campagne_aead_songbird.sh` | Long AEAD campaign: checks, ASan/UBSan, ctgrind, dudect, then `equiv`, `forge`, `multi`, `aval`, `biais` until a deadline, each detector first run against a planted defect |
 | `mutants.c`, `campagne_locale.sh` | Mutation score of `brume1024.c` (≈ 2 000 small mutations, each must be caught by the battery), and a **resumable** local campaign: compiler diversity, sanitizers, Valgrind, thread determinism, lengths beyond 2^32 bytes, mutation score, prolongation |
 | `mutation_songbird.sh`, `lsan_harnais.supp`, `valgrind.supp` | Second mutation pass (22 checks at the time of the run, then survivors under ASan and UBSan), resumable; suppression files for the only known leaks (the suite's result harness, libgomp's per-thread storage) |
+| `gpu/` (`boomerang1024.cu`, `brume1024.cuh`, `vecteurs_b1024.c`) | GPU boomerang bench at 1 024 bits, both directions of reduced rounds, checked against `brume1024.c`'s vectors and CPU-recomputed quartets |
+| `stats1024.c` | Statistical battery on P₃₂ and reduced rounds (stream tests, SAC both ways, witnesses) |
+| `dp1024/` | Division property: the suite's trail code on BRUME-1024q's parameters (`pistes1024.py`, `b1024_module.py`), beam search (`dp1024.py`), beam prefix + exact CP-SAT suffix (`dp1024_exact.py`), per-bit coverage (`dp1024_couverture.py`), direct construction for the inverse direction (`dp1024_inverse.py`), re-verified summary (`dp1024_bilan.py`) |
 | `agregation2.c` | Exact 2-round differentials and linear hulls (all characteristics aggregated, branch and bound), against the best characteristic and Park et al.'s bound, confirmed empirically on the real permutation |
 | `cubes_degre.c`, `campagne_portable.sh` | Cube and zero-sum experiments (degree reached after r rounds), checked against `perm1`; resumable campaign of the cryptanalysis benches on an extra machine |
 | `SPEC.md`, `kat_b1024.txt`, `spec_ref.c` | Self-contained specification (draft v0.6-1), test vectors as text, and a second implementation written from the spec alone (portable C), which reproduces the 18 vectors |
@@ -70,7 +73,7 @@ The design is the BRUME-512 rule (`sillage/select_params.py`) transposed to 256 
 |---|---|---|---|
 | 1 | M with B = 8 certified, full diffusion in 5 rounds, λ\* ≤ 4, asymmetric | **B_diff = B_lin = 8 exact.** Weight ≤ 3 on both sides for M, M⁻¹, Mᵀ, (Mᵀ)⁻¹: 8/13/17, 230/221/215, 8/13/17, 231/222/216. Balls 7, 37, 127, 224, 256; the effective diffusion through the permutation is the same. λ\* = 3.796. No invariant translation, 256 WL colours out of 256, order of M > 256. M⁻¹ density 93.7 %. max overlap 2. | **met** |
 | 2 | One-state AVX2 kernel at most 2.3 × BRUME-512 | 773 ns against 388 ns at 32 rounds: **×1.99** | **met** |
-| 3 | Measured structural reach at most BRUME-512 + 2 rounds | Impossible differentials and zero correlations: **5 rounds, as at 512** (same code). Degree (Boura–Canteaut, γ = 3): 11 rounds per direction against 10, so **+2 inside-out, at the limit**. Boomerang: 3 rounds 2^−19.41 (best quartet, 2^30), 4 rounds running. Cubes: observed integral reach 5 rounds. Exact division property: search running | partly met |
+| 3 | Measured structural reach at most BRUME-512 + 2 rounds | Impossible differentials and zero correlations: **5 rounds, as at 512** (same code). Degree (Boura–Canteaut, γ = 3): 11 rounds per direction against 10, so **+2 inside-out, at the limit**. Boomerang: 3 rounds 2^−19.41 (best quartet, 2^30), 4 rounds < 2^−32 (0 return in 2^36). Cubes: observed integral reach 5 rounds. Division property: inverse exactly 11 rounds, forward 11 or 12, **inside-out 22 or 23** against 20 at 512: **+2 (met) if the forward reach is 11, +3 (missed by one round) if it is 12** | partly met |
 | 4 | Certified C3 at least that of BRUME-512 (21) | **C3 ≥ 18 and C3 ≥ 21 certified** (§ 3) | **met** |
 
 ## 3. The 3-round bound (certified)
@@ -147,7 +150,7 @@ This hints at a larger C3 at 1024, but nothing is proved beyond 21.
     with a wiped output if the root cannot be allocated (check `echecs_d_allocation_injectes_…`).
   - Before the first scheduling fix, hashing 16 KiB took 2.1 ms instead of 0.17 ms.
 
-**Checks (26/26).** Each implementation is checked against the dense reference:
+**Checks (29/29).** Each implementation is checked against the dense reference:
 - the one-state kernel, and the dense inverse rounds;
 - the 32-state kernel against the one-state kernel;
 - the bitsliced 256-state kernel against the one-state kernel, transpositions included;
@@ -383,15 +386,15 @@ permutation):
 - **At 32 rounds**, with the certified C3 ≥ 21: at least 218 active S-boxes, so 2^218 quantum on characteristics, and 2^190
   after 4 free rounds.
 - **Structural margin.** The guaranteed zero-sum reach is at least 22 rounds inside-out (Boura–Canteaut), against 20 at 512,
-  so the margin is 10 rounds instead of 12. The exact division-property reach is being computed (`dp1024/`).
+  so the margin is 10 rounds instead of 12. Division property: 11 rounds proved per direction; verified trails for every bit at 12 rounds inverse and 13 forward, so the reach is exactly 11 inverse and 11 or 12 forward, **22 or 23 inside-out, margin 9 or 10** (`dp1024/`, `resultats/division_property_1024q.json`).
 
 ## 6. Limitations
 
 - A new permutation, **not reviewed**: its cryptanalysis is only beginning.
   - Done: B, C3, diffusion, degree bound, impossible differentials and zero correlations, 2-round aggregation, cube and
-    zero-sum experiments (observed reach 5 rounds), boomerang at 3 rounds (GPU), statistical battery (conforming; it is
+    zero-sum experiments (observed reach 5 rounds), boomerang to 4 rounds (GPU), forward division property, statistical battery (conforming; it is
     not a cryptographic proof).
-  - Running: boomerang at 4 rounds, exact division property.
+  - Open: the forward division property at 12 rounds (11 or 12).
   - Missing: truncated and aligned differentials beyond 2 rounds, aggregation of the other 2-round shapes.
 - 32 rounds were decided for BRUME-512, whose permutation is the suite's. Here the structural margin is 2 rounds smaller
   (§ 5). Raising the rounds would cost speed linearly.

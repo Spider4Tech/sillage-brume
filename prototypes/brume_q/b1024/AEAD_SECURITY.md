@@ -709,7 +709,7 @@ would go from ×1.11 to about ×1.4. The bitsliced multi-message AEAD gains in t
   ⌈(|A|+1)/80⌉ + ⌊|M|/80⌋ + 2, last absorbed entry `DOM_TEXTE`), the domain check, and the decoder's "length" alteration,
   which no longer exists and must be replaced (for example a final entry with nibble `DOM_AAD`).
 - This document: § 1 (mode, cost), § 4 bis (step 0, step 3 (a), resources, table of facts).
-- Re-verification: the 27 checks, the planted defects of the AE-step checks, ctgrind and dudect (open, accept, reject),
+- Re-verification: the 29 checks, the planted defects of the AE-step checks, ctgrind and dudect (open, accept, reject),
   the equivalence and forgery modes of the campaign over a few hours, and a mutation pass on the changed functions.
 
 **Verdict: feasible, with no security traded.** The security argument transposes without a new idea. It is the AE step
