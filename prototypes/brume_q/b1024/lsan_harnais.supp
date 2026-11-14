@@ -1,0 +1,4 @@
+# Fuites connues et bénignes du harnais de résultats de la suite (tests/c/resultat.h : res_controle et res_mesure gardent
+# leurs chaînes jusqu'à la fin du programme). Seules ces deux sources sont filtrées : toute autre fuite reste une erreur.
+leak:res_controle
+leak:res_mesure

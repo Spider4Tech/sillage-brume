@@ -302,8 +302,10 @@ extern "C" int kz_gpu_init(const kz_dims_t *d, const uint8_t *sk, const uint8_t 
     if (cudaGetDeviceCount(&n) != cudaSuccess || n < 1) { fprintf(stderr, "sig_kz_gpu : aucun GPU CUDA\n"); return -1; }
     cudaDeviceProp pr;
     CK(cudaGetDeviceProperties(&pr, 0));
+    int garde = 0; /* cudaDeviceProp::kernelExecTimeoutEnabled n'existe plus en CUDA 13 ; l'attribut marche en 12 et 13 */
+    CK(cudaDeviceGetAttribute(&garde, cudaDevAttrKernelExecTimeout, 0));
     snprintf(nom, lnom, "%s (sm_%d%d, %d SM%s)", pr.name, pr.major, pr.minor, pr.multiProcessorCount,
-             pr.kernelExecTimeoutEnabled ? ", chien de garde d'affichage actif" : "");
+             garde ? ", chien de garde d'affichage actif" : "");
     if (d->N != KN || d->D != KD || d->tau != KTAU || d->t != KT || d->sb != KSB || d->hb != KHB || d->Lp != KLP ||
         d->lsk != KLSK || d->pts != KPTS || d->La != KLA || d->ep != KEP || d->lrep != KLREP) {
         fprintf(stderr, "sig_kz_gpu : dimensions de l'instance différentes de celles du noyau\n");

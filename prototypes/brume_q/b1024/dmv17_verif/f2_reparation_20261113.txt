@@ -1,0 +1,9 @@
+Mu=16 Om= 8 : exact 9.170679e-04 ≤ lemme 2″ 1.728058e-03 : oui
+Mu=16 Om= 1 : exact 1.613995e-04 ≤ lemme 2″ 2.593994e-04 : oui
+Mu=32 Om= 4 : exact 8.590502e-04 ≤ lemme 2″ 2.645493e-03 : oui
+Mu= 4 Om= 8 : exact 5.974422e-04 ≤ lemme 2″ 6.580353e-04 : oui
+Mu= 8 Om= 8 : exact 7.055512e-04 ≤ lemme 2″ 8.773804e-04 : oui
+Mu=24 Om=16 : exact 3.062578e-03 ≤ lemme 2″ 7.030487e-03 : oui
+Mu= 2 Om=30 : exact 7.100672e-03 ≤ lemme 2″ 7.596970e-03 : oui
+Mu=40 Om= 2 : exact 9.305189e-04 ≤ lemme 2″ 2.354622e-03 : oui
+réparation tenue partout : oui

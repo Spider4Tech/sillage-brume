@@ -1,0 +1,6 @@
+Mu=16 Om= 8 : exact adversaire 9.170679e-04 | témoin 6.635553e-04 | borne p. 622 7.781982e-04 | rapport adv/borne 1.178 | E[charge α] 3.078 | prédiction union 9.174496e-04
+Mu=16 Om= 1 : exact adversaire 1.613995e-04 | témoin 1.296920e-04 | borne p. 622 1.440048e-04 | rapport adv/borne 1.121 | E[charge α] 3.078 | prédiction union 1.614112e-04
+Mu=32 Om= 4 : exact adversaire 8.590502e-04 | témoin 6.864182e-04 | borne p. 622 7.438660e-04 | rapport adv/borne 1.155 | E[charge α] 4.830 | prédiction union 8.594003e-04
+Mu= 4 Om= 8 : exact adversaire 5.974422e-04 | témoin 4.633948e-04 | borne p. 622 5.779266e-04 | rapport adv/borne 1.034 | E[charge α] 1.349 | prédiction union 5.975962e-04
+Mu= 8 Om= 8 : exact adversaire 7.055512e-04 | témoin 5.148683e-04 | borne p. 622 6.294250e-04 | rapport adv/borne 1.121 | E[charge α] 2.063 | prédiction union 7.057698e-04
+Mu=24 Om=16 : exact adversaire 3.062578e-03 | témoin 2.457608e-03 | borne p. 622 2.689362e-03 | rapport adv/borne 1.139 | E[charge α] 3.984 | prédiction union 3.067021e-03

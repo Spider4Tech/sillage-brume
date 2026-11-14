@@ -393,9 +393,10 @@ SPEC § 4 bis, with a normative annex for the constraint system; the code is `si
 | `VOLE-256f` | same as VOLE-256 | 32, 8 | 211 B | 363 B | 20 467 B | 5.4 ms |
 
 What is established, and how (PROOFS § 3 bis):
-- **Assumption.** Lemma 17.2 is an exact reduction from binary SD to regular SD, with no uniqueness heuristic: the
-  codimension is `⌈log₂ C(n, w)⌉`. In the ROM, the scheme therefore rests on binary SD alone, at rate ≈ 0.96. The reduction
-  guarantees 160.6 and 316.0 bits in our ISD model; the best direct attack costs 264.0 and 525.0 bits (CryptographicEstimators:
+- **Assumption.** Lemma 17.2 is an exact reduction from binary SD (H3) to regular SD, with no uniqueness heuristic: the
+  codimension is `⌈log₂ C(n, w)⌉`. In its direct form (12 November 2026), the (H3) instance is passed on unchanged. In the ROM,
+  the scheme therefore rests on (H3) alone, at rate ≈ 0.96. The reduction guarantees 162.4 and 317.8 bits in our ISD model
+  (160.6 and 316.0 with the former form, which went through uniform-matrix SD); the best direct attack costs 264.0 and 525.0 bits (CryptographicEstimators:
   275.4 and 612.2).
 - **Exact blocks.** Lemma 17.1 shows that a block must have exactly `Π μ = 256` positions. Otherwise empty blocks pass. Our first
   prototype, and apparently the parameter table of SDitH v2.0, had this gap.
@@ -404,7 +405,8 @@ What is established, and how (PROOFS § 3 bis):
 - **SUF-CMA and binding** (Propositions 17.3 and 17.4). The only malleability is another counter giving the same challenge, at a
   cost of 2^131 or more.
 - **QROM** (Theorem 17-Q, a sketch based on Theorems 54 and 56 of ePrint 2026/164): 2^61.8 and 2^125.8 quantum queries, within
-  2.2 bits of Grover. It needs the decisional variant of regular SD.
+  2.2 bits of Grover. It needs the decisional variant of regular SD. Its round-by-round soundness is proved in Lemma 17.6;
+  the other steps of that paper are still cited.
 - **Executed attacks**, against the real verifier:
   - each soundness term on reduced models: the Δ, γ and VOLE-check challenges;
   - Kales–Zaverucha transposed to the three rounds of VOLE, at intermediate scale.

@@ -32,3 +32,6 @@ prototypes/brume_sbox6/departage/build_*/
 prototypes/brume_sbox6/departage/departage
 prototypes/brume_sbox6/departage/departage_dev
 prototypes/vole/*.pdf
+
+# Articles tiers lus pour AEAD_SECURITY.md (PDF fournis, non publiés)
+/*.pdf

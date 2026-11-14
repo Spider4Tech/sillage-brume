@@ -121,6 +121,43 @@ static int reduction_mesuree(int n, int w, int r, long essais, uint64_t graine, 
     return fabs(*z) < 4 && *mes > *pred - 4 * sd;
 }
 
+/* Lemme 17.2, forme directe (12 nov. 2026). (H3) est posée sous forme systématique [H' | I] (PROOFS § 1) : B transmet son
+ * instance telle quelle au solveur RSD. x de poids w uniforme est régulier avec probabilité b^w/C(n, w), indépendamment de H',
+ * et, conditionné à cet événement, (H', x) suit exactement la loi du générateur de clés. Ni permutation, ni élimination :
+ * borne b^w/C(n, w), sans le facteur Π (1 − 2^−i). Prédiction affinée p + (1 − p)(1 − e^(−b^w/2^r)). */
+static int reduction_directe(int n, int w, int r, long essais, uint64_t graine, double *mes, double *pred, double *z, double *fine)
+{
+    int b = n / w, k = n - r;
+    uint64_t s = graine;
+    long ok = 0;
+    uint32_t col[64];
+    long tot = 1;
+    for (int i = 0; i < w; i++) tot *= b;
+    for (long t = 0; t < essais; t++) {
+        for (int j = 0; j < k; j++) col[j] = (uint32_t)xs64(&s) & ((1u << r) - 1);   /* H' uniforme */
+        for (int i = 0; i < r; i++) col[k + i] = 1u << i;                             /* bloc identité */
+        int x[64] = {0}, c = 0;
+        while (c < w) { int j = (int)(xs64(&s) % (uint64_t)n); if (!x[j]) { x[j] = 1; c++; } }
+        uint32_t y = 0;
+        for (int j = 0; j < n; j++) if (x[j]) y ^= col[j];
+        long trouve = -1;                                     /* solveur RSD exhaustif, sur l'instance elle-même */
+        for (long code = 0; code < tot && trouve < 0; code++) {
+            long q = code;
+            uint32_t acc = 0;
+            for (int i = 0; i < w; i++) { acc ^= col[i * b + (int)(q % b)]; q /= b; }
+            if (acc == y) trouve = code;
+        }
+        ok += trouve >= 0;                                    /* solution régulière, donc de poids w : solution de (H3) */
+    }
+    double preg = exp(w * log((double)b) - lb(n, w) * log(2.0));
+    *pred = preg;
+    *fine = preg + (1 - preg) * (1 - exp(-exp(w * log((double)b)) * ldexp(1, -r)));
+    *mes = (double)ok / (double)essais;
+    double sd = sqrt(*fine * (1 - *fine) / (double)essais);
+    *z = (*mes - *fine) / sd;
+    return fabs(*z) < 4 && *mes > *pred - 4 * sd;
+}
+
 int main(void)
 {
     resultat_t r = {.nom = "vole_params"};
@@ -156,8 +193,21 @@ int main(void)
             lj += (size_t)snprintf(json + lj, sizeof json - lj, "%s{\"n\":%d,\"w\":%d,\"r\":%d,\"succes\":%.5f,\"borne_lemme\":%.5f,\"prediction_affinee\":%.5f,\"z\":%.2f,\"plusieurs_solutions\":%.4f}",
                                    i ? "," : "", I[i][0], I[i][1], I[i][2], mes, pred, fine, z, multi);
         }
-        lj += (size_t)snprintf(json + lj, sizeof json - lj, "],\"grille\":[");
         res_controle(&r, "reduction_exacte_sd_vers_rsd_mesuree", bon);
+        /* forme directe sur (H3) systématique : mêmes instances, sans permutation ni élimination */
+        int bon_d = 1;
+        lj += (size_t)snprintf(json + lj, sizeof json - lj, "],\"reduction_directe\":[");
+        for (int i = 0; i < 2; i++) {
+            double mes, pred, z, fine;
+            bon_d &= reduction_directe(I[i][0], I[i][1], I[i][2], i ? 20000 : 200000, 0xD1B54A32D192ED03ULL + (uint64_t)i, &mes, &pred, &z, &fine);
+            printf("réduction directe (H3) systématique → RSD, n=%d w=%d r=%d : succès %.5f ≥ borne b^w/C(n,w) %.5f ; prédiction affinée %.5f (z = %+.2f)\n",
+                   I[i][0], I[i][1], I[i][2], mes, pred, fine, z);
+            fflush(stdout);
+            lj += (size_t)snprintf(json + lj, sizeof json - lj, "%s{\"n\":%d,\"w\":%d,\"r\":%d,\"succes\":%.5f,\"borne_lemme\":%.5f,\"prediction_affinee\":%.5f,\"z\":%.2f}",
+                                   i ? "," : "", I[i][0], I[i][1], I[i][2], mes, pred, fine, z);
+        }
+        lj += (size_t)snprintf(json + lj, sizeof json - lj, "],\"grille\":[");
+        res_controle(&r, "reduction_directe_sd_systematique_vers_rsd_mesuree", bon_d);
     }
     static const struct { int lam, cible, tau, topen; } V[4] = {{128, 143, 11, 107}, {128, 160, 11, 107}, {256, 272, 21, 216}, {256, 316, 21, 216}};
     int prem = 1, mono = 1;
@@ -196,8 +246,8 @@ int main(void)
             mono &= x_ >= prec;
             prec = x_;
         }
-        printf("λ=%d, λ'=%d : μ=(%d,%d,%d,%d) bloc %d, w=%d, n=%d k_rsd=%d (codim %d), témoin %d bits : %ld o, RSD ≥ %.1f b\n", V[v].lam, V[v].cible, bmu[0], bmu[1], bmu[2], bmu[3], bloc_b, bw, bn, bk, bn - bk, bw * bs, meilleur, bc);
-        lj += (size_t)snprintf(json + lj, sizeof json - lj, "%s{\"lam\":%d,\"cible\":%d,\"mu\":[%d,%d,%d,%d],\"bloc\":%d,\"n\":%d,\"k_rsd\":%d,\"w\":%d,\"temoin\":%d,\"taille\":%ld,\"rsd\":%.1f}", prem ? "" : ",", V[v].lam, V[v].cible, bmu[0], bmu[1], bmu[2], bmu[3], bloc_b, bn, bk, bw, bw * bs, meilleur, bc);
+        printf("λ=%d, λ'=%d : μ=(%d,%d,%d,%d) bloc %d, w=%d, n=%d k_rsd=%d (codim %d), témoin %d bits : %ld o, RSD ≥ %.1f b (forme directe du lemme : %.1f b)\n", V[v].lam, V[v].cible, bmu[0], bmu[1], bmu[2], bmu[3], bloc_b, bw, bn, bk, bn - bk, bw * bs, meilleur, bc, bc + LOG2_INV_SYST);
+        lj += (size_t)snprintf(json + lj, sizeof json - lj, "%s{\"lam\":%d,\"cible\":%d,\"mu\":[%d,%d,%d,%d],\"bloc\":%d,\"n\":%d,\"k_rsd\":%d,\"w\":%d,\"temoin\":%d,\"taille\":%ld,\"rsd\":%.1f,\"rsd_lemme_direct\":%.1f}", prem ? "" : ",", V[v].lam, V[v].cible, bmu[0], bmu[1], bmu[2], bmu[3], bloc_b, bn, bk, bw, bw * bs, meilleur, bc, bc + LOG2_INV_SYST);
         prem = 0;
         fflush(stdout);
     }

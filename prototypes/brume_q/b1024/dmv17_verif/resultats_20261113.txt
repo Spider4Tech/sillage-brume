@@ -1,0 +1,4 @@
+Mu=16 Om=8 essais=20000000 : Pr[s-collision] = 0.00091325 ± 6.8e-06 ; borne p. 622 = 0.000778198 ; écart = 20.0 σ
+Mu=16 Om=8 essais=20000000 : Pr[s-collision] = 0.0006668 ± 5.8e-06 ; borne p. 622 = 0.000778198 ; écart = -19.3 σ
+adversaire : Pr_O(μ_fw > 7) = 0.04805 ± 0.00151 (état deviné : 0.7912) ; borne annoncée ν/2^c = 0.00171 ; rapport 28.1
+témoin sans attaque : Pr_O(μ_fw > 7) = 0.00000 ± 0.00000 (état deviné : 0.0000) ; borne annoncée ν/2^c = 0.00171 ; rapport 0.0

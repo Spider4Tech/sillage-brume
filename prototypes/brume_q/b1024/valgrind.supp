@@ -1,0 +1,31 @@
+# Suppressions Valgrind de BRUME-1024q : uniquement des fuites connues et bénignes, vérifiées le 13 novembre 2026.
+# 1. Le harnais de résultats de la suite (tests/c/resultat.h) garde ses chaînes jusqu'à la fin du programme.
+{
+   harnais_res_controle
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   ...
+   fun:res_controle
+}
+{
+   harnais_res_mesure
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   ...
+   fun:res_mesure
+}
+# 2. libgomp : zone de stockage par thread (DTV) allouée par pthread_create pour le groupe de threads d'OpenMP.
+{
+   libgomp_tls_des_threads
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:calloc
+   ...
+   fun:_dl_allocate_tls
+   ...
+   fun:pthread_create*
+   ...
+   fun:GOMP_parallel
+}

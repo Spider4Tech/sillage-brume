@@ -1,4 +1,4 @@
-# Security proofs — SILLAGE v0.4
+# Security proofs — SILLAGE v0.5
 
 *Section numbers are stable: the “PROOFS § n” references in the code point to this text.*
 
@@ -592,11 +592,13 @@ rules, and extraction reads the oracle table.
 
 ---
 
-## 3 bis. VOLE-in-the-Head signature (prototype, lead 9)
+## 3 bis. VOLE-in-the-Head signature (the signature of v0.5, lead 9)
 
-*Status: written on 11 November 2026, **not reviewed by a third party**; human review is a condition of adoption. The
-prototype is not a SILLAGE format. Code: `prototypes/vole/vole_proto.c`; parameters: `prototypes/vole/vole_params.c`. The check
-names below are those of `resultats/vole_proto.json`.*
+*Status: written on 11 November 2026, **not reviewed by a third party**. Since v0.5 (11 November 2026) this is the signature of
+the suite (`sillage/c/vole.c`, SPEC § 4 bis); the MPC-in-the-Head signature of § 3 is kept as a reference. Test bench:
+`prototypes/vole/vole_proto.c`; parameters: `prototypes/vole/vole_params.c`. The check names below are those of
+`resultats/vole_proto.json` and `resultats/vole_params.json`. Revised on 12 November 2026: direct form of Lemma 17.2, the case
+with no consistent repetition in Theorem 17, Lemma 17.6 (round-by-round soundness, for Theorem 17-Q).*
 
 The construction follows the VOLE-in-the-Head line (FAEST: Baum et al., Crypto 2023; single GGM tree with `T_open` and
 grinding: Baum et al., Asiacrypt 2024; SDitH v2.0 for the degree-d PIOP on regular SD). The arguments below are written for
@@ -632,37 +634,60 @@ the profiles were re-chosen on a grid of exact blocks. Checks: `blocs_exacts_anc
 **(H3-R) Regular syndrome decoding.** For H as above and x regular of weight w with blocks of `b = 256`, finding a regular `x′`
 with `Hx′ = Hx` is hard. Lemma 17.2 shows that, at the codimension chosen, this follows from (H3).
 
-**Lemma 17.2 (exact reduction from (H3) to (H3-R), no heuristic).** Let `b = n/w`, and let `r ≥ log₂ C(n, w)` be the
-codimension. Let A solve (H3-R) on instances `([H′ | I], y)` of codimension r with probability ε in time t. Then there is B that
-solves (H3), with the same `(n, n − r, w)` and uniform H, in time t + O(n·r²) with probability
+**Lemma 17.2 (exact reduction from (H3) to (H3-R), no heuristic).** Let `b = n/w` and let r be the codimension. Let A solve
+(H3-R) on instances `([H′ | I], y)` of codimension r with probability ε in time t. Then:
+
+*(i) direct form, for (H3) as stated in § 1* (systematic matrix `[H′ | I]`, `H′` uniform, x uniform of weight w): A itself,
+run on the (H3) instance unchanged, solves (H3) with probability
+
+```
+ε_SD ≥ (b^w / C(n, w)) · ε .
+```
+
+*(ii) for SD with a uniform matrix H* (no systematic form): there is B, in time t + O(n·r²), with
 
 ```
 ε_SD ≥ (b^w / C(n, w)) · Π_{i=1..r} (1 − 2^{−i}) · ε  ≥  0.2887 · (b^w / C(n, w)) · ε .
 ```
 
-*Proof.* B receives `(H, y = Hx)`, with x of weight w uniform and H uniform. B draws a uniform permutation σ of the columns and sets
-`Ĥ = H·σ`, with `x̂ = σ^{−1}(x)` uniform of weight w. B brings the last r columns of Ĥ to the identity by row operations S, giving
-`(SĤ, Sy) = ([H″ | I], y″)`. If those columns are dependent, B gives up; this happens with probability
-`1 − Π (1 − 2^{−i})`, independently of x. B then runs A on `([H″ | I], y″)`. Conditioned on `x̂` being regular (probability
-exactly `b^w/C(n, w)`), `x̂` is uniform among regular vectors and independent of H″, which is uniform: this is exactly the
-distribution of the key generator. Any regular solution x′ returned by A satisfies `[H″ | I]x′ = y″`, hence `H·σ(x′) = y`
-with `wt(σ(x′)) = w`, which is a solution of (H3). **No uniqueness is needed**, because no row is removed. ∎
+*Proof.* (i) The (H3) instance is `([H′ | I], y = [H′ | I]·x)` with `H′` uniform and x uniform of weight w, independent of `H′`.
+The event "x is regular" depends on x alone and has probability exactly `b^w/C(n, w)`. Conditioned on it, x is uniform among
+regular vectors and still independent of `H′`: `([H′ | I], y)` then follows exactly the distribution of the key generator, so A
+succeeds with probability ε. Any regular x′ returned by A satisfies `[H′ | I]x′ = y` and `wt(x′) = w`, which is a solution of
+(H3). (ii) B receives `(H, y = Hx)` with H uniform. It draws a uniform permutation σ of the columns and sets `Ĥ = H·σ`, with
+`x̂ = σ^{−1}(x)` uniform of weight w and independent of Ĥ. It brings the last r columns of Ĥ to the identity by row operations S,
+`(SĤ, Sy) = ([H″ | I], y″)`, and gives up if those columns are dependent (probability `1 − Π (1 − 2^{−i})`, independent of x).
+Conditioned on the opposite, H″ is uniform and independent of x̂, so B is in case (i) with the instance `([H″ | I], y″)`; a
+solution x′ gives `H·σ(x′) = y`. In both cases **no uniqueness is needed**, because no row is removed. ∎
+
+*Correction of 12 November 2026.* The first version stated only (ii), for a uniform H, and Theorem 17 used it with the constant
+`1/0.2887 ≈ 3.47`. But (H3) is stated in § 1 for the systematic form, and the passage from uniform-H SD to (H3) (§ 1: "a random
+code reduces to it by elimination") only goes in one direction: hardness of uniform-H SD implies (H3), not the converse. Read
+literally, the chain "(H3) ⇒ (H3-R)" therefore went through an assumption (uniform-H SD) that is not (H3). Form (i) removes the
+detour: it reduces (H3-R) to (H3) itself, and it is 1.79 bits tighter. Form (ii) stays valid for those who prefer to assume
+uniform-H SD. Measured: `reduction_directe_sd_systematique_vers_rsd_mesuree` (`vole_params`) runs A on systematic instances,
+unchanged, and matches the prediction of (i).
 
 This differs from Theorem 5.1 of SDitH v2.0, which removes `k_rsd − k_sd` rows and relies on a heuristic step (uniqueness of the
-solution of the truncated system). The cost of rigour is a larger codimension, `⌈log₂ C(n, w)⌉` instead of `w·log₂ b + log₂ θ`:
-the public key gains a few bytes and γ a few elements, while **the signature size does not change** (the witness has `w·Σ(μ_t − 1)`
-bits whatever the codimension). The loss in bits is `log₂(C(n, w)/b^w) + 1.79`.
+solution of the truncated system). The reduction itself does not need `r ≥ log₂ C(n, w)`: that condition chooses the
+parameters, so that (H3) sits in the unique-solution regime where the ISD estimates apply. The cost of rigour is a larger
+codimension, `⌈log₂ C(n, w)⌉` instead of `w·log₂ b + log₂ θ`: the public key gains a few bytes and γ a few elements, while **the
+signature size does not change** (the witness has `w·Σ(μ_t − 1)` bits whatever the codimension). The loss in bits is
+`log₂(C(n, w)/b^w)` with form (i), `log₂(C(n, w)/b^w) + 1.79` with form (ii).
 
 *Hypotheses, stated explicitly.*
 - **Matrix.** H′ is expanded from `seed_H` by SHAKE256 (domain `H`). In the ROM, these are uniform independent outputs: H′ is a
   uniform matrix, exactly the one of (H3), and the reduction B programs it with its instance. Outside the ROM, it would be an extra
   assumption, the same as for the current signature.
 - **No θ.** Unlike Theorem 5.1 of SDitH v2.0, Lemma 17.2 removes no row. It has no density parameter θ, and no uniqueness hypothesis
-  (Codex review, point 3: the condition `k_rsd ≤ n − w·log₂(n/w) − log₂ θ` does not apply). Its only hypothesis is
-  `r ≥ log₂ C(n, w)`, which also guarantees that the SD solution is unique in expectation (`C(n, w)/2^r ≤ 1`).
+  (Codex review, point 3: the condition `k_rsd ≤ n − w·log₂(n/w) − log₂ θ` does not apply). The parameters take
+  `r ≥ log₂ C(n, w)`, which guarantees that the SD solution is unique in expectation (`C(n, w)/2^r ≤ 1`); the reduction holds
+  for every r.
 - **Profiles f.** They share (n, r, w) with the short profiles, so the same estimates apply.
 
-The values of the parameters (`docs/LEADS.md`, lead 9) are those of `tests/c/rsd_attaques.c` from 11 November 2026:
+The parameter grid of `vole_params` still selects w with the constant of form (ii), which is more cautious, so the profiles of
+v0.5 are unchanged. With form (i), the same target would allow a slightly smaller w: that would be a format change (new KATs),
+not made here. The values of the parameters (`docs/LEADS.md`, lead 9) are those of `tests/c/rsd_attaques.c` from 11 November 2026:
 `(19 456, 720, 76)` and `(38 912, 1 432, 152)`, best direct attack 264.0 and 525.0 bits. The version published before that date
 still had the old instances.
 
@@ -673,10 +698,10 @@ instances. Its success rate matches the exact prediction of the lemma, including
 syndrome decoding problem of the current signature, here at rate `k/n ≈ 0.96` with a unique solution. What remains is the cost
 of ISD on these instances, i.e. the estimators.
 
-| Profile | μ | b | w | n | r = n − k | Witness | Guaranteed by Lemma 17.2 (our ISD) | Best direct attack (ours / CryptographicEstimators) |
+| Profile | μ | b | w | n | r = n − k | Witness | Guaranteed by Lemma 17.2 (our ISD), form (i) / (ii) | Best direct attack (ours / CryptographicEstimators) |
 |---|---|---|---|---|---|---|---|---|
-| VOLE-128, VOLE-128f | (4,4,4,4) | 256 | 76 | 19 456 | 720 | 912 bits | 160.6 b | 264.0 / 275.4 |
-| VOLE-256, VOLE-256f | (4,4,4,4) | 256 | 152 | 38 912 | 1 432 | 1 824 bits | 316.0 b | 525.0 / 612.2 |
+| VOLE-128, VOLE-128f | (4,4,4,4) | 256 | 76 | 19 456 | 720 | 912 bits | 162.4 / 160.6 b | 264.0 / 275.4 |
+| VOLE-256, VOLE-256f | (4,4,4,4) | 256 | 152 | 38 912 | 1 432 | 1 824 bits | 317.8 / 316.0 b | 525.0 / 612.2 |
 
 *On SDitH v2.0.* Its text requires `μ_1···μ_d = n/w` (§ 2), but its Table 3 has n/w = 185, 252 and 191 for `Π μ` = 192, 256 and
 192. If implemented as written, the encoding then has positions past the block, and the relation proved would be "at most one
@@ -719,7 +744,9 @@ Adv^{EUF-CMA}(F) ≤ q_1·C(τ, 2)·2^{−(λ+B)}            VOLE check
                    + 2·Adv^{H3-R}(B)
 ```
 
-and, by Lemma 17.2, `Adv^{H3-R}(B) ≤ 3.47·(C(n, w)/b^w)·Adv^{H3}(B′)`: the scheme rests on (H3) alone.
+and, by Lemma 17.2 (i), `Adv^{H3-R}(B) ≤ (C(n, w)/b^w)·Adv^{H3}(B)`, B itself run on the (H3) instance: the scheme rests
+on (H3) alone, as stated in § 1. (The first version wrote `3.47·(C(n, w)/b^w)·Adv^{H3}(B′)`, through form (ii), i.e. through
+uniform-H SD; see the correction under Lemma 17.2.)
 
 B runs in the time of F, plus one evaluation of the constraints per query to `H_2`. The reduction does not use the forking lemma
 and loses no factor in q.
@@ -760,10 +787,17 @@ non-zero (otherwise `Mz` is its non-zero tail), so the probability is `2^{−(λ
 gives `C(τ, 2)·2^{−(λ+B)}` per `H_A` query. Outside this event, the open repetitions with `M·ũ′_e = ut` share one value `u*`.
 
 On repetition e, the verifier computes `ht_{e,b} = M·ṽ_{e,b} ⊕ Δ_{e,b}·(M·ũ′_e ⊕ ut)`. F fixed `hv` before Δ. For an open
-repetition with `M·ũ′_e ≠ ut` (*inconsistent*), F must therefore have predicted all κ bits of `Δ_e`.
+repetition with `M·ũ′_e ≠ ut` (*inconsistent*), F must therefore have predicted all κ bits of `Δ_e`: for each b, the value of
+`ht_{e,b}` inside the input of `hv` is either `M·ṽ_{e,b}` or `M·ṽ_{e,b} ⊕ (M·ũ′_e ⊕ ut)`, and these two differ, so it fixes
+`Δ_{e,b}` (or no value fits, and the repetition cannot pass).
 
 Let S be the set of guessed and inconsistent repetitions. A forgery requires `Δ|_S` to equal values fixed before the `H_d`
 queries.
+
+*(b′) No consistent repetition* (added on 12 November 2026; the first version passed over it). If no open repetition satisfies
+`M·ũ′_e = ut`, the value u* of (c) is undefined, but then S contains every repetition: a forgery requires Δ to equal, on all its
+τκ bits, a value fixed before the `H_d` queries. Each query succeeds with probability at most `2^{−τκ}·2^{−wpow}`, which is
+already counted in the Δ term (`d ≥ 1`). From here on, at least one repetition is open and consistent.
 
 *(c) γ.* The extracted witness is `w′ = dw* ⊕ u*|_wit`. It is fixed when F queries `H_2`, because `dw*` is part of that input and
 `u*` is fixed since h1. If `w′` is a solution, Lemma 17.1 gives the second `Adv^{H3-R}(B)`. Otherwise, by Lemma 17.1, the
@@ -892,9 +926,69 @@ The quantum proof is therefore almost tight, within 2.2 bits of Grover. The redu
 loses half of its bits. The quantum level remains about λ/2: no NIST quantum category is claimed for VOLE-128.
 Check: `*_qrom_a_moins_de_3_bits_de_grover` (`vole_proto`).
 
+**Lemma 17.6 (round-by-round soundness of IP+, 12 November 2026).** This is the counterpart of their Lemma 57 for FAEST, which
+the first version of this section only cited.
+
+*The interactive proof IP+.* As in their § 6.1 and § 6.6, every oracle call of the signer becomes a round of interaction, in the
+order of § 3 bis.2. The prover sends the input of the call and the verifier answers with a uniform value of the output length.
+- Signer-only calls are replaced by sampling: the root `H_r`, the salt, `H_m` (the message is fixed).
+- Rounds of error 0: the GGM tree `H_n`, level by level; the leaves `H_l`, one round per leaf; `H_c`, `H_C`, `H_A` (challenge
+  h1); `H_v` (hv); `H_2` (h2); `H_3` (h3).
+- Rounds with a non-zero error, with an empty prover message: `M = H_M(h1)` and `γ = H_g(h2)`.
+- A last round with prover message `ctr` and challenge `(Δ, z) = H_d(h3, ctr)`.
+
+The verifier of IP+ is the verifier of § 3 bis.2, with three changes:
+1. Every hash value it needs is read from the transcript, and it rejects if a value it needs is missing. In particular, the
+   opened nodes and the leaves below them must have been expanded in the `H_n` and `H_l` rounds.
+2. Instead of recomputing `hv`, `h2`, `h3`, it compares the values it recomputes (`ht`, then the inputs of `H_2` and `H_3`) with
+   the prover messages of those rounds.
+3. It rejects if a commitment of the `H_c` round has two preimages among the `H_l` rounds. This verifier is not efficient, as in
+   their FAEST-EM case; only its soundness matters.
+
+*Extraction from a prefix* (as in (a) of Theorem 17, but from the transcript, not from an oracle table). Once the `H_A` round is
+in the prefix:
+- a repetition e is *open* if each of its N commitments, as sent in the `H_c` round, is the output of exactly one earlier
+  `H_l` round; this defines `ũ′_e` and `ṽ_e`;
+- it is *guessed* if exactly one commitment has no such preimage;
+- it is *dead* if two have none: by change 1, the verifier rejects any opening that contains both.
+The rounds are ordered, so no preimage can appear after the `H_c` round: the "late preimage" of the ROM proof has no counterpart
+in IP+. It goes, with the collisions, into the term `30·Q³·2^{−ℓ_out}` of Theorem 54, which pays for turning an FS forger into an
+IP+ prover.
+
+*State function*, for `pk ∉ L`, meaning that no regular x has `Hx = y` (by Lemma 17.1, no assignment satisfies the constraints):
+- `B_M`: M is in the prefix, and two open repetitions e ≠ e′ have `ũ′_e ≠ ũ′_{e′}` and `M·(ũ′_e ⊕ ũ′_{e′}) = 0`.
+- `B_γ`: γ is in the prefix, ¬B_M, and the set `C = {e open : M·ũ′_e = ut}` is not empty. C then defines u*,
+  `w′ = dw ⊕ u*|_wit`, and `C_d = Σ_j γ_j f_j(w′) = 0`.
+- `RBRState = B_M ∨ B_γ ∨ Acc`, where `Acc` (complete transcripts only) means that the verifier of IP+ accepts.
+
+*The three properties of their Definition 48.*
+1. **Empty prefix:** no M, no γ, no complete transcript, so the state is 0.
+2. **Transitions.** `B_M` only depends on M and on values fixed before it (the commitments, the leaves, aux): it can only switch
+   on at the M round. `B_γ` only depends on γ and on values fixed before it (ut and dw, sent in the `H_2` round): it can only
+   switch on at the γ round. `Acc` only exists after the last round. Hence:
+   - **error 0** at every other round;
+   - **M round:** at most `C(τ, 2)·2^{−(λ+B)}`, because `ũ′` is fixed and M is uniform, by (b) of Theorem 17;
+   - **γ round:** at most `2^{−λ}`. If C is empty, `B_γ` cannot occur. Otherwise, w′ is not a solution, so `f(w′) ≠ 0` and
+     `Pr_γ[C_d = 0] = 2^{−λ}`, by (c);
+   - **last round:** from a prefix with ¬B_M ∧ ¬B_γ, `Pr_{(Δ,z)}[Acc] ≤ d·2^{−(τκ+wpow)}`, by (b′) and (d). The values of the
+     inconsistent and guessed repetitions are fixed by the prefix, C is empty or `C_d ≠ 0`, and P has at most d roots.
+3. **Complete transcript with state 0:** then ¬Acc, so the verifier rejects.
+
+So IP+ is RBR-sound with errors `C(τ, 2)·2^{−(λ+B)}`, `2^{−λ}` and `d·2^{−(τκ+wpow)}`, and 0 elsewhere. Their maximum is
+`ε = 2^{−λ}`, the value used above. ∎
+
 *Limitations.*
-- This is a sketch, **not reviewed**. The RBR soundness of our IP+ (their Lemma 57 for FAEST) is not re-proved line by line;
-  the errors are those of the classical proof of § 3 bis.3.
+- This is still a sketch, **not reviewed**. Lemma 17.6 re-proves the RBR soundness (their Lemma 57). Four points remain cited,
+  not re-proved:
+  1. the conditions of Theorem 54 for our derivation functions: tree, leaves, `H_c` and `H_C` must be
+     collision-resistance-preserving and sensitive (their Definition 53). These are parallel and sequential applications of one
+     domain-separated oracle, the case they treat;
+  2. the passage from an FS forger to an IP+ prover, the counterpart of their § 6.8, which uses the two changes 1 and 3 of the
+     verifier;
+  3. the reprogramming of the signing oracle (their § 6.3 and § 6.10);
+  4. one difference to check against their proof: Theorem 54 is stated with a single output length `ℓ_out`, whereas our last
+     challenge `(Δ, z)` only has `τκ + wpow` bits (131 to 259). This challenge feeds no later hash, so its collisions do not
+     break the extraction of the prefix, but the database argument of their Lemma 25 should be re-read with this in mind.
 - It needs **(D-H3-R)**, the decisional version (`(seed, y)` indistinguishable from `(seed, uniform)`), which is one more
   assumption than in the ROM. Its best known distinguishers are the search attacks.
 - Their constants assume all oracles are instantiated from one oracle by domain separation, as here (prefix ‖ domain).
@@ -957,7 +1051,7 @@ covers rejection under another key (another seed, with its own H), another messa
 
 **Corollary 17-mu (μ keys).** As in Corollary 8-mu. `hm` carries `pk`, so a query to `H_C` and to the challenges that follow
 targets a single key, barring a collision. The hidden points carry a fresh salt, and each key has its own `seed_H`. The terms in q
-take no factor μ; the last term becomes `2·μ·Adv^{H3-R}`, i.e. `μ·3.47·(C(n, w)/b^w)·Adv^{H3}` by Lemma 17.2, plus
+take no factor μ; the last term becomes `2·μ·Adv^{H3-R}`, i.e. `2·μ·(C(n, w)/b^w)·Adv^{H3}` by Lemma 17.2 (i), plus
 `μ²/2^{ℓ+1}` for a collision of keys.
 
 ---
@@ -1881,7 +1975,8 @@ quantum adversary, the situation per component is as follows.
 | Component | Best generic quantum attack | Quantum level | Proof model |
 |---|---|---|---|
 | Sillage-KEM | Accelerated ISD. Prange–Grover: ≈ 92 / 158 bits. Quantum walks with free QRAM: ≈ 67 / 129 bits | **between 67 and 92 / between 129 and 158 bits** depending on the model | FO with implicit rejection: known QROM reductions (Jiang et al. 2018; Bindel et al. 2019), with a quadratic loss in q and in √δ; not instantiated here |
-| Sillage-SIG | Grover on forgery, √(2^{128.3}) and √(2^{264}) | **≈ 64 / 132 bits** | QROM: Don–Fehr–Majenz–Schaffner (2019, 2022), Aguilar-Melchor–Hülsing et al. (2021, multi-round), loss in O(q²); not instantiated here |
+| Sillage-SIG v0.5 (VOLE) | Grover on γ, √(2^{λ}) | **≈ 64 / 128 bits** | Theorem 17-Q (§ 3 bis.5, sketch): 61.8 / 125.8 bits proved, needs (D-H3-R) |
+| Sillage-SIG v0.4 (reference) | Grover on forgery, √(2^{128.3}) and √(2^{264}) | **≈ 64 / 132 bits** | QROM: Don–Fehr–Majenz–Schaffner (2019, 2022), Aguilar-Melchor–Hülsing et al. (2021, multi-round), loss in O(q²); not instantiated here |
 | BRUME-AEAD | Grover key search (k = 512 bits): 2^{256} | ≥ 128 bits expected, not proved | Q1 model (classical queries to the construction, P in superposition) not analysed |
 | Hashing | generic quantum collisions (Brassard–Høyer–Tapp): 2^{c/3}, i.e. about 2^{85}, with a quantum memory of 2^{85} | ≈ 85 bits for collisions (more in cost models that count memory) | — |
 
@@ -2012,10 +2107,11 @@ depth 48; a seed oracle of one Keccak; total depth limited to MAXDEPTH via N·g�
 - SIG: the MPC-in-the-Head protocol and Theorem 8 are new in v0.4, neither audited nor reviewed by a third party. They reuse
   published constructions (SDitH, hypercube, Kales–Zaverucha bound) and are run on a reduced model (`tests/test_sig_modele.py`),
   but the binary instance with rate 0.7 and n = 2^e has no dedicated third-party analysis, beyond generic ISD.
-- VOLE-in-the-Head signature (§ 3 bis, prototype, lead 9). Theorem 17 (ROM), Propositions 17.3 (SUF-CMA) and 17.4 (binding) and
-  Lemmas 17.1 and 17.2 were written on 11 November 2026, and **have not been reviewed by a third party**. With the exact reduction
-  of Lemma 17.2, the scheme rests on (H3) alone in the ROM; the QROM sketch (Theorem 17-Q) needs the decisional version (D-H3-R).
-  The three soundness terms are matched by executed attacks on reduced models.
+- VOLE-in-the-Head signature (§ 3 bis, the signature of v0.5). Theorem 17 (ROM), Propositions 17.3 (SUF-CMA) and 17.4 (binding)
+  and Lemmas 17.1, 17.2, 17.5 and 17.6 were written on 11 and 12 November 2026, and **have not been reviewed by a third party**.
+  With the direct form of Lemma 17.2, the scheme rests on (H3), as stated in § 1, alone in the ROM. The QROM sketch (Theorem
+  17-Q) needs the decisional version (D-H3-R). Its round-by-round soundness is proved (Lemma 17.6), but four steps are still
+  cited (§ 3 bis.5). The three soundness terms are matched by executed attacks on reduced models.
 - Trail aggregation beyond 2 rounds: measurements and a
   margin are available, without a proved bound.
 - Division property: the reach of the method is exact (10 rounds per

@@ -692,3 +692,20 @@ or a review during this work; each is fixed and covered by a check.
 cube (`dp_exact`, `dp_tous_cubes`). Certified properties: U = 4, NL = 4, degree 3, inverse of degree 3, no fixed point. BCT
 maximum 8, against 10. MEDP₂ ≤ 2^−14.99 and MELP₂ ≤ 2^−15.0. No distinguisher beyond the known reach, including GPU cubes up
 to 2^36 inputs.
+
+## Errata of 2026-11-12 (proofs of the VOLE signature; GPU harness under CUDA 13)
+
+Found by a re-reading of PROOFS § 3 bis against § 1, and by the replication of the v0.5 battery on a second machine. No format,
+parameter or KAT changes.
+
+| Finding | How it was found | Fix and check |
+|---|---|---|
+| **Lemma 17.2 reduced (H3-R) to SD with a *uniform* matrix**, through a column permutation and an elimination. But (H3) is stated for the systematic form `[H′ \| I]` (§ 1), and the passage from uniform-H SD to (H3) only goes in one direction. Read literally, "the scheme rests on (H3) alone" went through another assumption, and cost a factor `1/0.2887 ≈ 3.47` (1.79 bits) | Re-reading § 3 bis against § 1 | Form (i) of Lemma 17.2: the (H3) instance is given to the RSD solver unchanged. x is regular with probability exactly `b^w/C(n, w)`, independently of `H′`, and the conditional instance follows the key generator's distribution. The guarantees become 162.4 and 317.8 bits (instead of 160.6 and 316.0). The former form is kept as (ii), for uniform-H SD. The parameter grid keeps the former, more cautious constant, so the profiles do not change. New check `reduction_directe_sd_systematique_vers_rsd_mesuree` (`vole_params`): 0.2816 and 0.1054 measured, against 0.2831 and 0.1065 predicted (z = −1.40, −0.51) |
+| **Corollary 17-mu** wrote the last term as `μ·3.47·(C(n, w)/b^w)·Adv^{H3}`, for `2·μ·Adv^{H3-R}`: a factor 2 was dropped | Same re-reading | `2·μ·(C(n, w)/b^w)·Adv^{H3}` |
+| **Theorem 17, analysis of a forgery:** the case where no open repetition is consistent (`M·ũ′_e ≠ ut` for every open e) was not treated; u* is then undefined | Same re-reading | Case (b′): every repetition is then in S, and Δ must be guessed on all τκ bits, which the Δ term already covers. The inconsistent-repetition argument now says why `ht` fixes each bit of `Δ_e` |
+| **Theorem 17-Q cited the round-by-round soundness** (Lemma 57 of Baum et al., ePrint 2026/164) without re-proving it | Limitation listed in § 3 bis.5 | Lemma 17.6: IP+ with every oracle call as a round, an inefficient verifier (transcript lookups, rejection on two preimages), a state function `B_M ∨ B_γ ∨ Acc`, and errors `C(τ,2)·2^{−(λ+B)}`, `2^{−λ}`, `d·2^{−(τκ+wpow)}`, 0 elsewhere. Four points remain cited and are listed, among them the shorter output (`τκ + wpow` bits) of the last challenge in Theorem 54 |
+| `tests/gpu/sig_kz_gpu.cu` did not compile under CUDA 13: `cudaDeviceProp::kernelExecTimeoutEnabled` was removed | Replication on a second machine (CUDA 13.3) | `cudaDeviceGetAttribute(…, cudaDevAttrKernelExecTimeout, 0)`, valid under CUDA 12 and 13. `./runtestg-gpu.sh`: 2 202 forgeries out of 100 000, prediction 0.0223 |
+
+**Replication.** v0.5 battery, from a clean tree on a second machine: 796/796 checks, 69 tests (all but `dp_validation`), in
+9 976 s. GPU campaign of cubes and ISD (`rungpu_special`): 8/8 checks, no distinguisher beyond the known reach. Transposed
+Kales–Zaverucha attack on VOLE (`vole_proto --kz`): 3/3 checks at 10 000 and 30 000 trials per budget.
