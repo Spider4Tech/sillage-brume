@@ -650,13 +650,15 @@ static int arbre(const uint8_t *m, size_t len, uint8_t *out, size_t outlen, int 
 /* ------------------------------------------------------------ AEAD : duplex à clé dans tout l'état (FKD), débit 80 octets */
 /* Full-state keyed duplex (Daemen, Mennink, Van Assche, ASIACRYPT 2017 : « DMV17 ») : état initial = clé (octets 0..63,
  * dans le débit) ‖ nonce (64..87 : 64..79 dans le débit, 80..87 dans la capacité) ‖ 0 ‖ IV du profil (121..127, mode 3),
- * puis P. Données associées (DOM_AAD, XOR), texte, longueur (DOM_FINAL), tag = 32 premiers octets ; 4 permutations pour un
- * message court. Texte, ORIENTATION SPONGEWRAP depuis le 13 novembre 2026 (AEAD_SECURITY.md § 6) : le clair est ajouté au
+ * puis P. Données associées (DOM_AAD, XOR), texte (DOM_TEXTE sur le dernier bloc, bourré 0x01), tag = 32 premiers octets
+ * de l'état après la permutation de ce dernier bloc ; 3 permutations pour un message court. Depuis le 14 novembre 2026, il
+ * n'y a plus de bloc de longueur (AEAD_SECURITY.md § 6 bis) : le codage (A, M) ↦ chemin est injectif sans lui (le bourrage
+ * 0x01 et les domaines délimitent A et M ; decoder_chemin en est l'inverse à gauche). Texte, ORIENTATION SPONGEWRAP depuis le 13 novembre 2026 (AEAD_SECURITY.md § 6) : le clair est ajouté au
  * débit par XOR au chiffrement, qui contient donc ensuite le CHIFFRÉ (drapeau faux de DMV17 : l'adversaire ne choisit pas
  * la partie externe) ; le déchiffrement écrase le débit avec le chiffré (drapeau vrai ; pour un dernier bloc partiel de r
  * octets, sur ces r octets seulement). Auparavant le débit recevait le clair (drapeau vrai au chiffrement, blocs chiffrés
  * comptés dans Ω). La permutation est passée en paramètre pour recouper le noyau AVX2 avec la référence dense. */
-enum { DOM_AAD = 1, DOM_TEXTE = 2, DOM_FINAL = 4 };
+enum { DOM_AAD = 1, DOM_TEXTE = 2 };   /* 4 (ancien DOM_FINAL, bloc de longueur) n'est plus utilisé */
 typedef void (*perm_f)(uint8_t w[128], int R);
 
 static void perm_ref(uint8_t w[128], int R)
@@ -731,11 +733,7 @@ static int aead(perm_f P, const uint8_t cle[64], const uint8_t nonce[24], const 
     w[r] ^= 0x01;
     w[127] ^= DOM_TEXTE << 4;
     P(w, R1);
-    uint8_t l8[8];
-    for (int k = 0; k < 8; k++)
-        l8[k] = (uint8_t)((uint64_t)len >> (8 * k));
-    absorber_a(P, w, l8, 8, DOM_FINAL);
-    memcpy(tag, w, 32);
+    memcpy(tag, w, 32);                    /* le tag suit la permutation du dernier bloc de texte (plus de bloc de longueur) */
     sl_effacer(w, sizeof w);
     return 0;
 }
@@ -836,13 +834,7 @@ static void aead_kd_chemin(perm_f P, const uint8_t cle[64], const uint8_t nonce[
         if (fin)
             break;
     }
-    /* longueur, puis un appel de plus pour lire le tag */
-    memset(sg, 0, 128);
-    for (int k = 0; k < 8; k++)
-        sg[k] = (uint8_t)((uint64_t)len >> (8 * k));
-    sg[8] = 0x01;
-    sg[127] = DOM_FINAL << 4;
-    kd_duplexing(&d, sg, 0, Z);
+    /* un appel de plus, σ = 0, pour lire le tag (le dernier bloc de texte, DOM_TEXTE, termine le chemin final) */
     memset(sg, 0, 128);
     kd_duplexing(&d, sg, 0, Z);
     memcpy(tag, Z, 32);
@@ -859,7 +851,7 @@ static void aead_kd(perm_f P, const uint8_t cle[64], const uint8_t nonce[24], co
 /* Décodeur du chemin final (AEAD_SECURITY.md § 4 bis, étape AE, ingrédient 3) : à partir des entrées σ̃_0 … σ̃_{n−1} des
  * appels (sans l'appel du tag, dont σ = 0 n'entre dans aucun chemin lu), retrouve (A, M), ou rend −1 si le chemin n'est
  * pas de la forme produite par le mode. Rôles lus sur le nibble haut de l'octet 127 : 0 (bloc non final), DOM_AAD (dernier
- * bloc de A), DOM_TEXTE (dernier bloc du texte), DOM_FINAL (bloc de longueur). Le décodeur est une inverse à gauche du
+ * bloc de A), DOM_TEXTE (dernier bloc du texte, dernière entrée du chemin final). Le décodeur est une inverse à gauche du
  * codage (A, M) ↦ chemin : celui-ci est donc injectif, et le rôle de la dernière entrée d'un chemin se lit sur elle seule. */
 static int decoder_chemin(const uint8_t (*ch)[128], size_t n, uint8_t *A, size_t *alen, uint8_t *M, size_t *mlen,
                           size_t cap)
@@ -897,16 +889,7 @@ static int decoder_chemin(const uint8_t (*ch)[128], size_t n, uint8_t *A, size_t
             break;
         }
     }
-    if (e + 1 != n)                                        /* reste exactement le bloc de longueur */
-        return -1;
-    const uint8_t *s = ch[e];
-    uint64_t v = 0;
-    for (int k = 0; k < 8; k++)
-        v |= (uint64_t)s[k] << (8 * k);
-    for (int k = 9; k < 127; k++)
-        if (s[k])
-            return -1;
-    if (s[8] != 0x01 || s[127] != (DOM_FINAL << 4) || v != lm)
+    if (e != n)                                            /* le dernier bloc du texte termine le chemin */
         return -1;
     *alen = la;
     *mlen = lm;
@@ -982,13 +965,6 @@ static void aead_lot32(size_t d, size_t nm, const uint8_t *cles, const uint8_t *
         st[j][127] ^= DOM_TEXTE << 4;
     }
     lot(st, R1);
-    for (size_t j = 0; j < nm; j++) {
-        for (int k = 0; k < 8; k++)
-            st[j][k] ^= (uint8_t)((uint64_t)len >> (8 * k));
-        st[j][8] ^= 0x01;
-        st[j][127] ^= DOM_FINAL << 4;
-    }
-    lot(st, R1);
     for (size_t j = 0; j < nm; j++)
         memcpy(tags + 32 * (d + j), st[j], 32);
     free(st);
@@ -1004,7 +980,7 @@ static void bs_xor_octet(__m256i (*P)[4], int k, uint8_t val)
 }
 
 /* 256 messages de même longueur (chiffrement), état en plans de bits gardé d'un bloc à l'autre ; mêmes sorties que aead().
- * AAD (communes) et longueur : constantes, sans transposition ; texte : flux extrait (80 octets), débit écrasé par le clair. */
+ * AAD (communes) : constantes, sans transposition ; texte : flux extrait (80 octets), débit écrasé par le clair. */
 static void aead_lot256(const uint8_t *cles, const uint8_t *nonces, const uint8_t *aad, size_t aadlen, const uint8_t *in,
                         size_t len, uint8_t *out, uint8_t *tags)
 {
@@ -1053,11 +1029,6 @@ static void aead_lot256(const uint8_t *cles, const uint8_t *nonces, const uint8_
         if (fin)
             break;
     }
-    for (int k = 0; k < 8; k++)
-        bs_xor_octet(P, k, (uint8_t)((uint64_t)len >> (8 * k)));
-    bs_xor_octet(P, 8, 0x01);
-    bs_xor_octet(P, 127, DOM_FINAL << 4);
-    bs_perm(P, R1);
     bs_extraire((const __m256i (*)[4])P, tags, 32, 2);
     free(tmp);
 }
@@ -1227,12 +1198,18 @@ static int controle_domaines(void)
     int ok = 1;
     /* 1. modes (nibble bas de l'octet 127) et domaines (nibble haut) : valeurs < 16, distinctes dans chaque construction ;
      *    dans l'AEAD, les domaines de fin de phase sont non nuls (les autres blocs portent 0) */
-    const int de[] = {DOM_SEQ, DOM_FEUILLE, DOM_RACINE, DOM_SEUL}, da[] = {0, DOM_AAD, DOM_TEXTE, DOM_FINAL};
+    const int de[] = {DOM_SEQ, DOM_FEUILLE, DOM_RACINE, DOM_SEUL}, da[] = {0, DOM_AAD, DOM_TEXTE};
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++) {
-            ok &= de[i] >= 0 && de[i] < 16 && da[i] >= 0 && da[i] < 16;
+            ok &= de[i] >= 0 && de[i] < 16;
             if (i != j)
-                ok &= de[i] != de[j] && da[i] != da[j];
+                ok &= de[i] != de[j];
+        }
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++) {
+            ok &= da[i] >= 0 && da[i] < 16;
+            if (i != j)
+                ok &= da[i] != da[j];
         }
     ok &= MODE_EPONGE != MODE_AEAD && MODE_EPONGE < 16 && MODE_AEAD < 16;
     /* 2. états avant la première permutation : éponge = 0^121 ‖ cadre(5), AEAD = clé ‖ nonce ‖ 0^33 ‖ cadre(3). On contrôle
@@ -1484,7 +1461,8 @@ int main(int argc, char **argv)
         /* étape AE (AEAD_SECURITY.md § 4 bis) : (1) le chemin IXIF du déchiffrement de (A, C) est celui du chiffrement de
          * (A, M), drapeau partiel du dernier bloc compris ; (2) le chemin final se décode en (A, M) (codage injectif) ;
          * (3) rôles : le flux de clé de chaque bloc de texte est lu après une entrée de nibble DOM_AAD ou 0, le tag après
-         * l'entrée DOM_FINAL ; l'appel du tag injecte σ = 0 ; nombre d'appels = ⌈(|A|+1)/80⌉ + ⌊|M|/80⌋ + 3. */
+         * l'entrée DOM_TEXTE du dernier bloc du texte (dernière entrée du chemin final, aucun flux n'est lu après elle) ;
+         * l'appel du tag injecte σ = 0 ; nombre d'appels = ⌈(|A|+1)/80⌉ + ⌊|M|/80⌋ + 2 (sans bloc de longueur). */
         int okch = 1;
         for (size_t i = 0; i < 8; i++)
             for (size_t j = 0; j < 8; j++) {
@@ -1494,17 +1472,17 @@ int main(int argc, char **argv)
                 aead_kd_chemin(perm1, m + 3, m + 70, m + 500, A, m + 1000, L, 0, c, t1, ce, 16, &ne);
                 aead_kd_chemin(perm1, m + 3, m + 70, m + 500, A, c, L, 1, p, t2, cd, 16, &nd);
                 const size_t na = A / RB + 1, nm = L / RB + 1;
-                okch &= ne == na + nm + 2 && nd == ne && !memcmp(ce, cd, ne * 128) && !memcmp(t1, t2, 32) &&
+                okch &= ne == na + nm + 1 && nd == ne && !memcmp(ce, cd, ne * 128) && !memcmp(t1, t2, 32) &&
                         !memcmp(p, m + 1000, L);
                 okch &= decoder_chemin((const uint8_t(*)[128])ce, ne - 1, dA, &la, dM, &lm, 200) == 0 && la == A &&
                         lm == L && !memcmp(dA, m + 500, A) && !memcmp(dM, m + 1000, L);
                 int zero = 1;
                 for (int k = 0; k < 128; k++)
                     zero &= ce[ne - 1][k] == 0;
-                okch &= zero && (ce[na - 1][127] >> 4) == DOM_AAD && (ce[ne - 2][127] >> 4) == DOM_FINAL;
+                okch &= zero && (ce[na - 1][127] >> 4) == DOM_AAD && (ce[ne - 2][127] >> 4) == DOM_TEXTE;
                 for (size_t t = 0; t < nm; t++)            /* entrée lue avant le bloc de texte t */
                     okch &= (ce[na + t - 1][127] >> 4) == (t == 0 ? DOM_AAD : 0);
-                /* témoins : une entrée altérée (domaine, bourrage, capacité, longueur) ne se décode pas en (A, M) */
+                /* témoins : une entrée altérée (domaine, bourrage, capacité, dernier bloc) ne se décode pas en (A, M) */
                 const int pos[4][2] = {{(int)(na - 1), 127}, {(int)(na + nm - 1), (int)(L % RB)}, {0, 100},
                                        {(int)(ne - 2), 0}};
                 for (int w = 0; w < 4; w++) {
@@ -1518,14 +1496,14 @@ int main(int argc, char **argv)
             }
         res_controle(&res, "etape_ae_chemin_du_dechiffrement_egal_au_chiffrement_decodable_et_roles", okch);
         /* décodeur du chemin final, branche par branche (trous de la 3e passe de mutation, 14 novembre) : chaque forme
-         * invalide rend EXACTEMENT −1 ; tampons de taille exacte ; longueurs ≥ 256 et ≥ 65 536 (octets 1 et 2 du bloc de
-         * longueur) ; capacité exacte acceptée, capacité − 1 refusée ; l'enregistrement du chemin s'arrête à nch (garde) */
+         * invalide rend EXACTEMENT −1 ; tampons de taille exacte ; textes de plusieurs blocs (300 et 70 000 octets) ;
+         * capacité exacte acceptée, capacité − 1 refusée ; l'enregistrement du chemin s'arrête à nch (garde) */
         int okd = 1, ndec = 0;
         {
             const size_t DA[] = {0, 81}, DL[] = {0, 79, 80, 300, 70000};
             for (size_t ia = 0; ia < 2; ia++)
                 for (size_t il = 0; il < 5; il++) {
-                    const size_t A = DA[ia], L = DL[il], na = A / RB + 1, nm = L / RB + 1, ne = na + nm + 2, n0 = ne - 1;
+                    const size_t A = DA[ia], L = DL[il], na = A / RB + 1, nm = L / RB + 1, ne = na + nm + 1, n0 = ne - 1;
                     const size_t cap = A > L ? A : L;
                     const uint8_t *vA = m + 500, *vM = m + 1000;
                     uint8_t(*ce)[128] = malloc((ne + 1) * 128), (*x)[128] = malloc((ne + 1) * 128), *c = malloc(L + 1),
@@ -1555,15 +1533,14 @@ int main(int argc, char **argv)
                         nok += dec_essai((const uint8_t(*)[128])ce, n0, cap - 1, vA, A, vM, L) == -1;
                         ntot++;
                     }
-                    DEC_REJET(n0 - 1);                          /* bloc de longueur absent */
-                    DEC_REJET(n0 - 2);
+                    DEC_REJET(n0 - 1);                          /* dernier bloc du texte absent */
+                    if (n0 >= 2)
+                        DEC_REJET(n0 - 2);
                     memcpy(x[n0], ce[n0 - 1], 128);             /* une entrée de trop */
                     DEC_REJET(n0 + 1);
                     for (size_t e = 0; e < n0; e++) {
-                        const int KC[] = {RB, 100, 126, 9};
-                        for (int i = 0; i < 4; i++) {           /* capacité non nulle (et octet 9 du bloc de longueur) */
-                            if (KC[i] == 9 && e != n0 - 1)
-                                continue;
+                        const int KC[] = {RB, 100, 126};
+                        for (int i = 0; i < 3; i++) {           /* capacité non nulle */
                             x[e][KC[i]] ^= 0x01;
                             DEC_REJET(n0);
                         }
@@ -1574,22 +1551,18 @@ int main(int argc, char **argv)
                     DEC_REJET(n0);
                     x[na + nm - 1][127] = DOM_AAD << 4;         /* domaine AAD dans la phase texte */
                     DEC_REJET(n0);
-                    x[n0 - 1][127] = DOM_TEXTE << 4;            /* bloc de longueur sans DOM_FINAL */
+                    x[n0 - 1][127] = 0;                         /* dernier bloc du texte sans DOM_TEXTE */
                     DEC_REJET(n0);
-                    if (na > 1) {                               /* bloc plein de A marqué DOM_FINAL */
-                        x[0][127] = DOM_FINAL << 4;
+                    x[n0 - 1][127] = 4 << 4;                    /* nibble 4 (ancien domaine du bloc de longueur) */
+                    DEC_REJET(n0);
+                    if (na > 1) {                               /* bloc plein de A marqué d'un domaine */
+                        x[0][127] = 4 << 4;
                         DEC_REJET(n0);
                     }
                     x[na - 1][A % RB] = 0x02;                   /* bourrage 0x01 remplacé */
                     DEC_REJET(n0);
                     x[na + nm - 1][L % RB] = 0x02;
                     DEC_REJET(n0);
-                    x[n0 - 1][8] ^= 0x01;                       /* bloc de longueur : 0x01 de l'octet 8, longueur */
-                    DEC_REJET(n0);
-                    for (int k = 0; k < 3; k++) {
-                        x[n0 - 1][k] ^= 0x01;
-                        DEC_REJET(n0);
-                    }
 #undef DEC_REJET
                     okd &= nok == ntot;
                     ndec += ntot;

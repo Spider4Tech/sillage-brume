@@ -98,8 +98,9 @@ XOF(M, ℓ) = Sponge(M, 0, ℓ).
 ### 3.5 AEAD (full-state keyed duplex, SpongeWrap orientation)
 
 Key K of 64 bytes, nonce N of 24 bytes, associated data A, plaintext X, tag of 32 bytes.
-**Lengths: |A| < 2^64 bytes and |X| < 2^64 bytes** (|X| is encoded by le64). An input beyond these limits is rejected; it
-is never processed with a truncated length. (Decision of 14 November 2026.)
+**Lengths: |A| < 2^64 bytes and |X| < 2^64 bytes.** An input beyond these limits is rejected. (Decision of 14 November
+2026.) The lengths are not encoded: the 0x01 padding and the domains delimit A and X (since 14 November 2026, option A of
+`AEAD_SECURITY.md` § 6 bis; before, a final block carried le64(|X|) with domain 4).
 
 *Implementation note (informative).* On a 64-bit platform `size_t` cannot express 2^64, but the index computations of
 the block loops overflow as soon as a length exceeds 2^64 − 81. The prototype therefore rejects |A| or |X| above
@@ -115,8 +116,9 @@ Check `longueurs_hors_limite_rejetees_sans_lecture_ni_ecriture`.
           c_i ← x_i ⊕ s[0..80) ; s[0..80) ← c_i ; s ← P(s)
       last block x* of ℓ bytes (0 ≤ ℓ < 80):
           c* ← x* ⊕ s[0..ℓ) ; s[0..ℓ) ← c* ; s[ℓ] ⊕= 0x01 ; s[127] ⊕= 2·16 ; s ← P(s)
-      s[0..8) ⊕= le64(|X|) ; s[8] ⊕= 0x01 ; s[127] ⊕= 4·16 ; s ← P(s)
       T ← s[0..32) ;  return (C = c_1 ‖ … ‖ c*, T)
+
+    (2 + ⌊|A|/80⌋ + ⌊|X|/80⌋ permutations: 3 for |A|, |X| < 80.)
 
     Dec(K, N, A, C, T): the same, the rate receiving the ciphertext bytes (s[0..80) ← c_i, s[0..ℓ) ← c*), the plaintext
       being c ⊕ (rate before replacement). The recomputed tag is compared with T in constant time. If they differ, the

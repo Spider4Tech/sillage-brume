@@ -4,7 +4,7 @@
  * les 18 vecteurs de test (SPEC § 4) et les compare à kat_b1024.txt.
  * Ni constant-time, ni rapide : une référence de conformité. SHAKE256 vient de sillage/c/commun.c (indépendant de BRUME).
  *   cc -O2 -I sillage/c -I prototypes/brume_q/b1024 prototypes/brume_q/b1024/spec_ref.c sillage/c/commun.c \
- *      sillage/c/brume512.c -lm -o spec_ref && ./spec_ref prototypes/brume_q/b1024/kat_b1024.txt */
+ *      sillage/c/brume512.c sillage/c/brume512_avx2.c -march=native -lm -o spec_ref && ./spec_ref prototypes/brume_q/b1024/kat_b1024.txt */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -115,10 +115,6 @@ static void enc(const uint8_t K[64], const uint8_t N[24], const uint8_t *A, size
     for (size_t k = 0; k < l; k++) { C[i + k] = X[i + k] ^ s[k]; s[k] = C[i + k]; }
     s[l] ^= 0x01;
     s[127] ^= 2 * 16;
-    P(s);
-    for (int k = 0; k < 8; k++) s[k] ^= (uint8_t)((uint64_t)lx >> (8 * k));
-    s[8] ^= 0x01;
-    s[127] ^= 4 * 16;
     P(s);
     memcpy(T, s, 32);
 }

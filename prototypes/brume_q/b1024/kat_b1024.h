@@ -2,7 +2,9 @@
  * Ne pas régénérer pour faire passer un contrôle : une différence signale un changement de la fonction. Message,
  * clé, nonce et AAD : voir calculer_kats() dans brume1024.c.
  * Historique : 13 novembre 2026, orientation SpongeWrap de l'AEAD (AEAD_SECURITY.md § 6) : les 4 KAT de l'AEAD avec
- * texte ont changé, volontairement ; les 14 autres sont restés identiques. */
+ * texte ont changé, volontairement ; les 14 autres sont restés identiques.
+ * 14 novembre 2026, fusion du bloc de longueur (option A, AEAD_SECURITY.md § 6 bis) : les 5 KAT de l'AEAD ont changé,
+ * volontairement ; les 13 autres sont restés identiques. */
 static const char *const KAT_FIGES[18][2] = {
     {"hachage_0",
      "95ee2e0b7586950191e0a64550ab3aa945e07509f46cd37fcaac8bb361be12535191ec87398ee05de283c7ebdd99e1856e46e3f09e90d6dac85515f15d255e95"},
@@ -31,13 +33,13 @@ static const char *const KAT_FIGES[18][2] = {
     {"xof_200",
      "44a7cdc423f8f879180fbb990a5189f1cd3b5b26e18912ecd674691e63397997d1d9d64a10fe3d92e9169196d4a9d2ed285aa22fa99ec11c60289fb3527346a00cebe5678637d36db7da473c0a53358632a08e4c839f84171099bb6aab0775658a5b350aaac72d6dfa966dac94a63ee5c40d92cf1ee45c93ad1dde6231e5595c5e94c8df83bb2ca7cf6bbcddbac0c51c8881cb0333aff00e5e457f2bef6fc6c7ab2a304cb513bbc511922241bb160e211c8758234b7d208bb2c230af929df22a863d1129688dd180"},
     {"aead_0",
-     "f002fa1de5d98080206f5e57840f071131704693a34dab8a80d077a2c9665e0346b9dd2b0ba88d13233b3feb743eeb243fcd52ea62b81b82b50c27646ed5762f"},
+     "9dea97a449b83ed205f63b7b4672bc34f3997270ba4c11bcd96a52efbc7c943146b9dd2b0ba88d13233b3feb743eeb243fcd52ea62b81b82b50c27646ed5762f"},
     {"aead_16",
-     "29395643cfa60c931f107708ca5da0438ab7e94b1ebb51887a40fc80f010614cd007f9d8861345df7813a4288aaaf8654a802fa978cdf52fa8320567b55b30c7"},
+     "78a5934aa4217fef6b6484539cf7c22faf04b78f0989b6c7525667cab2487ff4d007f9d8861345df7813a4288aaaf8654a802fa978cdf52fa8320567b55b30c7"},
     {"aead_64",
-     "4b4c51e4935e280f5c5df41d5617ae11948fdd5fe4ad65a40e21552793570ef6e2b725673657a6131ae561a3226bf9462b9e07922df4076413f3fb841cdf760b"},
+     "7d4c1647b1bdbb8b915171fbc17528e8416d678a29fbb7090e501081f0b75fd9e2b725673657a6131ae561a3226bf9462b9e07922df4076413f3fb841cdf760b"},
     {"aead_1000",
-     "ec76707ac384af1c871872b8647968bacdc50b49c01c015f1040312c53316568f10e83b059b31289009253d8ab36d68218dd68b4863bb6045cc86932928b5d6b"},
+     "7c91ee8a03f9a0d0d4482f74006db1c472e78fd26eb23ad12d9b4cfeab6a2f5bf10e83b059b31289009253d8ab36d68218dd68b4863bb6045cc86932928b5d6b"},
     {"aead_64_sans_aad",
-     "a58e9c0bf0cd03e75b8d4557e750bf0a3a0e1899401d5a49fe0041e8a07aff0e50e07146a8de90b6c8f883aa29471ba680a63bf99e82e9f22e40c6e2857dd537"},
+     "ea1a1a275eb8aedaae7ed31d175580cfa9b430e776f7e53ce5fa421ed7a277f050e07146a8de90b6c8f883aa29471ba680a63bf99e82e9f22e40c6e2857dd537"},
 };
