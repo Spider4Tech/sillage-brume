@@ -113,7 +113,9 @@ This hints at a larger C3 at 1024, but nothing is proved beyond 21.
 
     Until 13 November the rate received the plaintext, the orientation of the suite. The change follows
     `AEAD_SECURITY.md`; the 4 AEAD KATs with text changed, and the 14 others did not.
-  - **Cost:** 4 permutations for a short message, against 5 when the key was absorbed through the rate.
+  - **Cost:** 3 permutations for a short message since the length block was merged (14 November, option A,
+    `AEAD_SECURITY.md` § 6 bis); 4 before, and 5 when the key was absorbed through the rate. The tag is read after the
+    permutation of the last text block, which carries the padding 0x01 and `DOM_TEXTE`.
   - **Security: a classical reduction, not reviewed.** An earlier version of this README gave an informal argument:
     - Grover on the 512-bit key;
     - then the bound of c = 384;
@@ -311,7 +313,7 @@ The op-cache hypothesis is rejected on both microarchitectures. The table below 
 Same binary for both sides: the suite through its public API (`sl_hash`, `sl_hash_arbre`, `sl_aead_encrypt`), BRUME-1024q
 through `brume1024.c`. Median of 9 series, machines at rest.
 - **Remeasured during the night of 12 to 13 November** with the current code:
-  - full-state keyed AEAD (4 permutations per short message);
+  - full-state keyed AEAD (3 permutations per short message);
   - cached P(IV);
   - bitsliced tree.
 - **Replaces** the first version of this table, which measured the earlier AEAD (5 permutations, 3.89 µs at 64 B).

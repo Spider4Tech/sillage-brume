@@ -43,13 +43,13 @@ Enc(K, N, A, M):
       Z ← S.rate ; c_i ← m_i ⊕ Z ; S.rate ← c_i ; S ← P(S)        # = S.rate ⊕= m_i : the rate holds the CIPHERTEXT
   last block m* (0 ≤ ℓ = |m*| < 80):
       Z ← S.rate ; c* ← m* ⊕ Z[0..ℓ) ; S.rate[0..ℓ) ← c* ; S.rate[ℓ] ⊕= 0x01 ; S[127] ⊕= DOM_TEXTE·16 ; S ← P(S)
-  S.rate[0..8) ⊕= le64(|M|) ; S.rate[8] ⊕= 0x01 ; S[127] ⊕= DOM_FINAL·16 ; S ← P(S)
-  T ← S.rate[0..32)
+  T ← S.rate[0..32)                                       # no length block since 14 November (option A, § 6 bis)
 Dec (aead_ouvrir): same, the rate being overwritten by c_i; tags compared in constant time; on failure the output is wiped
   and −1 returned (no release of unverified plaintext, "no RUP").
 ```
 
-**Cost.** 1 (init) + ⌈(|A| + 1)/80⌉ + ⌊|M|/80⌋ + 1 + 1 permutations, that is 4 for a short message.
+**Cost.** 1 (init) + ⌈(|A| + 1)/80⌉ + ⌊|M|/80⌋ + 1 permutations, that is 3 for a short message (4 until the length block
+was merged, 14 November, § 6 bis).
 
 **Two implementations, checked identical.**
 - `aead()` is the one used, in its one-state, 32-state and 256-state versions.
@@ -107,7 +107,7 @@ q_iv N/2^k + N/2^{c−1} (eq. (3), for r > 2 log₂ M + c).
 | AAD blocks | σ = padded block, flag = false | yes |
 | **Text, encryption** | σ = m_i (plaintext), **flag = false**; the outer part becomes Z ⊕ m_i = c_i, not chosen by the adversary | yes |
 | **Text, decryption** | σ = c_i, **flag = true** (overwrite). For the last partial block (ℓ < 80 bytes), the overwrite covers the ℓ first bytes only, and the rest of the rate keeps Z. | full blocks: yes. **Last partial block: a deviation** from Algorithm 1, whose flag overwrites the whole outer part. It is written that way in `aead_kd` (flag on nv = ℓ bytes). **Covered in § 4 ter**: it is a "partial flag" call, counted in Ω |
-| Length block, tag | flag = false; the tag is the output Z of one more call | yes |
+| Tag | flag = false, σ = 0; the tag is the output Z of one more call, after the last text block | yes |
 | Path of the ideal XIF (σ after the flag adjustment) | encryption: σ = m_i; decryption: σ̄ + Z = c_i ⊕ Z = m_i | the same path for Enc and Dec of the same (N, A, C), as required |
 | k + c ≤ b − 1 | 512 + 384 = 896 ≤ 1 023 | yes |
 | N + M ≤ 0.1·2^c | 2^c = 2^384 | yes for any realistic budget |
@@ -132,7 +132,7 @@ q_iv N/2^k + N/2^{c−1} (eq. (3), for r > 2 log₂ M + c).
 **(b) The AE step (ideal XIF → privacy and authenticity): written in § 4 bis.** Its result differs from the assertion of
 p. 610 on one point, stated plainly: **the reduction does not give L = Ω = 0.** A decryption query is simulated with
 flag = true on its text blocks, and its prefix may repeat the path of an encryption, so the decryption blocks count in
-L + Ω (at most σ_D − 2q_d, σ_D being the number of calls made by decryption queries). Encryption data no longer appear in the
+L + Ω (at most σ_D − q_d, σ_D being the number of calls made by decryption queries). Encryption data no longer appear in the
 leading term.
 
 **(c) Multi-user.**
@@ -191,7 +191,7 @@ In the real world, Enc and Dec are the mode, with `aead_ouvrir` for decryption. 
 
 Resources of A:
 - q_e and q_d queries;
-- σ_E and σ_D calls of the keyed duplex made by these queries (a query makes ⌈(|A|+1)/80⌉ + ⌊|M|/80⌋ + 3 calls);
+- σ_E and σ_D calls of the keyed duplex made by these queries (a query makes ⌈(|A|+1)/80⌉ + ⌊|M|/80⌋ + 2 calls);
 - σ_D^txt ≤ σ_D, the text calls of the decryptions;
 - N primitive queries.
 
@@ -210,9 +210,11 @@ where KD′ and IXIF′ are KD and IXIF with the partial flag of § 4 ter, and B
 
 *Step 0, the mode as calls.* A query is the sequence of calls of `aead_kd`:
 - Init with σ = the first AAD block, then one Duplexing per further AAD block;
-- one Duplexing per text block, whose Z is the keystream of that block;
-- one Duplexing for the length block;
+- one Duplexing per text block, whose Z is the keystream of that block; the last one carries the padding 0x01 and
+  `DOM_TEXTE`;
 - one Duplexing with σ = 0, whose Z gives the tag (first 256 bits).
+
+(Until 14 November a Duplexing for a length block came before the tag call; it is merged, § 6 bis.)
 
 The checks `aead_identique_a_la_reference_dmv17_litterale_…` and the long campaigns check that `aead()` computes exactly
 this. In decryption, the text calls carry the partial flag on ℓ bytes (ℓ = 80 for a full block, the length of the last
@@ -239,8 +241,9 @@ Resources:
   a decryption, and nonces are unique in encryption, so it can be charged to that decryption. Hence L ≤ q_d. This is the
   argument of Mennink 2023 (proof of Theorem 7, ToSC 2023(2), p. 34). The first version of this section had the weaker
   L ≤ σ_D.
-- The flagged calls are the text calls of the decryptions: Ω ≤ σ_D^txt. Every query makes at least 3 calls that are not text
-  calls (first AAD block, length, tag), so L + Ω ≤ q_d + σ_D − 3q_d = σ_D − 2q_d.
+- The flagged calls are the text calls of the decryptions: Ω ≤ σ_D^txt. Every query makes at least 2 calls that are not text
+  calls (first AAD block, tag), so L + Ω ≤ q_d + σ_D − 2q_d = σ_D − q_d. (With the length block it was σ_D − 2q_d, for one
+  call more per query: σ_D itself is smaller by one call per decryption now.)
 
 *Step 2, from G1 to the ideal world.* G2 is G1 with Dec always returning ⊥ (it still evaluates RO). Let "bad" be the event
 that a Dec query computes a tag equal to its T. G1 and G2 are identical until bad, **because `aead_ouvrir` releases nothing
@@ -254,10 +257,11 @@ These paths are pairwise distinct across all Enc queries (step 1). A value of RO
 G2. Hence the Enc outputs are uniform and independent, and **G2 is the ideal world**: Adv^AE(A) ≤ Δ_B + Pr_G2[bad].
 
 *Step 3, Pr[bad] ≤ q_d/2^256.* Take a Dec query (δ, N, A, C, T), and let P′_fin be its final path (iv, AAD entries, text
-entries, length entry).
-- **(a) P′_fin is not the final path of an Enc query.** P′_fin ends with an entry whose role nibble is `DOM_FINAL`. Every
-  keystream path ends with an entry of nibble `DOM_AAD` (the first text block) or 0 (a full text block). So P′_fin is not
-  a revealed path, and RO(P′_fin) is uniform and independent of the view of A in G2, of which T is a function. Hence
+entries).
+- **(a) P′_fin is not a keystream path.** P′_fin ends with the entry of the last text block, whose role nibble is
+  `DOM_TEXTE`. Every keystream path ends with an entry of nibble `DOM_AAD` (the first text block) or 0 (a full text block):
+  the keystream of a block is read **before** that block's entry is absorbed, and no text block follows a `DOM_TEXTE`
+  entry. So P′_fin is not a revealed keystream path, and RO(P′_fin) is uniform and independent of the view of A in G2, of which T is a function. Hence
   Pr[T = tag] = 2^−256.
 - **(b) P′_fin is the final path of an Enc query** (δ, N, A₀, M₀) → (C₀, T₀). The path decodes uniquely (decoder
   `decoder_chemin`, a left inverse of the encoding (A, M) ↦ path). So A = A₀ and the decrypted text is M₀. Its keystream
@@ -271,13 +275,13 @@ A union bound over the q_d queries gives q_d/2^256. ∎
 | Fact | Check |
 |---|---|
 | The path of a decryption equals that of the encryption, partial last block included | `etape_ae_chemin_du_…` (8 × 8 grid) |
-| The final path decodes into (A, M), so the encoding is injective | same check: `decoder_chemin` on the grid, plus 4 altered paths (domain, padding, capacity, length) that must not decode into (A, M); planted defect (decoder accepting any nibble) caught |
-| Roles: keystream after an entry of nibble `DOM_AAD` or 0, tag after `DOM_FINAL`, σ = 0 for the tag call, ⌈(\|A\|+1)/80⌉ + ⌊\|M\|/80⌋ + 3 calls | same check |
+| The final path decodes into (A, M), so the encoding is injective | same check: `decoder_chemin` on the grid, plus 4 altered paths (domain, padding, capacity, last block) that must not decode into (A, M); planted defect (decoder accepting any nibble) caught. Every rejection branch returns exactly −1: `decodeur_chemin_rejette_exactement_chaque_forme_invalide_et_garde_nch` |
+| Roles: keystream after an entry of nibble `DOM_AAD` or 0, tag after the `DOM_TEXTE` entry of the last text block, σ = 0 for the tag call, ⌈(\|A\|+1)/80⌉ + ⌊\|M\|/80⌋ + 2 calls | same check |
 | `aead()` = the sequence of calls | `aead_identique_a_la_reference_dmv17_litterale_…`, campaigns (739 million cases) |
 | No release on failure | `aead_ouvrir_verifie_rejette_les_alterations_et_n_en_rend_rien` (383 alterations) |
 
 **Numerical bound.** We use Theorem 1′ (§ 4 quater: the paper's Theorem 1 with the repairs of F2 and F3 and the direct
-multicollision bound F4) plus the proposition, with L + Ω ≤ σ_D − 2q_d ≤ σ_D, σ = σ_E + σ_D ≤ 2^127, and
+multicollision bound F4) plus the proposition, with L + Ω ≤ σ_D − q_d ≤ σ_D, σ = σ_E + σ_D ≤ 2^127, and
 q = q_e + q_d:
 
     Adv^AE ≤ (2σ_D + 5)·N/2^384 + 3·C(σ_D+1, 2)/2^384 + 2·q_iv·N/2^512 + q_d/2^256
@@ -319,7 +323,8 @@ How to read it, classically, in the ideal-permutation model:
   - **The attack needs two conditions, and our mode meets both.**
     - In decryption, the ciphertext overwrites the outer part. That is the SpongeWrap orientation, decided on 13
       November.
-    - The tag is determined by the state before the final phase. Ours is a public length block, then P, with no key.
+    - The tag is determined by the state before the final phase. Ours is P after the last text block, with no key (until
+      14 November: a public length block, then P).
 
     The modes that frustrate the attack add the key in the final phase (Ascon, NORX v3) or use a feedback function
     (Beetle).
@@ -329,8 +334,8 @@ How to read it, classically, in the ideal-permutation model:
   - **The cost.** 21·2^{3c/4} calls to P, that is 2^292.4 for c = 384. A forgery then gives **the key** (§ 3.7): the
     returned plaintext lets one go back to the state after initialisation, and our P_init = P(K ‖ N ‖ 0 ‖ frame) can be
     inverted for a known N.
-  - **Length.** The published attack needs ciphertexts of ℓ = 3·2^{c/2} ≈ 2^193.6 blocks. BRUME-1024q encodes |M| on
-    8 bytes (le64), so |M| < 2^64 bytes, about 2^57.7 blocks. **The published version therefore does not apply as is.**
+  - **Length.** The published attack needs ciphertexts of ℓ = 3·2^{c/2} ≈ 2^193.6 blocks. BRUME-1024q limits |M| to less
+    than 2^64 bytes (`SPEC.md` § 3.5), about 2^57.7 blocks. **The published version therefore does not apply as is.**
     Variants for bounded lengths have not been studied.
     - Since 14 November `SPEC.md` § 3.5 states |A|, |M| < 2^64 bytes and the implementation rejects longer inputs (bound
       2^63 − 1 in this implementation). **This is a rule of use that keeps the published form out of reach, not a
@@ -572,7 +577,7 @@ then bad events col_cc, col_cp, mc_in, mc_out and key, all analysed directly in 
   agrees, one bit tighter, with our (2σ_D + 5)·N/2^384.
   - DM19's proof uses the flag only to classify a call as "fix": the adversary may have set the outer part, and
     right_c(T_i) keeps its entropy. So it also covers the partial flag of § 4 ter.
-  - Our mode differs from MonkeySpongeWrap: AAD and length blocks, frame, partial last block. So this is a cross-check,
+  - Our mode differs from MonkeySpongeWrap: AAD blocks (domain on the last), frame, partial last block. So this is a cross-check,
     not a substitute for § 4 bis. Theorem 1′ remains the bound we use.
 
 **Gilbert, Heim Boissier, Khati, Rotella 2023 read on 14 November** (EUROCRYPT 2023, ePrint 2023/262). See § 4 bis, "What
@@ -650,10 +655,11 @@ Lemma 1).
 - **The suite (BRUME-512) is not modified.** The remark on its Theorem 14, remark 2, is to be passed on to the human review
   of `docs/PROOFS.md`. Its σN/2^c bound is consistent; the improvement promised by "finer analyses (DMV17)" does not apply
   to its encryption blocks.
-- **Merging the length block** (4 → 3 permutations) is a separate question, kept out of this change. Per the author's
-  rule, no security is traded for speed before its argument is written. Its argument is now written: § 6 bis.
+- **Merging the length block** (4 → 3 permutations) was a separate question, kept out of this change. Per the author's
+  rule, no security is traded for speed before its argument is written. The argument was written first (§ 6 bis), then the
+  change was made on 14 November (option A).
 
-## 6 bis. Merging the length block: feasibility (14 November, proposal, author decision)
+## 6 bis. Merging the length block (14 November): argument, then option A adopted
 
 **What it means.** Drop the length block. The last text block, which already carries the padding 0x01 and `DOM_TEXTE`,
 becomes the last absorbed block, and the tag is read after its permutation:
@@ -714,7 +720,16 @@ would go from ×1.11 to about ×1.4. The bitsliced multi-message AEAD gains in t
 
 **Verdict: feasible, with no security traded.** The security argument transposes without a new idea. It is the AE step
 of § 4 bis with one role renamed and one call fewer. The work is a format change of the prototype and its
-re-verification, not new research. **Decision of the author**: option A, option B, or keep the length block.
+re-verification, not new research.
+
+**Decision (author, 14 November): option A.** Done the same day, on a separate branch merged only after re-verification:
+- code: `aead()`, `aead_lot32`, `aead_lot256`, `aead_kd_chemin`, `decoder_chemin`, the domain check, the AE-step and
+  decoder checks; `DOM_FINAL` removed (the value 4 stays unused in the AEAD);
+- the 5 AEAD KATs regenerated (kernel and dense reference agreeing), the 13 others unchanged; `spec_ref.c`, rewritten from
+  `SPEC.md` § 3.5 alone, reproduces the 18 vectors (the previous `spec_ref.c` reproduces 13 of them, exactly the
+  non-AEAD ones);
+- this document (§ 1, § 4 bis), `SPEC.md` § 3.5, `DOMAINS.md` § 4;
+- re-verification: see `ROADMAP.md` (29 checks, campaign, ctgrind and dudect, fourth mutation pass).
 
 ## 7. What remains (`ROADMAP.md` § 1)
 

@@ -64,15 +64,15 @@ k ≥ 2 leaves.
 | Initialisation | P(key ‖ nonce ‖ 0 ‖ frame(3)) | — | 1 permutation |
 | Associated data | XOR into the rate, pad 0x01 | `DOM_AAD` = 1 | always at least one block (an empty AAD gives a block holding only the padding) |
 | Text | ciphertext = text ⊕ rate; the rate then holds the **ciphertext** (encryption: the plaintext is XORed; decryption: the rate is overwritten by the ciphertext), on full blocks and on the first ℓ bytes of the last block (0 ≤ ℓ < 80), whose remaining bytes keep the keystream; the last block then receives the pad 0x01. **SpongeWrap orientation since 13 November 2026** (`AEAD_SECURITY.md` § 6); before, the rate held the plaintext | `DOM_TEXTE` = 2 | always ends with a padded block |
-| Length | text length on 8 bytes, little-endian, pad 0x01 | `DOM_FINAL` = 4 | 1 block |
-| Tag | first 32 bytes of the rate | — | |
+| Tag | first 32 bytes of the rate, after the permutation of the last text block | — | no further permutation |
 
-- The three end-of-phase domains are **non-zero and pairwise distinct**, and the phases always come in the same
-  order. Each phase ends with exactly one tagged permutation call, so the phase boundaries can be read from the
+- The two end-of-phase domains are **non-zero and distinct**, and the phases always come in the same order. Each phase ends with exactly one tagged permutation call, so the phase boundaries can be read from the
   sequence of calls.
 - Within a phase, the end of the data is marked by the padding.
-- The explicit length is redundant with the padding of the text. It is kept as in the suite's duplex. Merging it into
-  the last text block is item P3 of `ROADMAP.md`, and the decision belongs to the author.
+- **No length block since 14 November 2026** (option A, `AEAD_SECURITY.md` § 6 bis). The length block (le64 of the text
+  length, pad 0x01, domain `DOM_FINAL` = 4) was redundant with the padding of the text; it cost one permutation per
+  message. The value 4 is no longer used in the AEAD. The lengths stay limited (`SPEC.md` § 3.5): that is a rejection
+  rule, not an encoding.
 
 ## 5. Across constructions
 

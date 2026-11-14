@@ -37,7 +37,7 @@ Status legend:
 | Nonce reuse | **done** (13 November, evening) | Exact leakage written (`AEAD_SECURITY.md` § 4 (e)): the keystream of block t is the same for two messages **if and only if** their paths before t are the same, so c ⊕ c' = m ⊕ m' up to and including the first block whose padded entry differs, and nothing after; a prefix message gives a prefix ciphertext. Check `nonce_reutilise_fuite_exacte_…`: measured on `aead()`, predicted by the recorded paths, both directions, AAD 0/79/80 × texts 0 … 200 bytes × 4 kinds of second message (1 269 blocks predicted equal); planted defects caught |
 | Pass the remark on the suite's Theorem 14 (remark 2) on to the human review of `docs/PROOFS.md` | to do | The suite keeps the plaintext-overwrite orientation, and its σN/2^c bound is consistent; DMV17's improvement does not apply to its encryption blocks |
 | **Length limits** (`SPEC.md` § 3.5) | **done** (14 November) | `aead()`, `aead_ouvrir()` and `aead_multi()` return −1 and touch nothing when \|A\| or \|X\| exceeds 2^63 − 1 bytes, or when n·\|X\| does. This bound is stricter than the SPEC's 2^64 − 1: the block loops' index computations (`i + RB`, `b·RB + k`) overflow beyond 2^64 − 81, and the last block would then reread the start of the buffer. Check `longueurs_hors_limite_rejetees_sans_lecture_ni_ecriture` (27 checks): real buffers of a few bytes with guard bytes, the limit itself admitted, lengths 2^63, 2^64 − 1 … rejected. Six planted defects are caught (guard removed in `aead()` or `aead_multi()`, n·len or 64·n unchecked, off-by-one, wiping on rejection). KATs unchanged |
-| Merging the length block (4 → 3 permutations) | **feasibility assessed** (14 November, `AEAD_SECURITY.md` § 6 bis); **author decision** | The argument transposes as it is: the encoding is already injective without the length, and the final role becomes `DOM_TEXTE`, which no keystream path ends with. The bound keeps its form, with one call fewer per query. Recommended: plain removal (option A). Estimated gain: −25 % below 80 bytes. Cost: 5 AEAD KATs, about ten places in the code, and re-verification |
+| **Merging the length block** (4 → 3 permutations) | **done: option A** (14 November, author's decision), on branch `aead-option-a` until re-verified | The argument was written first (`AEAD_SECURITY.md` § 6 bis), then the change made: no length block, the tag read after the permutation of the last text block (`DOM_TEXTE`). The 5 AEAD KATs changed, the 13 others did not; `spec_ref.c`, rewritten from `SPEC.md` § 3.5, reproduces the 18 vectors. 29 checks pass. AE step: L + Ω ≤ σ_D − q_d (one call fewer per query), no term worse. Re-verification: AEAD campaign (second machine, 5 h, with ctgrind and dudect at rest), fourth mutation pass (laptop), battery, speed measured on both machines |
 
 ## 2. Implementation — over-verify
 
@@ -89,7 +89,7 @@ Status legend:
 | S-box in 16 gates | in progress | SAT search on songbird (2 hours per instance) if it still runs; 17 gates installed |
 | Less bitsliced code | open | Reuse the fused body for the last round (−101 KB) |
 | Smaller batches (128 states, `__m128i`) | open | Same throughput expected on Zen+, half on Zen 3 |
-| Merging the length block | **author**, after § 1 | See § 1 |
+| Merging the length block | **decided: option A** (14 November) | See § 1 |
 
 ## Done before 13 November (summary)
 
