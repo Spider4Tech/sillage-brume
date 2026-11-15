@@ -118,7 +118,15 @@ a **mandatory** second checker. It accepts the intact proofs and rejects a mutat
 
 **BRUME-1024** (`-DB1024`, `../b1024/README.md`), also with both checkers:
 - C3 ≥ 18: 361 / 361;
-- C3 ≥ 21: 484 / 484, of which 4 leaves through sub-cubes and one sub-cube through 128 fine cubes (`cubes_fins.sh`).
+- C3 ≥ 21: 484 / 484, of which 4 leaves through sub-cubes and one sub-cube through 128 fine cubes (`cubes_fins.sh`);
+- **C4 ≥ 28** (15 November, 4 rounds, K = 28, 841 leaves on (W₀, W₁)): 831 leaves directly, then three more levels of
+  splitting for the hardest ones, by W₂ (290 sub-leaves, 282 direct), by W₃ (232 pieces, 230 direct), and by the round-1
+  activity of the 7 neighbours of nibble 0 (2 × 128 cubes). 1 599 proofs and 4 completeness proofs, every one accepted by
+  both checkers; 0 satisfiable. The differential and linear CNFs are identical apart from the comment line (supp M =
+  supp Mᵀ at 1024 bits), so one certificate covers both. Audit from the result files: `audit_c4_K28.py`, output
+  `resultats/c4_K28_audit_20261115.txt`. The cube lists and split chains it reads are in the work directory
+  (`~/orion_calc/c4`, not in git; the proofs themselves were deleted once checked, as above). Run with HyperCompute on four
+  machines, 11.3 h of solver time in total. Details: `../b1024/README.md` § 3.
 
 ## 5. Reproduce
 
@@ -136,6 +144,8 @@ prototypes/brume_q/sat/sous_cubes.sh diff 3 21 7 "4 9" "6 9"   # optional: split
 
 - **Consequence.** Over R consecutive rounds, at least 21·⌊R/3⌋ + (0, 1, 8)[R mod 3] active S-boxes. Each one has
   DP ≤ 2⁻² and |correlation| ≤ 2⁻¹. That is ≥ 218 at 32 rounds (against 128 with B alone), and ≥ 190 over 28 rounds.
+  **BRUME-1024** also has C4 ≥ 28: over R rounds, the best split of R into blocks of 4, 3, 2 and 1 rounds (worth 28, 21, 8
+  and 1 active S-boxes), so ≥ 224 at 32 rounds (8 × 4, or 5 × 4 + 4 × 3) and ≥ 196 over 28 rounds.
 - **Limit.** Like B, this bounds **characteristics** and trails, in the Markov model. It does not bound differentials or hulls
   (aggregation), which are only measured beyond 2 rounds (Proposition 12).
 - **Limit.** It is a bound on the truncated relaxation. The true C3 of the permutation can be larger, never smaller.

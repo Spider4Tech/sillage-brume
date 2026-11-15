@@ -4,8 +4,9 @@
  * Historique : 13 novembre 2026, orientation SpongeWrap de l'AEAD (AEAD_SECURITY.md § 6) : les 4 KAT de l'AEAD avec
  * texte ont changé, volontairement ; les 14 autres sont restés identiques.
  * 14 novembre 2026, fusion du bloc de longueur (option A, AEAD_SECURITY.md § 6 bis) : les 5 KAT de l'AEAD ont changé,
- * volontairement ; les 13 autres sont restés identiques. */
-static const char *const KAT_FIGES[18][2] = {
+ * volontairement ; les 13 autres sont restés identiques.
+ * 14 novembre 2026, AEAD parallèle (v0.6, V06_MODES.md § 2) : 5 KAT ajoutés (aeadp_*) ; les 18 autres sont inchangés. */
+static const char *const KAT_FIGES[23][2] = {
     {"hachage_0",
      "95ee2e0b7586950191e0a64550ab3aa945e07509f46cd37fcaac8bb361be12535191ec87398ee05de283c7ebdd99e1856e46e3f09e90d6dac85515f15d255e95"},
     {"hachage_1",
@@ -42,4 +43,14 @@ static const char *const KAT_FIGES[18][2] = {
      "7c91ee8a03f9a0d0d4482f74006db1c472e78fd26eb23ad12d9b4cfeab6a2f5bf10e83b059b31289009253d8ab36d68218dd68b4863bb6045cc86932928b5d6b"},
     {"aead_64_sans_aad",
      "ea1a1a275eb8aedaae7ed31d175580cfa9b430e776f7e53ce5fa421ed7a277f050e07146a8de90b6c8f883aa29471ba680a63bf99e82e9f22e40c6e2857dd537"},
+    {"aeadp_0",
+     "208597cc2445ce996831344ac87cf32f4caab7bf423301de70a197cbee45415f46b9dd2b0ba88d13233b3feb743eeb243fcd52ea62b81b82b50c27646ed5762f"},
+    {"aeadp_1000",
+     "2f9df0096ae33099f69c40109f2aaf0f45ea8f26cd24f2e0496ca89299e508a1fdc7f76d8ddf848f2bd98a5fba2fbe83d3a26f9a75483ae5c3c4353490f5d6d9"},
+    {"aeadp_8192",
+     "b143316617f8df9c3596c5dd2164f5b5e50a0a18d33dbd2665ca3fcc46a3cae461cc9262007f556c2a4c7aaff921d2cab1f915d2dcbe6c11ed6363489f8b09ac"},
+    {"aeadp_8193",
+     "fb2964a78c2f6107acd927efb20e01d8832d1f7a4a319f5429d069d5e09b268c50c06ee0e4a0799ac09eddff752cdf60754fe48e1317422efff7649388878fb5"},
+    {"aeadp_24581",
+     "28e289ae80f935a4630527ed550d3e23d8864ae5036913e77708d37249cd7047103555bc9b248da5625e469702c45b2ffcf6f5729fde3a6ac36ddb261c9ec24b"},
 };

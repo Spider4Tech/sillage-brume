@@ -9,8 +9,8 @@ effets à 2 et 3 tours les distinguent.
 
 | Étape | Dossier | Candidate | Conclusion |
 |---|---|---|---|
-| 1. SBOX6 | [`etudes/1_sbox6/`](etudes/1_sbox6/) | `F2CDB7E30465A891` | BCT maximale 6 au lieu de 10, mais profil DDT et BCT plat, et meilleures caractéristiques multi-tours pour l'attaquant. Écartée (`ANALYSE.md`, revue Codex `analyse-codex-resultat.md`) |
-| 2. SBOX_V3 et campagne lourde | [`etudes/2_sbox_v3_comparaison_lourde/`](etudes/2_sbox_v3_comparaison_lourde/) | `E936FBA8C40571D2` | Compromis Pareto : BCT sans 10, propriétés différentielles de BRUME conservées (`ANALYSE_V3.md`, revue Codex `rapport-codex-sboxv3.md`). Campagne lourde à 5 graines (`resultats/campagne_lourde_*/synthese.md`) |
+| 1. SBOX6 | [`etudes/1_sbox6/`](etudes/1_sbox6/) | `F2CDB7E30465A891` | BCT maximale 6 au lieu de 10, mais profil DDT et BCT plat, et meilleures caractéristiques multi-tours pour l'attaquant. Écartée (`ANALYSE.md`, revue Automated-review `analyse-codex-resultat.md`) |
+| 2. SBOX_V3 et campagne lourde | [`etudes/2_sbox_v3_comparaison_lourde/`](etudes/2_sbox_v3_comparaison_lourde/) | `E936FBA8C40571D2` | Compromis Pareto : BCT sans 10, propriétés différentielles de BRUME conservées (`ANALYSE_V3.md`, revue Automated-review `rapport-codex-sboxv3.md`). Campagne lourde à 5 graines (`resultats/campagne_lourde_*/synthese.md`) |
 | 3. Tests appariés BRUME / SBOX6 / V3 | [`etudes/3_tests_apparies/`](etudes/3_tests_apparies/) | — | Mêmes quartets évalués avec les trois S-box, tests de McNemar (`resultats/paired_*/synthese_appariee.md`) |
 | 4. SBOX_V4 et tests appariés BRUME / V3 / V4 | [`etudes/4_tests_apparies_v3_v4/`](etudes/4_tests_apparies_v3_v4/) | `A4F60295C873D1BE` | V4, vérifiée par `sbox_v4_candidate.py`, comparée de la même façon |
 | 5. Étude de référence V3 contre BRUME | [`etudes/5_etude_v3_reference/`](etudes/5_etude_v3_reference/) | — | Scripts Python (coque, faisceau, boomerang, intégrales, différentielles impossibles). Leurs sorties vont dans `resultats/etude_v3_vs_brume_reference_20261109/` à la racine, qui n'est pas publiée |

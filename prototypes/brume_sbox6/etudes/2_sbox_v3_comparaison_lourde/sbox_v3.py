@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Prototype : Troisième S-box (SBOX_V3) combinant les atouts de BRUME et de SBOX6.
 
-Contexte (recommandation analyse Codex du 8 novembre 2026) :
+Contexte (recommandation analyse Automated-review du 8 novembre 2026) :
   - SBOX6 (BCT max = 6, RECTANGLE décalée) élimine les maxima BCT à 8 et 10,
     mais son profil DDT est uniformément plat (les 15 lignes non nulles ont
     un maximum à 4). En conséquence, le moteur de recherche différentiel

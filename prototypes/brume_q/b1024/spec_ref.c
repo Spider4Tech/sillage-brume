@@ -32,6 +32,10 @@ static int voisin(int v, int k)   /* SPEC § 2.2 */
     return f == 0 ? 128 + (i + k) % 128 : ((i - k) % 128 + 128) % 128;
 }
 
+#ifdef PERM_PORTABLE   /* -DPERM_PORTABLE : les vecteurs de test calculés par le noyau portable (b1024_portable.h) */
+#include "b1024_portable.h"
+static void P(uint8_t s[128]) { pp_perm(s, 32); }
+#else
 static void P(uint8_t s[128])   /* SPEC § 2.4, sur l'état emballé */
 {
     uint8_t x[256], y[256];
@@ -47,6 +51,7 @@ static void P(uint8_t s[128])   /* SPEC § 2.4, sur l'état emballé */
     }
     for (int i = 0; i < 128; i++) s[i] = (uint8_t)(x[2 * i] | x[2 * i + 1] << 4);
 }
+#endif
 
 static void cadre(uint8_t s[128], int mode)   /* SPEC § 3.1 */
 {
@@ -119,6 +124,56 @@ static void enc(const uint8_t K[64], const uint8_t N[24], const uint8_t *A, size
     memcpy(T, s, 32);
 }
 
+/* AEAD parallèle (V06_MODES.md § 2.1, écrit d'après ce texte seul) */
+static void absorbe(uint8_t s[128], const uint8_t *d, size_t l, int dom)   /* d ‖ 0x01 ‖ 0*, dom sur le dernier bloc */
+{
+    size_t n = l / 80 + 1;
+    for (size_t i = 0; i < n; i++) {
+        for (size_t k = 0; k < 80; k++) {
+            size_t p = 80 * i + k;
+            s[k] ^= p < l ? d[p] : (p == l ? 0x01 : 0);
+        }
+        if (i + 1 == n) s[127] ^= (uint8_t)(dom * 16);
+        P(s);
+    }
+}
+static void encp(const uint8_t K[64], const uint8_t N[24], const uint8_t *A, size_t la, const uint8_t *X, size_t lx,
+                 uint8_t *C, uint8_t T[32])
+{
+    const size_t B = 8192;
+    uint8_t sa[128] = {0}, s[128];
+    memcpy(sa, K, 64);
+    memcpy(sa + 64, N, 24);
+    cadre(sa, 6);
+    sa[122] = 13;
+    P(sa);
+    absorbe(sa, A, la, 1);
+    size_t k = lx ? (lx + B - 1) / B : 1;
+    uint8_t *R = malloc(64 * k + 16);
+    for (size_t j = 0; j < k; j++) {
+        uint8_t fj[9];
+        for (int b = 0; b < 8; b++) fj[b] = (uint8_t)(j >> (8 * b));
+        memcpy(s, sa, 128);
+        absorbe(s, fj, 8, 5);                    /* le64(j) ‖ 0x01, domaine 5 */
+        s[127] ^= 3 * 16;                        /* 0^r, domaine 3 */
+        P(s);
+        size_t o = j * B, l = lx - o < B ? lx - o : B, i = 0;
+        for (; i + 80 <= l; i += 80) {
+            for (int q = 0; q < 80; q++) { C[o + i + q] = X[o + i + q] ^ s[q]; s[q] = C[o + i + q]; }
+            P(s);
+        }
+        for (size_t q = 0; q < l - i; q++) { C[o + i + q] = X[o + i + q] ^ s[q]; s[q] = C[o + i + q]; }
+        s[l - i] ^= 0x01;
+        s[127] ^= 2 * 16;
+        P(s);
+        memcpy(R + 64 * j, s, 64);
+    }
+    for (int b = 0; b < 8; b++) { R[64 * k + b] = (uint8_t)(k >> (8 * b)); R[64 * k + 8 + b] = (uint8_t)((uint64_t)lx >> (8 * b)); }
+    absorbe(sa, R, 64 * k + 16, 4);
+    memcpy(T, sa, 32);
+    free(R);
+}
+
 static void hexa(const uint8_t *x, size_t n, char *o)
 {
     for (size_t i = 0; i < n; i++) sprintf(o + 2 * i, "%02x", x[i]);
@@ -126,6 +181,10 @@ static void hexa(const uint8_t *x, size_t n, char *o)
 
 int main(int argc, char **argv)
 {
+#ifdef PERM_PORTABLE
+    if (!pp_init()) { printf("noyau portable : circuit de la S-box NON conforme\n"); return 1; }
+    printf("noyau portable (b1024_portable.h)\n");
+#endif
     /* données normatives et empreinte (SPEC § 2.2) */
     uint8_t d[6 + 256 + 1536], e[32];
     for (int g = 0; g < 6; g++) d[g] = (uint8_t)B1_K[g];
@@ -148,7 +207,7 @@ int main(int argc, char **argv)
     printf("empreinte des tables : %s ; constantes recalculées = table : %s\n", ok_emp ? "conforme" : "DIFFÉRENTE", ok_rc ? "oui" : "NON");
     /* vecteurs de test (SPEC § 4) */
     const size_t TM = 300 * 8192 + 5;
-    uint8_t *m = malloc(TM), K[64], N[24], out[200], *C = malloc(1000), T[32];
+    uint8_t *m = malloc(TM), K[64], N[24], out[200], *C = malloc(3 * 8192 + 5), T[32];
     for (size_t i = 0; i < TM; i++) m[i] = (uint8_t)(i % 251);
     for (int i = 0; i < 64; i++) K[i] = (uint8_t)i;
     for (int i = 0; i < 24; i++) N[i] = (uint8_t)(0x80 + i);
@@ -162,6 +221,12 @@ int main(int argc, char **argv)
         if (!strcmp(nom, "hachage_abc")) { H((const uint8_t *)"abc", 3, out, 64); hexa(out, 64, calc); }
         else if (sscanf(nom, "hachage_%zu", &L) == 1) { H(m, L, out, 64); hexa(out, 64, calc); }
         else if (sscanf(nom, "xof_%zu", &L) == 1) { sponge(m, L, 0, out, 200); hexa(out, 200, calc); }
+        else if (sscanf(nom, "aeadp_%zu", &L) == 1) {
+            encp(K, N, m + 1000, 9, m, L, C, T);
+            memcpy(out, T, 32);
+            sl_shake256(C, L, out + 32, 32);
+            hexa(out, 64, calc);
+        }
         else if (sscanf(nom, "aead_%zu", &L) == 1) {
             int sans = strstr(nom, "sans_aad") != NULL;
             enc(K, N, m + 1000, sans ? 0 : 9, m, L, C, T);
@@ -175,5 +240,5 @@ int main(int argc, char **argv)
     }
     fclose(f);
     printf("seconde implémentation : %d vecteurs conformes, %d différents\n", nok, nko);
-    return !(ok_emp && ok_rc && nko == 0 && nok == 18);
+    return !(ok_emp && ok_rc && nko == 0 && nok == 23);
 }

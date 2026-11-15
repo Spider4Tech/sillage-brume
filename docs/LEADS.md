@@ -355,7 +355,8 @@ Prototype: `prototypes/brume_bitslice/` (generator `gen_asm.c`, S-box `sbox_bs.h
   - full-state keyed AEAD, in the **SpongeWrap orientation** since 13 November (the rate holds the ciphertext). Its security
     model (`AEAD_SECURITY.md`) maps it onto DMV17, but the AE step is not written yet.
 - **Certified.** B = 8 exact. C3 ≥ 21, with two LRAT checkers (ours and `lrat-check` of drat-trim). BRUME-512's C3 ≥ 21 was
-  re-proved with both checkers as well.
+  re-proved with both checkers as well. C4 ≥ 28 (15 November, same chain, both checkers): at least 224 active S-boxes over
+  32 rounds.
 - **Checked.**
   - 12/12 checks against the dense reference;
   - 18 frozen KATs;

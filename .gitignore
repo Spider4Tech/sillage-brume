@@ -35,3 +35,6 @@ prototypes/vole/*.pdf
 
 # Articles tiers lus pour AEAD_SECURITY.md (PDF fournis, non publiés)
 /*.pdf
+
+# Outil de calcul distribué (dépôt à part, non versionné ici)
+/Hypercompute/

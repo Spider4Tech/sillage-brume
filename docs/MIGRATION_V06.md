@@ -28,6 +28,15 @@ README, `ROADMAP.md`, `AEAD_SECURITY.md` and `DOMAINS.md`.
 
 ## 2. Decisions for the author
 
+**Decided by the author on 14 November 2026:** D1 (a), D2 (a), D3 (a), D5 (64 bytes), D6 (portable constant-time
+kernel, then NEON), and **D4 (b): port the parallel AEAD and the TE mode to BRUME-1024q**, since BRUME-512 leaves the
+suite. Each port gets its own design and proof, written before the code (no security traded for a negligible gain).
+**Done on 14 November:** `prototypes/brume_q/b1024/V06_MODES.md` gives both. The TE mode reduces exactly to the AEAD
+(Proposition TE). The parallel AEAD is proposed with its parameters (mode 6, B = 8 192, CV of 64 bytes, domains 1, 5, 3,
+2, 4); its encoding lemma is checked mechanically, and Theorem P (classical) and its Q1 corollary are proved. The
+parameters await the author; no code is written yet.
+D7 stays the gate for v0.6. The table below keeps the options as they were presented.
+
 | # | Question | Options | Recommendation |
 |---|---|---|---|
 | D1 | **Python** ("Python frozen, new work in C") | (a) Keep `brume512.py` and its Python tests as history of v0.5, and write the v0.6 tests in C, run by `run_all` (the `c:` entries already exist). (b) Write a Python reference of BRUME-1024q | **(a)**. The prototype already has a dense reference in C and all its checks in C |
@@ -43,6 +52,9 @@ README, `ROADMAP.md`, `AEAD_SECURITY.md` and `DOMAINS.md`.
 1. **`SPEC.md`** (draft v0.6-1 written) and a second, portable implementation written from it alone (`spec_ref.c`).
    - **It reproduces the 18 KATs on x86-64 and on ARM64** (qemu, aarch64 gcc 15).
 2. **Portable constant-time kernel** (D6), checked by ctgrind and dudect.
+   - **Written and checked on 14 November** (`prototypes/brume_q/b1024/b1024_portable.h`): equal to the dense reference for
+     every round count, the 18 KATs on x86-64 and ARM64, ctgrind clean with its witness flagged. dudect at rest and
+     NEON remain.
 3. **The AE step** of the AEAD proof (`AEAD_SECURITY.md` § 4 (b)), and the rewrite of `PROOFS.md` § 4 for 1024q.
 4. **`sillage/`**:
    - new files `brume1024.{c,h}`, with the generated tables and the constant-time kernels;

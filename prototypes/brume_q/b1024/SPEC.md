@@ -133,10 +133,28 @@ Check `longueurs_hors_limite_rejetees_sans_lecture_ni_ecriture`.
   key. In its published form it needs ciphertexts of about 3·2^{c/2} blocks, far beyond 2^64 bytes
   (`AEAD_SECURITY.md` § 4 bis).
 
+### 3.5 bis Parallel AEAD (normative, v0.6; argument in `V06_MODES.md` § 2)
+
+Same key, nonce and tag sizes as § 3.5; B = 8 192 bytes, k = max(1, ⌈|X|/B⌉).
+- **Initial state:** as in § 3.5, with frame(**6**) instead of frame(3), and byte 122 = 13 (log₂ B).
+- **Trunk:** P, then the AAD as in § 3.5 (pad 0x01, domain 1 on the last block). Call the result S_A; it is never output.
+- **Leaf j** (0 ≤ j < k), from a copy of S_A:
+  1. XOR le64(j) ‖ 0x01 into the rate and 5 into the high nibble of byte 127, then P;
+  2. XOR 3 into the high nibble of byte 127 (the rate receives 0), then P;
+  3. encrypt the bytes [jB, min((j + 1)B, |X|)) exactly as the text phase of § 3.5 (full blocks, then the last block,
+     possibly empty, with 0x01 and domain 2).
+
+  CV_j = the first 64 bytes of the state.
+- **Root**, from a copy of S_A: absorb CV₀ ‖ … ‖ CV_{k−1} ‖ le64(k) ‖ le64(|X|) (pad 0x01, domain **4** on the last
+  block). T = the first 32 bytes of the state.
+- **Decryption:** the same, the rate being overwritten by the ciphertext. The tag is compared in constant time, and
+  nothing is returned on failure (the output is wiped). Lengths are limited as in § 3.5.
+
 ### 3.6 Separation (informative)
 
 `DOMAINS.md` gives the separation:
-- the AEAD's initial state differs from the sponge's at byte 127 for every key;
+- the AEAD's initial state differs from the sponge's at byte 127 for every key, and the parallel AEAD's (mode 6) from
+  both;
 - the domains are distinct within each construction.
 
 ## 4. Test vectors (normative)
@@ -155,6 +173,7 @@ Check `longueurs_hors_limite_rejetees_sans_lecture_ni_ecriture`.
 | `hachage_abc` | H("abc", 64) |
 | `xof_<L>` | XOF(m[0..L), 200) |
 | `aead_<L>`, `aead_64_sans_aad` | T ‖ SHAKE256(C)[0..32), with X = m[0..L) and A as above (empty for `sans_aad`) |
+| `aeadp_<L>` (L = 0, 1 000, 8 192, 8 193, 24 581: 1 to 3 leaves) | the same for the parallel AEAD (§ 3.5 bis), A of 9 bytes |
 
 - H("") = `95ee2e0b…5d255e95`.
 - H("abc") = `062a5ef2…5f776916`.
@@ -165,8 +184,9 @@ The full values are in the files.
 
 | Claim | Status | Where |
 |---|---|---|
-| Generic quantum level of the sponge, c = 384: 2^128 (BHT, collision search) | generic attack cost, not a proof; **not** a quantum guarantee for the AEAD (Q1 open, Q2 not claimed) | README § 5, `AEAD_SECURITY.md` § 4 (d) |
-| Bound on characteristics: C3 ≥ 21, 218 active S-boxes over 32 rounds | certified (two LRAT checkers) | README § 3 |
+| Generic quantum level of the sponge, c = 384: 2^128 (BHT, collision search) | generic attack cost, not a proof; **not** a quantum guarantee for the AEAD (Q2, superposition queries to the mode: **not claimed** in general; proofs of ours, not reviewed, for decryption in superposition with classical encryption (weak bound) and for encryption in superposition confined to the last text block, `AEAD_SECURITY.md` §§ 4 sexies–septies) | README § 5, `AEAD_SECURITY.md` § 4 (d) |
+| AEAD in model Q1 (classical queries to the mode, quantum queries to P): advantage ≤ 4σ·√(q_Q/2^384) + 2q_Q·√(2σ/2^384) + σ²/2^385 + 3σ²/2^1025 + q_d/2^256, for σ calls and q_Q quantum queries | **our proof, not reviewed**; ideal permutation; it rests on two published lemmas (statements and proofs re-read); probably not tight (best known attack: 2^192) | `AEAD_SECURITY.md` § 4 quinquies |
+| Bound on characteristics: C3 ≥ 21 and C4 ≥ 28, 224 active S-boxes over 32 rounds | certified (two LRAT checkers) | README § 3 |
 | Aggregation at 2 rounds: max DP 2^−16, max hull 2^−7.83 | exact, confirmed empirically | `agregation2.c` |
 | AEAD (classical queries, ideal permutation, nonce-respecting, no release of unverified plaintext, u users): Adv ≤ (2σ_D + 5)·N/2^384 + 2·q_iv·N/2^512 + q_d/2^256 + 2·C(u, 2)/2^512 (keys drawn with replacement; 0 without) + negligible terms; valid for σ = σ_E + σ_D ≤ 2^127, N + M ≤ 0.1·2^384 and M − L ≤ 2^127 (M = number of keyed-duplex calls, DMV17 notation), uniform independent 512-bit keys; the negligible terms are listed in `AEAD_SECURITY.md` § 4 bis | AE step written; DMV17 Theorem 1 checked for our parameters and repaired (Theorem 1′); agrees with Mennink 2023 Th. 7 / Dobraunig–Mennink 2019; not peer reviewed | `AEAD_SECURITY.md` §§ 4 bis–4 quater |
 | Constant time | measured (dudect, ctgrind) on two machines, AVX2 kernels | README |

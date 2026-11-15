@@ -22,6 +22,7 @@
 #include <time.h>
 
 #include "b1024_tables.h"
+#include "b1024_portable.h"
 #include "b1024_lot.h"
 #include "brume512_simd.h"
 #include "brume_ref.h"
@@ -759,6 +760,150 @@ static int aead_ouvrir(const uint8_t cle[64], const uint8_t nonce[24], const uin
     return 0;
 }
 
+/* ------------------------------------------------------------ AEAD parallèle (v0.6, V06_MODES.md § 2) */
+/* Mode 6 : l'état initial diffère de celui de l'AEAD séquentiel (mode 3) pour toute clé et tout nonce ; octet 122 = log₂ B.
+ * Tronc : phase AAD de l'AEAD séquentiel → S_A. Feuille j : fourche (le64(j) ‖ 0x01, domaine 5), fourche 2 (0^r, domaine 3),
+ * puis le morceau j (B = 8 192 octets) comme la phase de texte de l'AEAD ; CV_j = 64 premiers octets de l'état final.
+ * Racine : depuis S_A, absorbe CV_0 ‖ … ‖ CV_{k−1} ‖ le64(k) ‖ le64(ℓ), domaine 4 ; tag = 32 premiers octets. */
+enum { MODE_AEADP = 6, PAR_LOGB = 13, DOM_FOURCHE = 5, DOM_FOURCHE2 = 3, DOM_RACINE_P = 4 };
+#define PAR_B ((size_t)1 << PAR_LOGB)
+#define PAR_CV 64
+
+static void etat_aeadp(uint8_t w[128], const uint8_t cle[64], const uint8_t nonce[24])
+{
+    memset(w, 0, 128);
+    memcpy(w, cle, 64);
+    memcpy(w + 64, nonce, 24);
+    cadre_iv(w, MODE_AEADP);
+    w[122] = PAR_LOGB;
+}
+
+/* phase de texte, identique à celle de aead() (orientation SpongeWrap), laissant w après la dernière permutation */
+static void texte_p(perm_f P, uint8_t w[128], const uint8_t *in, size_t len, int dech, uint8_t *out)
+{
+    size_t i = 0;
+    for (; i + RB <= len; i += RB) {
+        for (size_t k = 0; k < RB; k++) {
+            uint8_t o = in[i + k] ^ w[k];
+            out[i + k] = o;
+            w[k] = dech ? in[i + k] : o;
+        }
+        P(w, R1);
+    }
+    size_t r = len - i;
+    for (size_t k = 0; k < r; k++) {
+        uint8_t o = in[i + k] ^ w[k];
+        out[i + k] = o;
+        w[k] = dech ? in[i + k] : o;
+    }
+    w[r] ^= 0x01;
+    w[127] ^= DOM_TEXTE << 4;
+    P(w, R1);
+}
+
+static void feuille_p(perm_f P, const uint8_t sa[128], uint64_t j, const uint8_t *in, size_t len, int dech, uint8_t *out,
+                      uint8_t cv[PAR_CV])
+{
+    uint8_t w[128] __attribute__((aligned(32)));
+    memcpy(w, sa, 128);
+    for (int b = 0; b < 8; b++)
+        w[b] ^= (uint8_t)(j >> (8 * b));
+    w[8] ^= 0x01;
+    w[127] ^= DOM_FOURCHE << 4;
+    P(w, R1);
+    w[127] ^= DOM_FOURCHE2 << 4;   /* σ = 0^r */
+    P(w, R1);
+    texte_p(P, w, in, len, dech, out);
+    memcpy(cv, w, PAR_CV);
+    sl_effacer(w, sizeof w);
+}
+
+/* absorption incrémentale (blocs de 80 octets, bourrage 0x01, domaine sur le dernier bloc), même résultat que absorber_a */
+typedef struct { uint8_t w[128]; size_t pos; perm_f P; } abs_t;
+static void abs_octets(abs_t *a, const uint8_t *d, size_t n)
+{
+    for (size_t i = 0; i < n; i++) {
+        a->w[a->pos++] ^= d[i];
+        if (a->pos == RB) {
+            a->P(a->w, R1);
+            a->pos = 0;
+        }
+    }
+}
+static void abs_fin(abs_t *a, int dom)
+{
+    a->w[a->pos] ^= 0x01;
+    a->w[127] ^= (uint8_t)(dom << 4);
+    a->P(a->w, R1);
+}
+
+/* Rend 0, ou −1 sans rien lire ni écrire si une longueur dépasse AEAD_LONGUEUR_MAX. Le noyau calcule les feuilles en
+ * parallèle (OpenMP) dans un tampon de CV ; sans tampon (échec d'allocation, ou référence dense), feuille par feuille :
+ * mêmes sorties. */
+static int aeadp(perm_f P, const uint8_t cle[64], const uint8_t nonce[24], const uint8_t *aad, size_t aadlen, const uint8_t *in,
+                 size_t len, int dech, uint8_t *out, uint8_t tag[32])
+{
+    if (!longueurs_admises(aadlen, len))
+        return -1;
+    uint8_t sa[128] __attribute__((aligned(32)));
+    etat_aeadp(sa, cle, nonce);
+    P(sa, R1);
+    absorber_a(P, sa, aad, aadlen, DOM_AAD);
+    size_t k = len ? (len + PAR_B - 1) / PAR_B : 1;
+    abs_t r;
+    memcpy(r.w, sa, 128);
+    r.pos = 0;
+    r.P = P;
+    uint8_t *cvs = (P == perm1 && k > 1) ? allouer(k * PAR_CV) : NULL;
+    if (cvs) {
+#pragma omp parallel for schedule(dynamic) if (k >= 4)
+        for (size_t j = 0; j < k; j++) {
+            size_t o = j * PAR_B, l = len - o < PAR_B ? len - o : PAR_B;
+            feuille_p(P, sa, j, in + o, l, dech, out + o, cvs + j * PAR_CV);
+        }
+        abs_octets(&r, cvs, k * PAR_CV);
+        sl_effacer(cvs, k * PAR_CV);
+        free(cvs);
+    } else {
+        for (size_t j = 0; j < k; j++) {
+            uint8_t cv[PAR_CV];
+            size_t o = j * PAR_B, l = len - o < PAR_B ? len - o : PAR_B;
+            feuille_p(P, sa, j, l ? in + o : in, l, dech, l ? out + o : out, cv);
+            abs_octets(&r, cv, PAR_CV);
+            sl_effacer(cv, sizeof cv);
+        }
+    }
+    uint8_t q[16];
+    for (int b = 0; b < 8; b++) {
+        q[b] = (uint8_t)((uint64_t)k >> (8 * b));
+        q[8 + b] = (uint8_t)((uint64_t)len >> (8 * b));
+    }
+    abs_octets(&r, q, 16);
+    abs_fin(&r, DOM_RACINE_P);
+    memcpy(tag, r.w, 32);
+    sl_effacer(r.w, sizeof r.w);
+    sl_effacer(sa, sizeof sa);
+    return 0;
+}
+
+/* déchiffrement vérifié de l'AEAD parallèle : rien n'est rendu avant la vérification du tag (temps constant) */
+static int aeadp_ouvrir(const uint8_t cle[64], const uint8_t nonce[24], const uint8_t *aad, size_t aadlen, const uint8_t *ct,
+                        size_t len, const uint8_t tag[32], uint8_t *pt)
+{
+    uint8_t t[32], d = 0;
+    if (aeadp(perm1, cle, nonce, aad, aadlen, ct, len, 1, pt, t))
+        return -1;
+    for (int i = 0; i < 32; i++)
+        d |= t[i] ^ tag[i];
+    sl_effacer(t, sizeof t);
+    SL_PUBLIC(&d, sizeof d);
+    if (d) {
+        sl_effacer(pt, len);
+        return -1;
+    }
+    return 0;
+}
+
 /* ------------------------------------------------------------ référence « DMV17 littérale » (contrôle de aead()) */
 /* Algorithme 1 de DMV17 (p. 615) transcrit tel quel sur l'état emballé, écrit indépendamment de aead() :
  *   Init(K, iv, σ, flag) : s ← f(K ‖ iv) ; Z ← ⌊s⌋_r ; si flag : σ̄ ← σ̄ + Z ; s ← s + σ
@@ -1089,7 +1234,7 @@ static double mediane(double *t, int n)
 /* Message de test : octet i = i mod 251 ; clé : octet i = i ; nonce : octet i = 0x80 + i ; AAD : 9 octets du message
  * à partir de l'octet 1000. Chaque KAT est calculé deux fois, par le noyau AVX2 et par la référence dense (éponge et arbre
  * réécrits à part sur l'état emballé), et comparé aux valeurs figées de kat_b1024.h. AEAD : tag ‖ SHAKE256(chiffré)[0..31]. */
-#define NKAT 18
+#define NKAT 23
 typedef struct { char nom[24]; char hex[401]; } kat_t;
 
 /* arbre de référence : même cadrage que arbre(), réécrit séquentiellement sur eponge_ref (contrôle indépendant du cadrage) */
@@ -1117,7 +1262,7 @@ static void arbre_ref(const uint8_t *m, size_t len, uint8_t *out, size_t outlen)
 static int calculer_kats(int ref, kat_t *k)
 {
     const size_t TM = 300 * 8192 + 5;
-    uint8_t *m = malloc(TM), out[200], cle[64], nonce[24], c[1000], tag[32];
+    uint8_t *m = malloc(TM), out[200], cle[64], nonce[24], *c = malloc(3 * 8192 + 5), tag[32];
     for (size_t i = 0; i < TM; i++)
         m[i] = (uint8_t)(i % 251);
     for (int i = 0; i < 64; i++)
@@ -1158,6 +1303,15 @@ static int calculer_kats(int ref, kat_t *k)
         sl_shake256(c, LA[t], out + 32, 32);
         hexa(out, 64, k[n].hex);
     }
+    const size_t LP[] = {0, 1000, 8192, 8193, 3 * 8192 + 5};   /* AEAD parallèle (v0.6) : 1, 1, 1, 2 et 3 feuilles */
+    for (size_t t = 0; t < 5; t++, n++) {
+        snprintf(k[n].nom, sizeof k[n].nom, "aeadp_%zu", LP[t]);
+        aeadp(ref ? perm_ref : perm1, cle, nonce, m + 1000, 9, m, LP[t], 0, c, tag);
+        memcpy(out, tag, 32);
+        sl_shake256(c, LP[t], out + 32, 32);
+        hexa(out, 64, k[n].hex);
+    }
+    free(c);
     free(m);
     return n;
 }
@@ -1184,7 +1338,10 @@ static int generer_kats(void)
            " * Ne pas régénérer pour faire passer un contrôle : une différence signale un changement de la fonction. Message,\n"
            " * clé, nonce et AAD : voir calculer_kats() dans brume1024.c.\n"
            " * Historique : 13 novembre 2026, orientation SpongeWrap de l'AEAD (AEAD_SECURITY.md § 6) : les 4 KAT de l'AEAD avec\n"
-           " * texte ont changé, volontairement ; les 14 autres sont restés identiques. */\n", R1);
+           " * texte ont changé, volontairement ; les 14 autres sont restés identiques.\n"
+           " * 14 novembre 2026, fusion du bloc de longueur (option A, AEAD_SECURITY.md § 6 bis) : les 5 KAT de l'AEAD ont changé,\n"
+           " * volontairement ; les 13 autres sont restés identiques.\n"
+           " * 14 novembre 2026, AEAD parallèle (v0.6, V06_MODES.md § 2) : 5 KAT ajoutés (aeadp_*) ; les 18 autres sont inchangés. */\n", R1);
     printf("static const char *const KAT_FIGES[%d][2] = {\n", NKAT);
     for (int i = 0; i < NKAT; i++)
         printf("    {\"%s\",\n     \"%s\"},\n", kn[i].nom, kn[i].hex);
@@ -1265,7 +1422,7 @@ int main(int argc, char **argv)
     int kat = argc > 1 && !strcmp(argv[1], "kat");   /* brume1024 kat > kat_b1024.h : fige les KAT du profil R = 32 */
     if (argc > 1 && !kat)
         R1 = atoi(argv[1]);
-    if (R1 < 1 || R1 > B1_RT || !bref_init() || !ref_init() || !init_noyaux())
+    if (R1 < 1 || R1 > B1_RT || !bref_init() || !ref_init() || !init_noyaux() || !pp_init())
         return 2;
     prepare_iv();
     sl_init();
@@ -1298,6 +1455,38 @@ int main(int argc, char **argv)
     }
     res_controle(&res, "noyau_1_etat_identique_a_la_reference_dense", ok1);
     res_controle(&res, "tours_inverses_denses_inversent_la_permutation", okinv);
+    /* 1 bis. noyau portable à temps constant (b1024_portable.h, C pur) ≡ noyau AVX2 : chaque nombre de tours de la table,
+     * 64 états à R1 tours, et l'AEAD aux frontières de blocs (chiffrement et déchiffrement) */
+    int okp = PP_PRET;
+    for (int R = 1; R <= B1_RT; R++)
+        for (int e = 0; e < 4; e++) {
+            uint8_t a[128], b[128];
+            memcpy(a, m + 128 * (64 + 4 * R + e), 128);
+            memcpy(b, a, 128);
+            pp_perm(a, R);
+            perm1(b, R);
+            okp &= !memcmp(a, b, 128);
+        }
+    for (int e = 0; e < 64; e++) {
+        uint8_t a[128], b[128];
+        memcpy(a, m + 128 * (512 + e), 128);
+        memcpy(b, a, 128);
+        pp_perm(a, R1);
+        perm1(b, R1);
+        okp &= !memcmp(a, b, 128);
+    }
+    {
+        static const size_t LP[] = {0, 1, 79, 80, 81, 159, 160, 1000};
+        for (int i = 0; i < 8; i++)
+            for (int dec = 0; dec < 2; dec++) {
+                uint8_t c1[1000], c2[1000], t1[32], t2[32];
+                const uint8_t *k = m + 100000, *n = m + 100064, *aad = m + 100100, *x = m + 200000;
+                int r1 = aead(pp_perm, k, n, aad, LP[i] % 97, x, LP[i], dec, c1, t1);
+                int r2 = aead(perm1, k, n, aad, LP[i] % 97, x, LP[i], dec, c2, t2);
+                okp &= r1 == r2 && !memcmp(c1, c2, LP[i]) && !memcmp(t1, t2, 32);
+            }
+    }
+    res_controle(&res, "noyau_portable_temps_constant_identique_au_noyau_avx2_tous_tours_et_aead", okp);
     /* 2. noyau 32 états ≡ 1 état */
     int ok32 = 1;
     {
@@ -1650,6 +1839,10 @@ int main(int argc, char **argv)
                 memcpy(n2, nonce, 24); n2[23] ^= 0x80; REJET(cle, n2, aad, A, ct, L, tag);
                 memcpy(t2, tag, 32); t2[0] ^= 1; REJET(cle, nonce, aad, A, ct, L, t2);
                 memcpy(t2, tag, 32); t2[31] ^= 0x80; REJET(cle, nonce, aad, A, ct, L, t2);
+                /* altérations dont les différences s'annulent par XOR (deux octets, même écart ; les 32 octets) : une
+                 * comparaison qui cumulerait par ^ au lieu de | les accepterait */
+                memcpy(t2, tag, 32); t2[3] ^= 0x5A; t2[17] ^= 0x5A; REJET(cle, nonce, aad, A, ct, L, t2);
+                memcpy(t2, tag, 32); for (int q = 0; q < 32; q++) t2[q] ^= 1; REJET(cle, nonce, aad, A, ct, L, t2);
                 if (A) {
                     memcpy(a2, aad, A); a2[0] ^= 1; REJET(cle, nonce, a2, A, ct, L, tag);
                     memcpy(a2, aad, A); a2[A - 1] ^= 0x80; REJET(cle, nonce, a2, A, ct, L, tag);
@@ -1934,6 +2127,83 @@ int main(int argc, char **argv)
         hexa(h, 64, s);
         printf("KAT BRUME-1024q R=%d hachage(\"abc\") = %s\n", R1, s);
         res_mesure(&res, "kat_abc", "\"%s\"", s);
+    }
+    /* 4 ter. AEAD parallèle (v0.6, V06_MODES.md § 2) : noyau ≡ référence dense aux frontières de feuilles, déchiffrement,
+     * altérations rejetées sans rien rendre, feuilles indépendantes, séparation d'avec l'AEAD séquentiel, repli sans
+     * allocation identique, longueurs hors limite */
+    {
+        static const size_t LPAR[] = {0, 1, 79, 80, 8191, 8192, 8193, 16384, 16385, 3 * 8192 + 5};
+        const size_t NMAX = 3 * 8192 + 5;
+        uint8_t *c1 = malloc(NMAX), *c2 = malloc(NMAX), *pt = malloc(NMAX + 1), *alt = malloc(NMAX + 1);   /* +1 : cas « prolongé » */
+        const uint8_t *cle = m + 300000, *non = m + 300100, *aad = m + 300200, *x = m + 400000;
+        int okp1 = 1, nref = 0;
+        for (int a = 0; a < 2; a++)
+            for (size_t i = 0; i < sizeof LPAR / sizeof *LPAR; i++) {
+                size_t L = LPAR[i], la = a ? 81 : 0;
+                uint8_t t1[32], t2[32];
+                okp1 &= aeadp(perm1, cle, non, aad, la, x, L, 0, c1, t1) == 0;
+                if (L <= 16385 || a == 0) {                          /* la référence dense est lente : 19 cas sur 20 */
+                    aeadp(perm_ref, cle, non, aad, la, x, L, 0, c2, t2);
+                    okp1 &= !memcmp(c1, c2, L) && !memcmp(t1, t2, 32);
+                    nref++;
+                }
+                memset(pt, 0xA5, NMAX);
+                okp1 &= aeadp_ouvrir(cle, non, aad, la, c1, L, t1, pt) == 0 && !memcmp(pt, x, L);
+            }
+        res_controle(&res, "aead_parallele_noyau_identique_a_la_reference_dense_et_dechiffre", okp1 && nref == 19);
+        /* altérations : chaque cas doit rendre −1 et une sortie effacée */
+        size_t L = NMAX;
+        uint8_t t[32];
+        aeadp(perm1, cle, non, aad, 9, x, L, 0, c1, t);
+        int okp2 = 1, nalt = 0;
+        for (int cas = 0; cas < 14; cas++) {
+            uint8_t k2[64], n2[24], a2[9], t2[32];
+            size_t L2 = L;
+            memcpy(k2, cle, 64); memcpy(n2, non, 24); memcpy(a2, aad, 9); memcpy(t2, t, 32);
+            memcpy(alt, c1, L);
+            switch (cas) {
+            case 0: alt[5] ^= 1; break;                          /* feuille 0 */
+            case 1: alt[8192 + 77] ^= 0x80; break;                /* feuille 1 */
+            case 2: alt[L - 1] ^= 1; break;                       /* dernière feuille, dernier octet */
+            case 3: memcpy(alt, c1 + 8192, 8192); memcpy(alt + 8192, c1, 8192); break;   /* feuilles 0 et 1 échangées */
+            case 4: L2 = L - 1; break;                            /* tronqué */
+            case 5: alt[L] = 0; L2 = L + 1; break;                /* prolongé */
+            case 6: L2 = 2 * 8192; break;                         /* une feuille de moins */
+            case 7: a2[3] ^= 1; break;
+            case 8: n2[23] ^= 1; break;                           /* octet du nonce dans la capacité */
+            case 9: t2[31] ^= 1; break;
+            case 10: k2[0] ^= 1; break;
+            case 11: L2 = 8192; break;                            /* première feuille seule */
+            case 12: alt[8191] ^= 1; alt[8192] ^= 1; break;       /* frontière entre feuilles */
+            case 13: t2[0] ^= 0x5A; t2[9] ^= 0x5A; break;         /* écarts qui s'annulent par XOR */
+            }
+            memset(pt, 0xA5, NMAX + 1);
+            int rr = aeadp_ouvrir(k2, n2, a2, 9, alt, L2, t2, pt);
+            int efface = 1;
+            for (size_t j = 0; j < L2; j++)
+                efface &= pt[j] == 0;
+            okp2 &= rr == -1 && efface;
+            nalt++;
+        }
+        res_controle(&res, "aead_parallele_rejette_les_alterations_et_n_en_rend_rien", okp2 && nalt == 14);
+        /* indépendance des feuilles, séparation d'avec l'AEAD séquentiel, repli sans allocation, longueurs hors limite */
+        uint8_t ta[32], tb[32];
+        memcpy(alt, x, L);
+        alt[8192 + 10] ^= 1;                                      /* clair modifié dans la feuille 1 */
+        aeadp(perm1, cle, non, aad, 9, alt, L, 0, c2, tb);
+        int okp3 = !memcmp(c1, c2, 8192) && !memcmp(c1 + 16384, c2 + 16384, L - 16384) && memcmp(c1 + 8192, c2 + 8192, 8192)
+                   && memcmp(t, tb, 32);
+        aead(perm1, cle, non, aad, 9, x, 64, 0, c2, ta);
+        aeadp(perm1, cle, non, aad, 9, x, 64, 0, pt, tb);
+        okp3 &= memcmp(c2, pt, 64) && memcmp(ta, tb, 32);
+        long inj = ALLOC_INJECTES;
+        ALLOC_ECHEC = 0;                                          /* le prochain tampon de CV échoue : repli feuille par feuille */
+        aeadp(perm1, cle, non, aad, 9, x, L, 0, c2, tb);
+        ALLOC_ECHEC = -1;
+        okp3 &= ALLOC_INJECTES == inj + 1 && !memcmp(c1, c2, L) && !memcmp(t, tb, 32);
+        okp3 &= aeadp(perm1, cle, non, aad, SIZE_MAX, x, 0, 0, c2, tb) == -1 && aeadp(perm1, cle, non, aad, 0, x, SIZE_MAX, 0, c2, tb) == -1;
+        res_controle(&res, "aead_parallele_feuilles_independantes_separe_du_sequentiel_repli_identique", okp3);
+        free(c1); free(c2); free(pt); free(alt);
     }
     /* 5 bis. KAT figés (profil R = 32) : noyau AVX2 et référence dense contre kat_b1024.h ; table des domaines */
     if (R1 == 32) {

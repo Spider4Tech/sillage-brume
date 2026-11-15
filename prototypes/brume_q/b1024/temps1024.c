@@ -14,6 +14,8 @@
  *   temoin        aa + 300 cycles d'attente en classe 1 : sensibilité du banc (doit être détecté) ;
  *   permutation_ref  référence dense par tables (indices dépendant des données) : témoin indicatif, sans contrôle ;
  *   ouvrir       déchiffrement vérifié (aead_ouvrir), clé et clair secrets, tag valide (chemin d'acceptation) ;
+ *   permutation_portable  noyau portable à temps constant (b1024_portable.h, C pur, plans de bits), état secret ;
+ *   aead_portable  l'AEAD sur le noyau portable, clé et clair secrets ;
  *   ouvrir_rejet le même avec un tag faux (chemin de rejet, sortie effacée). Le verdict étant public, on ne compare pas
  *                acceptation et rejet entre eux : chaque mesure compare clé fixe et clé aléatoire sur le même chemin.
  * Un test statistique ne prouve pas l'absence de fuite ; il en détecte. À lancer sur une machine au repos, jamais pendant
@@ -26,14 +28,15 @@
 #include <x86intrin.h>
 
 #include "brume1024.c"
+#include "b1024_portable.h"
 
 #define PAQ 256
 #define SEUIL 4.5
 #define NT (32 * 128)   /* taille du tampon : 32 états pour le lot */
 
-enum { OP_PERM, OP_LOT, OP_AEAD, OP_AEAD_CLE, OP_AEAD_CLAIR, OP_AA, OP_TEMOIN, OP_PERM_REF, OP_OUVRIR, OP_OUVRIR_REJET, NOP };
+enum { OP_PERM, OP_LOT, OP_AEAD, OP_AEAD_CLE, OP_AEAD_CLAIR, OP_AA, OP_TEMOIN, OP_PERM_REF, OP_OUVRIR, OP_OUVRIR_REJET, OP_PERM_PORT, OP_AEAD_PORT, NOP };
 static const char *const NOMS[NOP] = {"permutation", "lot", "aead", "aead_cle", "aead_clair", "aa", "temoin", "permutation_ref",
-                                      "ouvrir", "ouvrir_rejet"};
+                                      "ouvrir", "ouvrir_rejet", "permutation_portable", "aead_portable"};
 
 static double t_coupe(double *const t[2], const long nc[2], double seuil)
 {
@@ -98,6 +101,8 @@ static mesure_t mesurer(int op, long n)
             case OP_PERM: perm1(tampon, R1); break;
             case OP_LOT: lot(st, R1); break;
             case OP_PERM_REF: perm_ref(tampon, R1); break;
+            case OP_PERM_PORT: pp_perm(tampon, R1); break;
+            case OP_AEAD_PORT: aead(pp_perm, tampon, nonce, NULL, 0, tampon + 64, 64, 0, sortie, tag); break;
             case OP_OUVRIR:
             case OP_OUVRIR_REJET: acc ^= (uint8_t)aead_ouvrir(tampon, nonce, NULL, 0, ct, 64, tg, clair); break;
             case OP_TEMOIN:
@@ -140,7 +145,7 @@ static void afficher(int op, mesure_t r)
 
 int main(int argc, char **argv)
 {
-    if (!bref_init() || !ref_init() || !init_noyaux())
+    if (!bref_init() || !ref_init() || !init_noyaux() || !pp_init())
         return 2;
     prepare_iv();
     sl_init();
@@ -154,7 +159,7 @@ int main(int argc, char **argv)
         return 2;
     }
     resultat_t res = {.nom = "temps1024", .titre = "BRUME-1024q (prototype) : temps constant mesure (dudect)"};
-    const long N[NOP] = {1000000, 40000, 500000, 500000, 500000, 500000, 200000, 20000, 500000, 500000};
+    const long N[NOP] = {1000000, 40000, 500000, 500000, 500000, 500000, 200000, 20000, 500000, 500000, 500000, 300000};
     double t[NOP];
     for (int op = 0; op < NOP; op++) {
         mesure_t r = mesurer(op, N[op]);
@@ -184,5 +189,7 @@ int main(int argc, char **argv)
     res_controle(&res, "aead_clair_seul_sans_fuite_detectee", fabs(t[OP_AEAD_CLAIR]) < SEUIL);
     res_controle(&res, "aead_ouvrir_acceptation_sans_fuite_detectee", fabs(t[OP_OUVRIR]) < SEUIL);
     res_controle(&res, "aead_ouvrir_rejet_sans_fuite_detectee", fabs(t[OP_OUVRIR_REJET]) < SEUIL);
+    res_controle(&res, "permutation_portable_sans_fuite_detectee", fabs(t[OP_PERM_PORT]) < SEUIL);
+    res_controle(&res, "aead_portable_sans_fuite_detectee", fabs(t[OP_AEAD_PORT]) < SEUIL);
     return res_ecrire(&res);
 }

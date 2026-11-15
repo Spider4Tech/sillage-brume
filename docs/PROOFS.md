@@ -680,7 +680,7 @@ signature size does not change** (the witness has `w·Σ(μ_t − 1)` bits whate
   uniform matrix, exactly the one of (H3), and the reduction B programs it with its instance. Outside the ROM, it would be an extra
   assumption, the same as for the current signature.
 - **No θ.** Unlike Theorem 5.1 of SDitH v2.0, Lemma 17.2 removes no row. It has no density parameter θ, and no uniqueness hypothesis
-  (Codex review, point 3: the condition `k_rsd ≤ n − w·log₂(n/w) − log₂ θ` does not apply). The parameters take
+  (Automated-review, point 3: the condition `k_rsd ≤ n − w·log₂(n/w) − log₂ θ` does not apply). The parameters take
   `r ≥ log₂ C(n, w)`, which guarantees that the SD solution is unique in expectation (`C(n, w)/2^r ≤ 1`); the reduction holds
   for every r.
 - **Profiles f.** They share (n, r, w) with the short profiles, so the same estimates apply.

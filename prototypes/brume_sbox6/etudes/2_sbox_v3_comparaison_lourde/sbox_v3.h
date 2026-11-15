@@ -3,7 +3,7 @@
  * SBOX_V3 = [14, 9, 3, 6, 15, 11, 10, 8, 12, 4, 0, 5, 7, 1, 13, 2]
  * SBOX_V3(x) = M2 * S_G11(M1 * x ^ 9) ^ 5
  *
- * Résout le dilemme mis en évidence par l'analyse Codex du 8 novembre 2026 :
+ * Résout le dilemme mis en évidence par l'analyse Automated-review du 8 novembre 2026 :
  *   - Réduit la BCT maximale de 10 à 8 (0 entrée à 10, contre 1 à 10 dans BRUME).
  *   - Réduit la DBCT maximale de 52 à 32 (identique à SBOX6).
  *   - Conserve 5 lignes DDT sans transition à 4 (max DDT = 2), contre 3 pour BRUME

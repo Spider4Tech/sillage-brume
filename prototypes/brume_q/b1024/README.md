@@ -27,8 +27,10 @@ belongs to the author: c = 384 for 128 quantum bits, with a wider permutation to
 | `dp1024/` | Division property: the suite's trail code on BRUME-1024q's parameters (`pistes1024.py`, `b1024_module.py`), beam search (`dp1024.py`), beam prefix + exact CP-SAT suffix (`dp1024_exact.py`), per-bit coverage (`dp1024_couverture.py`), direct construction for the inverse direction (`dp1024_inverse.py`), re-verified summary (`dp1024_bilan.py`) |
 | `agregation2.c` | Exact 2-round differentials and linear hulls (all characteristics aggregated, branch and bound), against the best characteristic and Park et al.'s bound, confirmed empirically on the real permutation |
 | `cubes_degre.c`, `campagne_portable.sh` | Cube and zero-sum experiments (degree reached after r rounds), checked against `perm1`; resumable campaign of the cryptanalysis benches on an extra machine |
-| `SPEC.md`, `kat_b1024.txt`, `spec_ref.c` | Self-contained specification (draft v0.6-1), test vectors as text, and a second implementation written from the spec alone (portable C), which reproduces the 18 vectors |
-| `AEAD_SECURITY.md` | Security model of the AEAD against Daemen–Mennink–Van Assche 2017: exact mode, hypothesis-by-hypothesis mapping, bounds, AE reduction (§ 4 bis) to DMV17 Theorem 1 as repaired (Theorem 1′, § 4 quater), classical ideal-permutation model only; Q1 open |
+| `SPEC.md`, `kat_b1024.txt`, `spec_ref.c` | Self-contained specification (draft v0.6-1), test vectors as text, and a second implementation written from the spec alone (portable C), which reproduces the 23 vectors |
+| `V06_MODES.md`, `v06_verif/` | v0.6 modes: TE (reduction to the AEAD) and the parallel AEAD (construction, encoding lemma checked mechanically, Theorem P, Q1) |
+| `b1024_portable.h`, `controle_portable.c` | **Portable constant-time kernel** (plain C, 64-bit words, no intrinsics; MIGRATION_V06 decision D6): the state as 4 bit planes of 256 bits, the 17-gate S-box circuit, the linear layer as 128-bit rotations of the other half (the dihedral neighbours) and per-position GF(2) masks. Its check: equal to a dense reference for every round count 1 to 48, round trip of the packing, ctgrind mode with a witness |
+| `AEAD_SECURITY.md` | Security model of the AEAD against Daemen–Mennink–Van Assche 2017: exact mode, hypothesis-by-hypothesis mapping, bounds, AE reduction (§ 4 bis) to DMV17 Theorem 1 as repaired (Theorem 1′, § 4 quater), classical ideal-permutation model; quantum: our proofs, not reviewed, for Q1 (§ 4 quinquies), decryption in superposition (§ 4 sexies) and encryption in superposition confined to the last block (§ 4 septies); full Q2 not claimed |
 | `DOMAINS.md` | Initial states, modes, domains and padding of every construction, and what is checked |
 
 ```bash
@@ -74,9 +76,9 @@ The design is the BRUME-512 rule (`sillage/select_params.py`) transposed to 256 
 | 1 | M with B = 8 certified, full diffusion in 5 rounds, λ\* ≤ 4, asymmetric | **B_diff = B_lin = 8 exact.** Weight ≤ 3 on both sides for M, M⁻¹, Mᵀ, (Mᵀ)⁻¹: 8/13/17, 230/221/215, 8/13/17, 231/222/216. Balls 7, 37, 127, 224, 256; the effective diffusion through the permutation is the same. λ\* = 3.796. No invariant translation, 256 WL colours out of 256, order of M > 256. M⁻¹ density 93.7 %. max overlap 2. | **met** |
 | 2 | One-state AVX2 kernel at most 2.3 × BRUME-512 | 773 ns against 388 ns at 32 rounds: **×1.99** | **met** |
 | 3 | Measured structural reach at most BRUME-512 + 2 rounds | Impossible differentials and zero correlations: **5 rounds, as at 512** (same code). Degree (Boura–Canteaut, γ = 3): 11 rounds per direction against 10, so **+2 inside-out, at the limit**. Boomerang: 3 rounds 2^−19.41 (best quartet, 2^30), 4 rounds < 2^−32 (0 return in 2^36). Cubes: observed integral reach 5 rounds. Division property: inverse exactly 11 rounds, forward 11 or 12, **inside-out 22 or 23** against 20 at 512: **+2 (met) if the forward reach is 11, +3 (missed by one round) if it is 12** | partly met |
-| 4 | Certified C3 at least that of BRUME-512 (21) | **C3 ≥ 18 and C3 ≥ 21 certified** (§ 3) | **met** |
+| 4 | Certified C3 at least that of BRUME-512 (21) | **C3 ≥ 18 and C3 ≥ 21 certified** (§ 3); since 15 November also **C4 ≥ 28** | **met** |
 
-## 3. The 3-round bound (certified)
+## 3. The 3- and 4-round bounds (certified)
 
 The method is the one of `../sat/README.md`, compiled with `-DB1024`.
 - **Model and encoding checks.**
@@ -90,10 +92,43 @@ The method is the one of `../sat/README.md`, compiled with `-DB1024`.
 |---|---|---|
 | C3 ≥ 18 | 361 | 361 / 361, both checkers, 762 s of solver time |
 | C3 ≥ 21 | 484 | 480 directly; (4, 9), (5, 10) and (5, 11) through 22 sub-cubes on W₂ each; (6, 10) through 21 sub-cubes plus, for the last one (6, 10, 4), 128 fine cubes on the 7 round-1 neighbours of the active nibble. All checked twice, completeness of every split included |
+| **C4 ≥ 28** (15 November) | 841 | 831 directly; the 10 others through 29 sub-cubes on W₂ each (282 direct); the 8 remaining through 29 pieces on W₃ each (230 direct); the last 2, (4, 8, 10, 5) and (8, 4, 11, 4), through 128 cubes each on the round-1 activity of the 7 neighbours of nibble 0. **1 599 proofs, all checked twice, 0 satisfiable**; the 4 completeness proofs (leaf grid, W₂, W₃, neighbourhood split) checked twice |
+
+**C4 ≥ 28 in detail.** Same chain as C3 (`../sat/c3_cnf.c` with R = 4, K = 28, nibble 0 active at round 0 by the
+transitive automorphisms). The differential CNF (M) and the linear one (Mᵀ) are **identical** apart from their comment line,
+because the support of M is symmetric (supp M = supp Mᵀ, checked by `c3_cnf verif`): one certificate covers both. Model
+check at 4 rounds: 20 000 real differential and 20 000 real linear characteristics, 0 violated clauses. Solver time
+11.3 h over the 1 599 proofs (attempts stopped at a time limit not counted); hardest piece (4, 9, 10, 4): 5 850 s and
+18.8 GB. The tree is re-read from the result files, without trusting the campaign summaries, by
+`../sat/audit_c4_K28.py` (`resultats/c4_K28_audit_20261115.txt`): each child's literals are exactly its parent's plus its
+own split line, every node is proved directly or by all its children plus a checked completeness proof. Run on the
+HyperCompute cluster (four machines), 15 November, 03 h 45 → 17 h 20. 28 over 4 rounds is 7 per round, the rate of
+C3 ≥ 21; C3 alone gives only 22 over 4 rounds (21 + 1). No feasible pattern of the 4-round relaxation is known, so no upper bound.
 
 The hardest cubes are much harder than at 512 bits. Leaf (6, 10) did not finish after 2 h 36 directly (18 GB of proof),
 against 32 min at 512. No pattern with at most 30 active S-boxes was found in 15 min, whereas there is one at 512 ([4, 21, 5]).
-This hints at a larger C3 at 1024, but nothing is proved beyond 21.
+This hints at a larger C3 at 1024, but nothing is proved beyond 21 (C3) and 28 (C4).
+
+**Best characteristics found** (`trails1024.py`, 14–15 November, laptop, local machine and HyperCompute). The certified
+bound in bits is 2 per active S-box in differential and 1 in linear, with the best split into blocks of 4, 3, 2 and 1
+rounds (28, 21, 8, 1). "CP-SAT" is the exact bit-level model stopped at 30 min (15 min for the "restricted" runs: at
+most one active S-box in the first round in differential, in the last round in linear), every trail checked by
+`verifier`. "Beam" is the beam search (K = 1 000, L = 10, seeds 5 and 6, 10 rounds), a valid upper
+bound, whose trails are not re-checked. The best value of the two is in bold.
+
+| Rounds | Proved diff | Found diff: CP-SAT / beam | Proved lin | Found lin: CP-SAT / beam |
+|---|---|---|---|---|
+| 3 | 42 | **87** (sweep of `agregation34.c`, re-checked by `verif_chemin3.py`; CP-SAT 89) / 95 | 21 | **40** (optimal for the restricted run) / 154 |
+| 4 | 56 | **321** / 360 | 28 | **142** / 359 |
+| 5 | 58 | **774** / 836 | 29 | **344** / 596 |
+| 6 | 84 | 1 510 / **1 382** | 42 | **716** / 831 |
+| 7 | 98 | 2 141 / **1 928** | 49 | 1 154 / **1 069** |
+| 8 | 112 | 2 812 / **2 477** | 56 | 1 539 / **1 306** |
+| 10 | 140 | — / 3 577 | 70 | — / 1 782 |
+
+Only the 3-round linear value is proved optimal, and only within the restricted run (one active S-box in the last round). Every
+other value found is far above the proved bound. That gap is what the relaxation loses (cancellations are free in it, and
+every active S-box is counted at its minimum weight); it is not a margin that is proved.
 
 ## 4. Modes and measurements
 
@@ -131,8 +166,9 @@ This hints at a larger C3 at 1024, but nothing is proved beyond 21.
     (nonce-respecting, no release of unverified plaintext, multi-user) to DMV17 Theorem 1, **as repaired** (Theorem 1′,
     § 4 quater: two steps of the published proof, F2 and F3, are false as written and are repaired). Bound:
     Adv ≤ (2σ_D + 5)·N/2^384 + 2·q_iv·N/2^512 + q_d/2^256 + negligible terms, under the conditions listed in `SPEC.md`
-    § 5. What it is **not**: a proof for the concrete permutation (ideal-permutation model), a quantum proof (Q1 open,
-    Q2 not claimed), nor a reviewed result. The repairs (F2, F3) and the partial-flag extension (§ 4 ter) need an
+    § 5. What it is **not**: a proof for the concrete permutation (ideal-permutation model), a reviewed quantum proof
+    (the Q1 and partial Q2 proofs of §§ 4 quinquies–septies are ours and not reviewed; full Q2 is not claimed), nor a
+    reviewed result. The repairs (F2, F3) and the partial-flag extension (§ 4 ter) need an
     independent review.
   - **Batched version (`aead_multi`).** It uses the same scheduling as the tree (bitsliced batches of 256 messages, then
     batches of 32, then one message at a time), and is checked equal to the one-message AEAD.
@@ -152,8 +188,15 @@ This hints at a larger C3 at 1024, but nothing is proved beyond 21.
     with a wiped output if the root cannot be allocated (check `echecs_d_allocation_injectes_…`).
   - Before the first scheduling fix, hashing 16 KiB took 2.1 ms instead of 0.17 ms.
 
-**Checks (29/29).** Each implementation is checked against the dense reference:
+**Checks (33/33).** Each implementation is checked against the dense reference:
+- the parallel AEAD (v0.6, `V06_MODES.md`): the kernel against the dense reference at the leaf boundaries (0, 1, 79,
+  80, 8 191 to 8 193, 16 384, 16 385, 24 581 bytes), and decryption; 13 alterations rejected with nothing returned
+  (a byte of each leaf, swapped leaves, truncation, extension, a missing leaf, AAD, nonce, tag, key, a leaf boundary);
+  independent leaves; separation from the sequential AEAD; the fallback without allocation giving the same outputs;
+  lengths beyond the limit rejected;
 - the one-state kernel, and the dense inverse rounds;
+- the portable constant-time kernel (`b1024_portable.h`) against the AVX2 kernel, for every round count 1 to 48, and the
+  AEAD through it at the block boundaries, encryption and decryption;
 - the 32-state kernel against the one-state kernel;
 - the bitsliced 256-state kernel against the one-state kernel, transpositions included;
 - the unpacked-state sponge against the reference sponge at the boundary lengths;
@@ -189,7 +232,8 @@ This hints at a larger C3 at 1024, but nothing is proved beyond 21.
     after `prepare_iv()`;
 - the batched AEAD against the one-message AEAD, on 1 thread so that the batch path is exercised;
 - full effective diffusion in 5 rounds;
-- 18 frozen KATs, recomputed by the AVX2 kernel and (16 of them) by the dense reference (`kat_figes_*`). The 18th (300 leaves)
+- 23 frozen KATs (the last 5 for the parallel AEAD, 14 November; the first 18 unchanged), recomputed by the AVX2 kernel
+  and (21 of them) by the dense reference (`kat_figes_*`). The 18th (300 leaves)
   was added with the bitsliced kernel; the first 17 did not change, and it is the same on 1 thread (bitsliced path) and 12
   threads (32-leaf batches and sponges);
 - the structural domain-separation checks of `DOMAINS.md` (`separation_des_domaines_structurelle`).
@@ -330,30 +374,32 @@ through `brume1024.c`. Median of 9 series, machines at rest.
 | | 64 B | 1480 ns | 762 ns | **×1.94** | 3473 ns | 1701 ns | **×2.04** |
 | | 1 KiB | 12.6 µs | 9.8 µs | ×1.29 | 29.4 µs | 21.8 µs | ×1.35 |
 | | 4 KiB | 48.4 µs | 39.5 µs | ×1.23 | 112.7 µs | 87.1 µs | ×1.29 |
-| AEAD vs BRUME-512 (c = 256), 16 B of AAD | 0 B | 2.64 µs | **2.31 µs** | **×1.15** | 6.17 µs | 6.75 µs ⁽ᵃ⁾ | ×0.91 ⁽ᵃ⁾ |
-| | 64 B | 3.36–3.51 µs | **2.32 µs** | **×1.45–1.53** | 7.91 µs | 6.79 µs ⁽ᵃ⁾ | ×1.17 ⁽ᵃ⁾ |
-| | 1 KiB | 14.4 µs | 11.5 µs | ×1.25 | 33.9 µs | 27.0 µs ⁽ᵃ⁾ | ×1.26 ⁽ᵃ⁾ |
-| AEAD vs BRUME-512-256 (c = 384), 16 B of AAD | 0 B | 4.62 µs | 2.31 µs | **×2.00** | 10.53 µs | 6.75 µs ⁽ᵃ⁾ | **×1.56** ⁽ᵃ⁾ |
-| | 64 B | 6.04 µs | 2.32 µs | **×2.60** | 13.99 µs | 6.79 µs ⁽ᵃ⁾ | **×2.06** ⁽ᵃ⁾ |
-| | 1 KiB | 28.7 µs | 11.5 µs | **×2.49** | 66.0 µs | 27.0 µs ⁽ᵃ⁾ | **×2.44** ⁽ᵃ⁾ |
+| AEAD vs BRUME-512 (c = 256), 16 B of AAD | 0 B | 2.64 µs | **2.31 µs** | **×1.15** | 6.22 µs | **5.12 µs** | **×1.21** |
+| | 64 B | 3.36–3.51 µs | **2.32 µs** | **×1.45–1.53** | 7.97 µs | **5.14 µs** | **×1.55** |
+| | 1 KiB | 14.4 µs | 11.5 µs | ×1.25 | 34.3 µs | 25.6 µs | ×1.34 |
+| AEAD vs BRUME-512-256 (c = 384), 16 B of AAD | 0 B | 4.62 µs | 2.31 µs | **×2.00** | 10.57 µs | 5.12 µs | **×2.06** |
+| | 64 B | 6.04 µs | 2.32 µs | **×2.60** | 14.09 µs | 5.14 µs | **×2.74** |
+| | 1 KiB | 28.7 µs | 11.5 µs | **×2.49** | 66.8 µs | 25.6 µs | **×2.61** |
 | Sequential sponge, 1 core | 1 MiB | 86.5 MB/s | 106.1 MB/s | ×1.23 | 37.0 MB/s | 47.8 MB/s | ×1.29 |
 | Tree, 1 core | 16 MiB | 163.5 MB/s | 249.3 MB/s | **×1.52** | 73.7 MB/s | 181.0 MB/s | **×2.46** |
 | Tree, all threads (12 / 16) | 64 MiB | 879.0 MB/s | 1045.4 MB/s | ×1.19 | 497.6 MB/s | 1005.4 MB/s | **×2.02** |
 | AEAD, 1 core, vs c = 256 / vs c = 384 | 1 MiB | 87.2 / 43.3 MB/s | 105.7 MB/s | ×1.21 / ×2.44 | 36.1 / 18.4 MB/s | 47.5 MB/s | ×1.32 / ×2.58 |
 
-⁽ᵃ⁾ 2700X: measured before the length block was merged (4 permutations per short message); to be remeasured. The 5600G
-AEAD rows are measured with the merge (14 November, 3 permutations); before it they were 3.08 µs (0 B), 3.07 µs (64 B)
-and 12.2 µs (1 KiB).
+Both machines are measured with the length block merged (option A, 3 permutations per short message): the 5600G on
+14 November, the 2700X on 14 November at rest after the AEAD campaign (`resultats/bench_comparatif_1024q_zenplus.json`).
+Before the merge they were 3.08 µs (0 B), 3.07 µs (64 B) and 12.2 µs (1 KiB) on the 5600G, and 6.75, 6.79 and 27.0 µs on
+the 2700X.
 
 **Reading:**
 - **Where 1024q wins.** It is faster than the classical suite, which is weaker against a quantum adversary, on:
   - every hash from 64 bytes up (×1.2 to ×2), and the sequential sponge;
   - the AEAD at every size on the 5600G since the merge of the length block (×1.15 at 0 B, ×1.45–1.53 at 64 B);
   - the tree on both machines (×1.19 to ×2.46).
-- **At equal capacity**, its AEAD runs ×1.47 to ×2.6 faster than BRUME-512-256, from 0 bytes.
-- **Where it loses.** Nowhere on the 5600G since the length block was merged (14 November): the fixed cost of the AEAD
-  went from 4 permutations of 1 024 bits to 3, and the empty message from ×0.87 to ×1.15 against BRUME-512 at c = 256.
-  The 2700X column is still the measurement before the merge (×0.91 at 0 B).
+- **At equal capacity**, its AEAD runs ×2.0 to ×2.7 faster than BRUME-512-256, from 0 bytes, on both machines.
+- **Where it loses.** Nowhere among the measured sizes, on either machine, since the length block was merged
+  (14 November). The fixed cost of the AEAD went from 4 permutations of 1 024 bits to 3. Against BRUME-512 at c = 256,
+  the empty message went from ×0.87 to ×1.15 on the 5600G, and from ×0.91 to ×1.21 on the 2700X. Only the single
+  permutation is slower (×0.5): it has twice the width.
 - **What changed since the first version:**
   - the AEAD at 64 B went from ×0.87 to ×1.11 (full-state keyed initialisation), then to ×1.45–1.53 (length block merged);
   - the tree went from ×0.87 to ×1.52 on one core of the 5600G (bitsliced kernel).
@@ -375,7 +421,7 @@ permutation):
 | Collision on the 512-bit digest or a 64-byte CV | 2^170.7 (BHT) | idem |
 | Preimage: Grover on the output / meet-in-the-middle through the capacity (a collision search) | 2^256 / ≥ 2^128 | — |
 | AEAD key (512 bits), Grover | 2^256 | — |
-| AEAD state recovery offline (Q1, Grover on the capacity) | ≈ 2^192 | Heuristic: the classical terms N/2^c and 2σN/2^c under a square root. Not a bound on the AEAD (`AEAD_SECURITY.md`, `ROADMAP.md` § 1) |
+| AEAD state recovery offline (Q1, Grover on the inner part of one state) | 2^(c/2) = 2^192 | Lang–Lucks–Mennink–Talnikar, ePrint 2025/411, § 7.2 (for the Ascon mode). An attack cost, not a bound on the AEAD: no published Q1 theorem covers our mode (`AEAD_SECURITY.md` § 4 (d bis)) |
 
 **Why c = 384 and not 320.**
 - c = 320 gives 2^128 only if quantum memory is counted (2^(2c/5)); with free quantum memory (BHT) it gives 2^106.7.
@@ -385,23 +431,34 @@ permutation):
 - **Random function.** The quantum indifferentiability of the sponge is proved for a random internal function (Czajkowski,
   Majenz, Schaffner, Zur 2019).
 - **Invertible permutation.** The bounds of Alagic–Carolan–Majenz–Tokat (2025) are not tight (next point).
-- **What the 128-bit level rests on.** It rests on the cost of the best known generic attacks, not on a proof, as for SHA-3.
+- **What the 128-bit level rests on.** For the unkeyed modes it rests on the cost of the best known generic attacks, not
+  on a proof, as for SHA-3.
+- **AEAD, model Q1.** A proof of ours, not reviewed (`AEAD_SECURITY.md` § 4 quinquies): the keyed duplex is
+  indistinguishable from its ideal counterpart up to 4σ·√(q_Q/2^384) + 2q_Q·√(2σ/2^384) + small terms, for σ calls and
+  q_Q quantum queries to P; below 2^−30 at q_Q = 2^128 and σ = 2^64. Same method and same order as the published proofs
+  for the Ascon mode (Lang et al. 2025, Hosoyamada 2025), which do not cover our mode. Probably not tight.
 - **Proved quantum bounds** (Alagic–Carolan–Majenz–Tokat 2025): min(r, c) = 384, instead of 128 for a 512-bit permutation at
   the same capacity. Indifferentiability
   ≈ 2^42.7 instead of 2^14.2. Still far from 128 bits.
-- **At 32 rounds**, with the certified C3 ≥ 21: at least 218 active S-boxes, so 2^218 quantum on characteristics, and 2^190
-  after 4 free rounds.
+- **At 32 rounds**, with the certified C4 ≥ 28 (15 November): at least 224 active S-boxes (8 × 28), so 2^224 quantum on
+  characteristics, and 2^196 after 4 free rounds (7 × 28). With C3 ≥ 21 alone it was 218 and 190.
 - **Structural margin.** The guaranteed zero-sum reach is at least 22 rounds inside-out (Boura–Canteaut), against 20 at 512,
   so the margin is 10 rounds instead of 12. Division property: 11 rounds proved per direction; verified trails for every bit at 12 rounds inverse and 13 forward, so the reach is exactly 11 inverse and 11 or 12 forward, **22 or 23 inside-out, margin 9 or 10** (`dp1024/`, `resultats/division_property_1024q.json`).
 
 ## 6. Limitations
 
 - A new permutation, **not reviewed**: its cryptanalysis is only beginning.
-  - Done: B, C3, diffusion, degree bound, impossible differentials and zero correlations, 2-round aggregation, cube and
+  - Done: B, C3, C4, diffusion, degree bound, impossible differentials and zero correlations, 2-round aggregation, cube and
     zero-sum experiments (observed reach 5 rounds), boomerang to 4 rounds (GPU), forward division property, statistical battery (conforming; it is
     not a cryptographic proof).
-  - Open: the forward division property at 12 rounds (11 or 12).
-  - Missing: truncated and aligned differentials beyond 2 rounds, aggregation of the other 2-round shapes.
+  - Open: the forward division property at 12 rounds (11 or 12). On 14–15 November, 8 output bits (0, 150, 300, 450,
+    577, 700, 850, 1023) were tried with `dp1024/dp1024_suffixe.py complete`: a free end of the trail from round 7, then
+    6 (30 min each), then a start from the cube joined to that end (2 h). No complete trail within the time limits. That is a search that stopped, not a proof that the reach is 11.
+  - Missing: truncated and aligned differentials beyond 2 rounds, aggregation of the other 2-round shapes. **In progress**
+    (15 November, `ETUDE_GROUPE_STRUCTURE.md`): exact aggregation at 3 and 4 rounds for the one-nibble shape (largest
+    factor 1.25 so far), truncated differentials to 7 rounds (model and real permutation; nothing significant so far),
+    and local quadratic invariants (none, for any of the 32 rounds or all at once).
+    Best 3-round differential characteristic: 87 bits, not 89 (re-checked independently).
 - 32 rounds were decided for BRUME-512, whose permutation is the suite's. Here the structural margin is 2 rounds smaller
   (§ 5). Raising the rounds would cost speed linearly.
 - Constant time is **measured, not proved** (dudect, `temps1024.c`, 12 November 2026, Ryzen 7 2700X at rest). No leak was

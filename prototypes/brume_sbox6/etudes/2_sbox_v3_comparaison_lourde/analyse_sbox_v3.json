@@ -1554,7 +1554,7 @@
  },
  "hypotheses": [
   "comparaison simultanée de BRUME, SBOX6 et SBOX_V3",
-  "SBOX_V3 conçue selon les recommandations de l'analyse Codex",
+  "SBOX_V3 conçue selon les recommandations de l'analyse Automated-review",
   "poids 1 exhaustif, poids 3 échantillonné (50 000)",
   "poids 2 vérifié exhaustivement jusqu'à 8 tours",
   "coûts en demi-bits : probabilité 2^(-coût/2), corrélation 2^(-coût/2)"

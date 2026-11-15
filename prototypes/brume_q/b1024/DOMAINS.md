@@ -29,6 +29,7 @@ block of each phase, just before its permutation. All other blocks carry domain 
 |---|---|---|
 | Unkeyed sponge | 0^121 ‖ frame(mode 5) | XOF, single message, tree leaves, tree root (one P(IV) cached per profile) |
 | AEAD (full-state keyed duplex) | key (bytes 0..63, rate) ‖ nonce (64..87: bytes 64..79 in the rate, **80..87 in the capacity**) ‖ 0^33 (88..120) ‖ frame(mode 3) | encryption, decryption, multi-message batches |
+| Parallel AEAD (v0.6, `V06_MODES.md` § 2) | as the AEAD, with frame(mode **6**) and byte 122 = 13 (log₂ B) | encryption and decryption of long messages, leaves in parallel |
 
 **The two states differ at byte 127 for every key and every nonce.** The key and nonce never reach bytes 88..127.
 This is checked on extreme keys and nonces (all 0, all 0xFF, the bytes of the sponge state itself) and on random ones.
@@ -73,6 +74,20 @@ k ≥ 2 leaves.
   length, pad 0x01, domain `DOM_FINAL` = 4) was redundant with the padding of the text; it cost one permutation per
   message. The value 4 is no longer used in the AEAD. The lengths stay limited (`SPEC.md` § 3.5): that is a rejection
   rule, not an encoding.
+
+## 4 bis. Parallel AEAD (mode 6, v0.6)
+
+| Phase | Domain on the last block | Notes |
+|---|---|---|
+| Associated data (trunk) | `DOM_AAD` = 1 | as in the AEAD; the final state S_A is never output |
+| Leaf j, fork 1 | `DOM_FOURCHE` = 5 | one block: le64(j) ‖ 0x01 |
+| Leaf j, fork 2 | `DOM_FOURCHE2` = 3 | one block: 0^r |
+| Leaf j, text | `DOM_TEXTE` = 2 | as the AEAD's text phase; CV_j = 64 bytes |
+| Root | `DOM_RACINE_P` = 4 | CV₀ ‖ … ‖ CV_{k−1} ‖ le64(k) ‖ le64(ℓ), pad 0x01; tag = 32 bytes |
+
+- The domains are distinct within the construction. The first call of a leaf (domain 5) and that of the root (domain 0 or
+  4) differ in the capacity. Lemma 5′ of `V06_MODES.md` is checked by `v06_verif/chemins_paralleles.py`.
+- Value 4 is free in mode 6: it was the retired length domain of mode 3.
 
 ## 5. Across constructions
 

@@ -1,6 +1,6 @@
 # SBOX_V3 — Prototype Pareto-optimal (Synthèse BRUME-SBOX-SEARCH v1)
 
-Document rédigé le 8 novembre 2026 suite aux conclusions de l'analyse Codex (`analyse-codex-resultat.md`).
+Document rédigé le 8 novembre 2026 suite aux conclusions de l'analyse Automated-review (`analyse-codex-resultat.md`).
 
 Ce document détaille la découverte, la caractérisation et la validation expérimentale d'une **troisième S-box** (`SBOX_V3`), conçue pour combiner les avantages locaux de `SBOX6` (réduction de la BCT et de la DBCT) et les atouts structurels multi-tours de `BRUME` (lignes DDT contraintes, pistes longues hautement improbables), tout en éliminant leurs défauts respectifs.
 
@@ -47,7 +47,7 @@ En hexadécimal :
 
 ## 3. Pourquoi un compromis BCT 8 est mathématiquement incontournable
 
-L'analyse de Codex posait la question suivante :
+L'analyse Automated-review posait la question suivante :
 > *« Est-il possible de concevoir une S-box ayant BCT = 6 tout en conservant des lignes DDT sans transition à 4 (max DDT = 2) ? »*
 
 ### 3.1 Théorème d'invariance et unicité de la classe BCT 6
@@ -187,7 +187,7 @@ Le prototype comprend l'ensemble des composants nécessaires à la reproduction 
 
 ## 8. Conclusion et recommandation
 
-L'expérimentation valide le diagnostic posé dans l'analyse Codex :
+L'expérimentation valide le diagnostic posé dans l'analyse Automated-review :
 1. Chercher à tout prix $\mathrm{BCT}_{\max} = 6$ sur une bijection 4 bits est un leurre : cela impose un profil DDT plat à 4, détruisant la résistance différentielle multi-tours (-230 bits).
 2. **`SBOX_V3` constitue la solution Pareto-optimale :**
    - Elle élimine le maximum à 10 et ramène la BCT à 8.
