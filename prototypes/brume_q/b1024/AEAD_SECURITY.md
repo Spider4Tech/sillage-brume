@@ -1,9 +1,12 @@
 # BRUME-1024q — security of the AEAD (full-state keyed duplex, SpongeWrap orientation)
 
 Written on 13 November 2026, revised the same day after the change of orientation (§ 6) decided by the author. The AE
-step (§ 4 bis) and the partial flag (§ 4 ter) were added on the evening of 13 November. **Status: a reduction to DMV17
-Theorem 1, written in full (§ 4 bis); Theorem 1 itself is taken from the paper, and its extension to the partial flag
-is our reading of its proof (§ 4 ter).**
+step (§ 4 bis) and the partial flag (§ 4 ter) were added on the evening of 13 November. **Status (16 November): a
+reduction to DMV17 Theorem 1, written in full (§ 4 bis); the proof of Theorem 1 was then checked step by step for our
+parameters, two steps were found false as written and repaired, and we use the repaired Theorem 1′ (§ 4 quater); its
+extension to the partial flag is our reading (§ 4 ter). Quantum: Q1 proved by us (§ 4 quinquies), Q2 only in restricted
+forms (§§ 4 sexies–septies). None of this is reviewed by a third party.** The length block was removed on 14 November
+(option A, § 6 bis).
 
 **Reference.** The paper read is Daemen, Mennink, Van Assche, *Full-State Keyed Duplex with Built-In Multi-user Support*,
 ASIACRYPT 2017, LNCS 10625, pp. 606–637 (CWI copy of the Springer version). It is called **DMV17** below, and page numbers

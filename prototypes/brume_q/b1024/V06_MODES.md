@@ -49,7 +49,7 @@ to P are forwarded. In the real world B simulates the real TE game, and in the i
 
 ## 2. Parallel AEAD on BRUME-1024q
 
-### 2.1 Construction (proposal)
+### 2.1 Construction (approved and implemented, 14 November)
 
 The same key (64 bytes), nonce (24 bytes) and tag (32 bytes) as the sequential AEAD; r = 640, c = 384.
 - **Initial state:** key ‖ nonce ‖ 0 ‖ frame, the frame being the sequential AEAD's except:
@@ -67,7 +67,7 @@ The same key (64 bytes), nonce (24 bytes) and tag (32 bytes) as the sequential A
 
   CV_j = the first **64 bytes** of the rate after the last permutation of the leaf.
 - **Root**, starting from S_A: absorb CV₀ ‖ … ‖ CV_{k−1} ‖ le64(k) ‖ le64(ℓ) (XOR into the rate, pad 0x01,
-  `DOM_RACINE` = 4 on the last block). **Tag** = the first 32 bytes of the rate after the last permutation.
+  `DOM_RACINE_P` = 4 on the last block; not the tree root's `DOM_RACINE` = 9). **Tag** = the first 32 bytes of the rate after the last permutation.
 - **Decryption** decrypts all leaves (overwriting the rate with the ciphertext, as in the sequential AEAD), computes the
   CVs and the root, and compares tags in constant time. **Nothing is released before the check**; the output is wiped on
   failure.

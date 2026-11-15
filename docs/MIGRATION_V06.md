@@ -4,7 +4,7 @@ Written on 13 November 2026, after the author's decision: **in v0.6, BRUME-1024q
 suite. This document lists what the change touches, the decisions it needs, and the order of work. **Nothing in `sillage/`
 is modified before the author has validated it.**
 
-The reference of BRUME-1024q is `prototypes/brume_q/b1024/SPEC.md` (draft v0.6-1). The state of the prototype is in its
+The reference of BRUME-1024q is `prototypes/brume_q/b1024/SPEC.md` (draft v0.6-2, 16 November). The state of the prototype is in its
 README, `ROADMAP.md`, `AEAD_SECURITY.md` and `DOMAINS.md`.
 
 ## 1. What the change touches, and what it does not
@@ -49,8 +49,9 @@ D7 stays the gate for v0.6. The table below keeps the options as they were prese
 
 ## 3. Order of work (proposed)
 
-1. **`SPEC.md`** (draft v0.6-1 written) and a second, portable implementation written from it alone (`spec_ref.c`).
-   - **It reproduces the 18 KATs on x86-64 and on ARM64** (qemu, aarch64 gcc 15).
+1. **`SPEC.md`** (draft v0.6-1 written; v0.6-2 on 16 November) and a second, portable implementation written from it alone
+   (`spec_ref.c`).
+   - **It reproduces the 18 KATs on x86-64 and on ARM64** (qemu, aarch64 gcc 15); 23 since the parallel AEAD (14 November).
 2. **Portable constant-time kernel** (D6), checked by ctgrind and dudect.
    - **Written and checked on 14 November** (`prototypes/brume_q/b1024/b1024_portable.h`): equal to the dense reference for
      every round count, the 18 KATs on x86-64 and ARM64, ctgrind clean with its witness flagged. dudect at rest and

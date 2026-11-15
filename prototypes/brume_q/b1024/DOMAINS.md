@@ -14,11 +14,12 @@ The profile frame occupies bytes 121..127 of the state before the first permutat
 | Byte | Value | Meaning |
 |---|---|---|
 | 121 | R (32) | number of rounds |
-| 122, 123 | 0 | reserved |
+| 122 | 0 (13 in mode 6) | reserved; log₂ B = 13 for the parallel AEAD |
+| 123 | 0 | reserved |
 | 124 | 160 | rate in nibbles |
 | 125 | 0x10 | width 1 024 |
 | 126 | `'q'` | quantum profile |
-| 127, low nibble | 5 or 3 | **mode**: 5 = unkeyed sponge, 3 = AEAD |
+| 127, low nibble | 5, 3 or 6 | **mode**: 5 = unkeyed sponge, 3 = AEAD, 6 = parallel AEAD |
 
 **Domains** go in the high nibble of byte 127, a capacity byte. They are XORed into the state together with the last
 block of each phase, just before its permutation. All other blocks carry domain 0.

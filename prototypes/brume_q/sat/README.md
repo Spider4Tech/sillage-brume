@@ -105,7 +105,7 @@ refuses everything at 17.
 |---|---|---|---|---|---|---|
 | **C3 ≥ 18** | 361 | **361 / 361** | checked | 154 s (11 processes) | (6, 7): 40 s | 1.2 GB (3.7·10⁶ RUP lemmas) |
 | **C3 ≥ 21** | 484 | **484 / 484**: 482 directly; (4, 9) and (6, 9) through 2 × 22 sub-cubes on W₂, plus their 4 completeness chains, all checked | checked | 5 212 s | (6, 10): 1 922 s | ≈ 10⁸ RUP lemmas in total |
-| C3 ≥ 24 | 625 | started on a second machine on 12 November (16 threads); its result was never collected here, so it is not counted | checked | | | |
+| C3 ≥ 24 | 625 | **incomplete, not counted**: on the second machine (12 November), 221 of 625 leaves were proved (our checker only; `lrat-check` was added after), 0 satisfiable, then the run stopped | checked | | up to 1 915 s | |
 
 The proofs are deleted once checked (they total several GB). They are reproducible: same CNF, same solver, `cubes.sh`.
 

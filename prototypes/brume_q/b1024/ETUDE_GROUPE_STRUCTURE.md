@@ -124,7 +124,8 @@ criterion so far. Each line says what is exact, what is a search, and what is no
   5.42. No significant cell and no output that is always zero: **conforming**. A maximum near 4.3 is what 16 384 normal
   cells give by chance. At 5 rounds from two neighbouring nibbles (2^30 pairs × 64 inputs): largest |z| = 4.51 (a
   deficit, frequency 0.06247), conforming. At 7 rounds from one nibble (2^28 pairs × 64 inputs): largest z = 4.00,
-  conforming. 6 rounds (one and two nibbles): running.
+  conforming. At 6 rounds (2^30 pairs × 64 inputs, one nibble and two): largest |z| = 4.15 and 3.95, conforming.
+  The final checks of the tools, rerun on the workers, all pass.
 
 ### B2. Local quadratic invariants
 

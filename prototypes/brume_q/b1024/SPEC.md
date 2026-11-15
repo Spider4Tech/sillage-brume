@@ -1,6 +1,11 @@
 # BRUME-1024q — specification
 
-Version: **draft v0.6-1**, 13 November 2026. **Status: research, not reviewed, not for production.**
+Version: **draft v0.6-2**, 16 November 2026 (v0.6-1: 13 November). **Status: research, not reviewed, not for production.**
+
+Changes since v0.6-1, all on 14 November 2026: option A, no length block in the AEAD (§ 3.5; the 5 AEAD vectors changed);
+length limits (§ 3.5); the parallel AEAD, mode 6 (§ 3.5 bis, 5 new vectors). On 16 November, after a review of this
+text: the permutation count of the AEAD corrected (it read 2 + …, the right count is 3 + …), the frame bytes and the tree
+root encoding explained, the TE mode located (§ 3.7), the claims of § 5 brought up to date. No function changed.
 
 On 13 November 2026 the author decided that BRUME-1024q replaces BRUME-512 in v0.6 (`docs/MIGRATION_V06.md`). This
 document is meant to be **sufficient to write an independent implementation**. Each section says what is normative. The
@@ -69,8 +74,10 @@ The profile frame fills bytes 121..127 of a state:
 | Byte | 121 | 122 | 123 | 124 | 125 | 126 | 127 |
 |---|---|---|---|---|---|---|---|
 | Value | 32 (rounds) | 0 | 0 | 160 (rate in nibbles) | 0x10 | 0x71 (`'q'`) | mode |
+| Meaning | rounds | reserved (13 = log₂ B in mode 6) | reserved | rate | width 1 024 | quantum profile | low nibble |
 
-The mode is **5** for the unkeyed sponge and **3** for the AEAD.
+The mode is **5** for the unkeyed sponge, **3** for the AEAD and **6** for the parallel AEAD (§ 3.5 bis, which also sets
+byte 122 to 13). The high nibble of byte 127 is 0 in the frame; it receives the domains.
 
 ### 3.2 Sponge with domains
 
@@ -95,6 +102,10 @@ XOF(M, ℓ) = Sponge(M, 0, ℓ).
       CV_i ← Sponge(L_i, 8, 64)
       return Sponge(CV_1 ‖ … ‖ CV_k ‖ be64(k) ‖ 0x00 0x00 0x20 0x00, 9, ℓ)
 
+The last 4 bytes are the leaf size 8 192 as a 32-bit big-endian integer. The tree root uses big-endian integers, the
+parallel AEAD (§ 3.5 bis) little-endian ones: both are normative as written (informative: the tree keeps the suite's
+encoding).
+
 ### 3.5 AEAD (full-state keyed duplex, SpongeWrap orientation)
 
 Key K of 64 bytes, nonce N of 24 bytes, associated data A, plaintext X, tag of 32 bytes.
@@ -118,7 +129,7 @@ Check `longueurs_hors_limite_rejetees_sans_lecture_ni_ecriture`.
           c* ← x* ⊕ s[0..ℓ) ; s[0..ℓ) ← c* ; s[ℓ] ⊕= 0x01 ; s[127] ⊕= 2·16 ; s ← P(s)
       T ← s[0..32) ;  return (C = c_1 ‖ … ‖ c*, T)
 
-    (2 + ⌊|A|/80⌋ + ⌊|X|/80⌋ permutations: 3 for |A|, |X| < 80.)
+    (3 + ⌊|A|/80⌋ + ⌊|X|/80⌋ permutations: the initial P, ⌊|A|/80⌋ + 1 for A, ⌊|X|/80⌋ + 1 for X; 3 for |A|, |X| < 80.)
 
     Dec(K, N, A, C, T): the same, the rate receiving the ciphertext bytes (s[0..80) ← c_i, s[0..ℓ) ← c*), the plaintext
       being c ⊕ (rate before replacement). The recomputed tag is compared with T in constant time. If they differ, the
@@ -157,6 +168,12 @@ Same key, nonce and tag sizes as § 3.5; B = 8 192 bytes, k = max(1, ⌈|X|/B⌉
   both;
 - the domains are distinct within each construction.
 
+### 3.7 TE mode (normative by reference)
+
+The self-correcting TE mode of the suite (`docs/SPEC.md` § 2.7: 7 parity bytes per 64-byte block of the AEAD output,
+correction of one byte per block before `Dec`) applies unchanged on top of the AEAD of § 3.5; it depends neither on the
+permutation nor on the rate (`V06_MODES.md` § 1). It is not yet implemented in the prototype, and has no test vectors here.
+
 ## 4. Test vectors (normative)
 
 **Inputs:**
@@ -172,7 +189,7 @@ Same key, nonce and tag sizes as § 3.5; B = 8 192 bytes, k = max(1, ⌈|X|/B⌉
 | `hachage_<L>` | H(m[0..L), 64) |
 | `hachage_abc` | H("abc", 64) |
 | `xof_<L>` | XOF(m[0..L), 200) |
-| `aead_<L>`, `aead_64_sans_aad` | T ‖ SHAKE256(C)[0..32), with X = m[0..L) and A as above (empty for `sans_aad`) |
+| `aead_<L>` (L = 0, 16, 64, 1 000), `aead_64_sans_aad` | T ‖ SHAKE256(C)[0..32), with X = m[0..L) and A as above (empty for `sans_aad`) |
 | `aeadp_<L>` (L = 0, 1 000, 8 192, 8 193, 24 581: 1 to 3 leaves) | the same for the parallel AEAD (§ 3.5 bis), A of 9 bytes |
 
 - H("") = `95ee2e0b…5d255e95`.
@@ -188,8 +205,13 @@ The full values are in the files.
 | AEAD in model Q1 (classical queries to the mode, quantum queries to P): advantage ≤ 4σ·√(q_Q/2^384) + 2q_Q·√(2σ/2^384) + σ²/2^385 + 3σ²/2^1025 + q_d/2^256, for σ calls and q_Q quantum queries | **our proof, not reviewed**; ideal permutation; it rests on two published lemmas (statements and proofs re-read); probably not tight (best known attack: 2^192) | `AEAD_SECURITY.md` § 4 quinquies |
 | Bound on characteristics: C3 ≥ 21 and C4 ≥ 28, 224 active S-boxes over 32 rounds | certified (two LRAT checkers) | README § 3 |
 | Aggregation at 2 rounds: max DP 2^−16, max hull 2^−7.83 | exact, confirmed empirically | `agregation2.c` |
+| Aggregation at 3 and 4 rounds (one active nibble at one end): exact sums, largest factor 1.25 | exact at the ends computed; the choice of ends is a search, not exhaustive | `ETUDE_GROUPE_STRUCTURE.md` § A |
+| Truncated differentials, local quadratic invariants | none found (CP-SAT model to 7 rounds, real permutation to 7 rounds; no quadratic invariant of the local family for any round); absence is shown only for the families searched | `ETUDE_GROUPE_STRUCTURE.md` § B |
 | AEAD (classical queries, ideal permutation, nonce-respecting, no release of unverified plaintext, u users): Adv ≤ (2σ_D + 5)·N/2^384 + 2·q_iv·N/2^512 + q_d/2^256 + 2·C(u, 2)/2^512 (keys drawn with replacement; 0 without) + negligible terms; valid for σ = σ_E + σ_D ≤ 2^127, N + M ≤ 0.1·2^384 and M − L ≤ 2^127 (M = number of keyed-duplex calls, DMV17 notation), uniform independent 512-bit keys; the negligible terms are listed in `AEAD_SECURITY.md` § 4 bis | AE step written; DMV17 Theorem 1 checked for our parameters and repaired (Theorem 1′); agrees with Mennink 2023 Th. 7 / Dobraunig–Mennink 2019; not peer reviewed | `AEAD_SECURITY.md` §§ 4 bis–4 quater |
-| Constant time | measured (dudect, ctgrind) on two machines, AVX2 kernels | README |
+| Constant time | measured (dudect, ctgrind) on two machines (Zen 3, Zen+), AVX2 and portable kernels, AEAD accept and reject paths; not proved, other processor families not measured | README, `ROADMAP.md` |
+
+*Implementation note (informative).* An implementation that handles a key must not index a table by secret data: the
+prototype's kernels evaluate S as a register shuffle (AVX2) or as a 17-gate circuit (bitsliced and portable kernels).
 
 Not claimed:
 - security against superposition queries to the keyed construction (Q2);
