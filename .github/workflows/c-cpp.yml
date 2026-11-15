@@ -39,3 +39,16 @@ jobs:
       run: |
         # the tests record their checks in resultats/<name>.json and always exit 0
         if grep -H ': false' resultats/fonctionnel.json resultats/te.json resultats/c_impl.json; then exit 1; fi
+    - name: BRUME-1024q prototype (v0.6 candidate, not part of the v0.5 battery)
+      run: |
+        B="-O3 -march=native -fopenmp -I sillage/c -I tests/c -I prototypes/brume_q/b1024"
+        L="sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c -lm"
+        # 33 checks against the dense reference (kernels, sponge, tree, AEAD, parallel AEAD, portable kernel, 23 KATs)
+        gcc $B prototypes/brume_q/b1024/brume1024.c $L -o tests/c/build/brume1024
+        OMP_NUM_THREADS=2 tests/c/build/brume1024
+        if grep -H ': false' resultats/brume1024.json; then exit 1; fi
+        # second implementation written from SPEC.md alone: the 23 test vectors
+        gcc -O2 -march=native -I sillage/c -I prototypes/brume_q/b1024 prototypes/brume_q/b1024/spec_ref.c $L -o tests/c/build/spec_ref
+        tests/c/build/spec_ref prototypes/brume_q/b1024/kat_b1024.txt
+        # C4 >= 28 certificate: structure of the reproduction package (completeness CNFs rebuilt, tree re-read)
+        python3 prototypes/brume_q/sat/audit_c4_K28.py

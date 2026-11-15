@@ -105,7 +105,7 @@ refuses everything at 17.
 |---|---|---|---|---|---|---|
 | **C3 ≥ 18** | 361 | **361 / 361** | checked | 154 s (11 processes) | (6, 7): 40 s | 1.2 GB (3.7·10⁶ RUP lemmas) |
 | **C3 ≥ 21** | 484 | **484 / 484**: 482 directly; (4, 9) and (6, 9) through 2 × 22 sub-cubes on W₂, plus their 4 completeness chains, all checked | checked | 5 212 s | (6, 10): 1 922 s | ≈ 10⁸ RUP lemmas in total |
-| C3 ≥ 24 | 625 | running on a second machine (16 threads), not counted | checked | | | |
+| C3 ≥ 24 | 625 | started on a second machine on 12 November (16 threads); its result was never collected here, so it is not counted | checked | | | |
 
 The proofs are deleted once checked (they total several GB). They are reproducible: same CNF, same solver, `cubes.sh`.
 
@@ -124,8 +124,10 @@ a **mandatory** second checker. It accepts the intact proofs and rejects a mutat
   activity of the 7 neighbours of nibble 0 (2 × 128 cubes). 1 599 proofs and 4 completeness proofs, every one accepted by
   both checkers; 0 satisfiable. The differential and linear CNFs are identical apart from the comment line (supp M =
   supp Mᵀ at 1024 bits), so one certificate covers both. Audit from the result files: `audit_c4_K28.py`, output
-  `resultats/c4_K28_audit_20261115.txt`. The cube lists and split chains it reads are in the work directory
-  (`~/orion_calc/c4`, not in git; the proofs themselves were deleted once checked, as above). Run with HyperCompute on four
+  `resultats/c4_K28_audit_20261115.txt`. **Reproduction package in `c4_K28/`**: cube lists, split chains, completeness
+  CNFs, one result line per unit, scripts and tool versions; the audit rebuilds each completeness CNF from the lists, and
+  with `--reprouver n` redoes the completeness proofs and a sample of leaves on the regenerated CNF (SHA-256 checked).
+  The proofs themselves were deleted once checked, as above. Run with HyperCompute on four
   machines, 11.3 h of solver time in total. Details: `../b1024/README.md` § 3.
 
 ## 5. Reproduce

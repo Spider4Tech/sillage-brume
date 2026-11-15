@@ -8,6 +8,13 @@
 
 SILLAGE is a research suite built around code-based constructions and noisy decoding. The repository contains a key-encapsulation mechanism, a binary-syndrome-decoding signature scheme, the BRUME-512 permutation, authenticated-encryption modes, hash functions, C implementations, and a collection of tests and cryptanalysis tools.
 
+> **Version status.** The library in `sillage/` and its test battery are **v0.5.0** (BRUME-512). **v0.6 is decided but
+> not integrated:** BRUME-1024q (1 024-bit permutation, c = 384, 128-bit quantum generic target) will replace BRUME-512
+> (`docs/MIGRATION_V06.md`). Until then it is a **prototype** in `prototypes/brume_q/b1024/` with its own specification,
+> checks and security notes (C3 ≥ 21 and C4 ≥ 28 certified; AEAD proofs written by us, **not reviewed**; full quantum
+> security of the AEAD with superposition queries is not claimed). The v0.5 battery does not test it; its checks run in a
+> separate CI step.
+
 > **Research prototype — not for production use.** The parameters and constructions are experimental. The v0.5.0 designs have not received a complete independent cryptanalysis. The reductions and computational estimates documented here are conditional on the assumptions and models stated in [`docs/PROOFS.md`](docs/PROOFS.md). Passing the test suite is not evidence that a construction is secure.
 
 The measurements and test totals below refer to dated runs committed with the project; they are not live CI results. The documents in `docs/` are in English ([`docs/README.md`](docs/README.md) lists them); a few external review reports are kept in their original French. Code comments, test names and result files are in French. The C implementation and Python package are under `sillage/`.
@@ -284,6 +291,8 @@ The exact branch-number result gives a wide-trail lower bound of at least 128 ac
 
 - differential characteristic probability: at most `2⁻²⁵⁶`;
 - linear trail correlation: at most `2⁻¹²⁸`.
+
+A certified 3-round bound strengthens this: every characteristic over 3 rounds activates at least 21 S-boxes (C3 ≥ 21, SAT with LRAT proofs checked by two independent checkers; `prototypes/brume_q/sat/README.md`), so **at least 218 active S-boxes over 32 rounds**, hence `2⁻⁴³⁶` and `2⁻²¹⁸` in the same model (PROOFS, Corollary 11 bis). The certificate is machine-checked; its encoding is not reviewed by a human.
 
 These are **characteristic/trail bounds in the stated model**, not bounds on the sum of all differential characteristics or linear trails for the concrete fixed permutation. The Markov model is an assumption for a permutation without subkeys. In exact reduced models (mini-BRUME, 24 bits), fixed-constant instances deviate from it by no more than the dispersion measured between random constant sets, of which the Markov chain is the exact average (PROOFS § 4.2 bis); this does not extend to 512 bits by itself. A two-round aggregation bound is documented separately. No corresponding general aggregation proof is claimed for arbitrary numbers of rounds.
 

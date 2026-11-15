@@ -108,14 +108,15 @@ k ≥ 2 leaves.
 4. one message under four domains gives four distinct outputs, at three lengths.
 
 `kat_figes_noyau_avx2`, `kat_figes_reference_dense`:
-- 18 frozen KATs (`kat_b1024.h`, profile R = 32):
+- 23 frozen KATs (`kat_b1024.h`, profile R = 32):
   - the default hash at 0, 1, 3 ("abc"), 79, 80, 81, 8 192, 8 193, 3·8 192 + 5, 100·8 192 + 77 and 300·8 192 + 5 bytes (the last
     one goes through the bitsliced 256-leaf batches on one thread, and through the 32-leaf batches on 12 threads: same value);
   - the XOF at 0 and 200 bytes, with 200 output bytes;
   - the AEAD at 0, 16, 64 and 1 000 bytes, plus 64 bytes without AAD, giving tag ‖ SHAKE256(ciphertext)[0..31].
+  - the parallel AEAD (mode 6) at 0, 1 000, 8 192, 8 193 and 24 581 bytes (added on 14 November; the 18 others unchanged).
   - History: on 13 November 2026 the 4 AEAD KATs with text changed with the SpongeWrap orientation, deliberately; the 14
-    others did not.
-- They are recomputed by the AVX2 kernel and, except the 100- and 300-leaf trees, by the dense reference (16 of 18). The tree reference
+    others did not. On 14 November (option A) the 5 AEAD KATs changed, the 13 others did not.
+- They are recomputed by the AVX2 kernel and, except the 100- and 300-leaf trees, by the dense reference (21 of 23). The tree reference
   `arbre_ref()` rewrites the root framing separately from `arbre()`.
 - `brume1024 kat > kat_b1024.h` regenerates the file only if the kernel and the reference agree. It must not be rerun
   to make a check pass: a difference means the function changed.

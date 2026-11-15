@@ -1,0 +1,1 @@
+completude: cadical rc=20 ; lrat_verif VERIFIEE ; lrat-check 1

@@ -32,6 +32,14 @@ belongs to the author: c = 384 for 128 quantum bits, with a wider permutation to
 | `b1024_portable.h`, `controle_portable.c` | **Portable constant-time kernel** (plain C, 64-bit words, no intrinsics; MIGRATION_V06 decision D6): the state as 4 bit planes of 256 bits, the 17-gate S-box circuit, the linear layer as 128-bit rotations of the other half (the dihedral neighbours) and per-position GF(2) masks. Its check: equal to a dense reference for every round count 1 to 48, round trip of the packing, ctgrind mode with a witness |
 | `AEAD_SECURITY.md` | Security model of the AEAD against Daemen–Mennink–Van Assche 2017: exact mode, hypothesis-by-hypothesis mapping, bounds, AE reduction (§ 4 bis) to DMV17 Theorem 1 as repaired (Theorem 1′, § 4 quater), classical ideal-permutation model; quantum: our proofs, not reviewed, for Q1 (§ 4 quinquies), decryption in superposition (§ 4 sexies) and encryption in superposition confined to the last block (§ 4 septies); full Q2 not claimed |
 | `DOMAINS.md` | Initial states, modes, domains and padding of every construction, and what is checked |
+| `structure1024.py` | Structural analysis (level 1 of the cryptanalysis plan): Frobenius, nibble-sum invariants, invariant subspaces, cyclicity of M, rotational differences, each with a witness |
+| `trails1024.py` | Best characteristics (level 2): beam search and exact bit-level CP-SAT, every trail re-checked by `verifier` |
+| `ETUDE_GROUPE_STRUCTURE.md` | Study of clustering and hidden structure (criteria fixed in advance, results) |
+| `agregation34.c`, `verif_chemin3.py` | Exact aggregation of all trails at 2 to 4 rounds between fixed ends (kernel method at the last transition); independent numpy re-check of the best 3-round path |
+| `tronquees1024.py`, `tronquees_verif.c` | Truncated differentials: CP-SAT model (maximisation, and a decision mode that can prove absence) with GF(16) rank of the cancellations; empirical scan on the real permutation |
+| `invariants_quad1024.c` | Local quadratic invariants (monomials in a nibble or on an edge of M's graph, 14 848 unknowns), round by round and for all rounds |
+| `q1_verif/` | Mechanical checks for the Q1 and Q2-1 proofs: algebraic identities of the hybrids, the stitching lemma (exhaustive on small sizes), numerical checks around the two cited lemmas |
+| `../sat/audit_c4_K28.py` | Independent audit of the C4 ≥ 28 certificate from the result files |
 
 ```bash
 B="-O3 -march=native -fopenmp -I sillage/c -I tests/c -I prototypes/brume_q/b1024"
@@ -101,7 +109,9 @@ check at 4 rounds: 20 000 real differential and 20 000 real linear characteristi
 11.3 h over the 1 599 proofs (attempts stopped at a time limit not counted); hardest piece (4, 9, 10, 4): 5 850 s and
 18.8 GB. The tree is re-read from the result files, without trusting the campaign summaries, by
 `../sat/audit_c4_K28.py` (`resultats/c4_K28_audit_20261115.txt`): each child's literals are exactly its parent's plus its
-own split line, every node is proved directly or by all its children plus a checked completeness proof. Run on the
+own split line, every node is proved directly or by all its children plus a checked completeness proof. Everything needed
+to check or redo it without our machines is in `../sat/c4_K28/` (the audit can redo the completeness proofs and a sample
+of leaves with both checkers). Run on the
 HyperCompute cluster (four machines), 15 November, 03 h 45 → 17 h 20. 28 over 4 rounds is 7 per round, the rate of
 C3 ≥ 21; C3 alone gives only 22 over 4 rounds (21 + 1). No feasible pattern of the 4-round relaxation is known, so no upper bound.
 

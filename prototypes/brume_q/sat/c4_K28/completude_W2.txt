@@ -1,0 +1,1 @@
+completude W2 : cadical rc=20 ; lrat_verif VERIFIEE ; lrat-check 1 ; machine-D

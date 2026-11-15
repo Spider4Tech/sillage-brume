@@ -353,13 +353,14 @@ Prototype: `prototypes/brume_bitslice/` (generator `gen_asm.c`, S-box `sbox_bs.h
   - sponge and XOF;
   - default hash = tree;
   - full-state keyed AEAD, in the **SpongeWrap orientation** since 13 November (the rate holds the ciphertext). Its security
-    model (`AEAD_SECURITY.md`) maps it onto DMV17, but the AE step is not written yet.
+    model (`AEAD_SECURITY.md`) maps it onto DMV17; the AE step is written (§ 4 bis, on the repaired Theorem 1′), not
+    reviewed. Option A since 14 November: no length block, 3 permutations for a short message.
 - **Certified.** B = 8 exact. C3 ≥ 21, with two LRAT checkers (ours and `lrat-check` of drat-trim). BRUME-512's C3 ≥ 21 was
   re-proved with both checkers as well. C4 ≥ 28 (15 November, same chain, both checkers): at least 224 active S-boxes over
   32 rounds.
 - **Checked.**
-  - 12/12 checks against the dense reference;
-  - 18 frozen KATs;
+  - 33/33 checks against the dense reference (also under ASan and UBSan);
+  - 23 frozen KATs, reproduced by a second implementation written from `SPEC.md` (x86-64 and ARM64);
   - domain-separation table and checks;
   - dudect and ctgrind clean on both machines.
 - **Measured.** Impossible differentials and zero correlations reach 5 rounds, as at 512.
@@ -369,12 +370,13 @@ Prototype: `prototypes/brume_bitslice/` (generator `gen_asm.c`, S-box `sbox_bs.h
   - tree 281 MB/s on one core and 1 048 MB/s on 12 threads (bitsliced 256-leaf batches);
   - AEAD 105 MB/s;
   - multi-message AEAD up to ×1.63 faster than the suite's AEAD-128 on all cores.
+- **Done since** (13–15 November, details in `prototypes/brume_q/b1024/README.md` and `ROADMAP.md`): boomerang to 4
+  rounds (< 2^−32); exact 2-round aggregation; division property (inverse exactly 11 rounds, forward 11 or 12);
+  structural analysis; best characteristics to 10 rounds; aggregation at 3 and 4 rounds, truncated differentials and
+  local quadratic invariants (`ETUDE_GROUPE_STRUCTURE.md`, nothing found).
 - **Missing.**
-  - the AE step of the AEAD proof (`AEAD_SECURITY.md` § 4 (b));
-  - boomerang;
-  - aggregation (hulls);
-  - exact division property;
-  - review.
+  - the forward division property at 12 rounds;
+  - human review of the proofs (Theorem 1′, Q1, Q2d, Q2-1, Theorem P) and third-party cryptanalysis.
 
 ## Tried and rejected
 

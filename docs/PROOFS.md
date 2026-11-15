@@ -1089,6 +1089,20 @@ resistance of the concrete permutation to all differential, linear and
 structural attacks, which remains the ideal-permutation assumption
 of the mode proofs.
 
+**Corollary 11 bis (3-round bound, certified by computation, 12 November 2026).** Every
+characteristic over 3 consecutive rounds of BRUME-512 activates at least 21 S-boxes (C3 ≥ 21),
+differential and linear alike. Over R rounds this gives at least 21·⌊R/3⌋ + (0, 1, 8)[R mod 3]
+active S-boxes: **at least 218 at 32 rounds**, instead of 128 with B alone. In the Markov model,
+a differential characteristic then has probability ≤ `2^{−436}` and a linear trail correlation
+≤ `2^{−218}`. *How it is established* (`prototypes/brume_q/sat/README.md`): the truncated
+relaxation (activity patterns, cancellations allowed, exact branch facts) is encoded in SAT; 484
+cubes and their completeness are proved unsatisfiable by CaDiCaL, each LRAT proof accepted by two
+independent checkers (ours and `lrat-check` of drat-trim), and the whole run was redone from
+scratch on a second machine. The relaxation depends on the support of M only, not on the S-box,
+so the v0.5 S-box change does not affect it. *Status:* the certificate is checked by machine; the
+encoding and our checker are not reviewed by a human. Same scope as Corollary 11: characteristics,
+not aggregated differentials.
+
 **Proposition 10 bis (diffusion support, certified).** The six
 generators of the Cayley graph of D₁₂₈ are reflections, with
 s_a·s_b = r^{a−b}. The combinatorial support of M^r (diagonal included),
@@ -1261,6 +1275,7 @@ Three similar-looking statements do not have the same status:
 
 | Statement | Nature | What it does not say |
 |---|---|---|
+| ≥ 218 active S-boxes per characteristic over 32 rounds | **certified by computation** (Corollary 11 bis: C3 ≥ 21, SAT + LRAT checked twice; encoding not reviewed by a human) | the same limits as the line below |
 | ≥ 128 active S-boxes per characteristic over 32 rounds | **proved and certified** (Theorem 9, Proposition 10), a property of the construction | nothing about probabilities, nor about aggregated differentials |
 | Characteristic ≤ 2⁻²⁵⁶, linear trail ≤ 2⁻¹²⁸ | **Markov model**: an assumption, BRUME having no subkeys | nothing about the concrete permutation; at small scale, a fixed-constant instance deviates from the model by the key-to-key dispersion, not more (below) |
 | 20 rounds inside-out | **exact reach of the division property** | it is not an actual integral attack on 20 rounds, nor a ceiling for such an attack |

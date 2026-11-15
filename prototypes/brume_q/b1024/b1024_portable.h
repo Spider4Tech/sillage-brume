@@ -62,6 +62,10 @@ static inline void pp_rotr(uint64_t lo, uint64_t hi, int k, uint64_t *rl, uint64
     *rh = (hi >> k) | (lo << (64 - k));
 }
 
+/* Prépare PP_MASQ, PP_RC, PP_KSM et pose PP_PRET. NON réentrant : à appeler une fois, avant tout usage et hors de toute
+ * région parallèle (c'est le cas dans brume1024.c et spec_ref.c : au démarrage de main). Pour le portage dans sillage/
+ * (v0.6), ces tables ne dépendent que des données publiques : les générer comme constantes (static const) supprime
+ * l'initialisation à l'exécution et toute question de concurrence (revue externe du 15 novembre). */
 static int pp_init(void)
 {
     /* le circuit doit être conforme sur les 16 entrées (bit x des mots = entrée x) */

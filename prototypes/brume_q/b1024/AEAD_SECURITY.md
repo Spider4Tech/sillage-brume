@@ -1024,7 +1024,8 @@ superposition decryptions.
 5. Outside these conditions nothing is said: nonces in superposition, nonce reuse, release of unverified plaintext.
 
 **To do:** a human review of the corollary; Kaplan et al. 2016 (CRYPTO 2016) for completeness; an IND-qCPA argument
-is research, for the reason given in point 5.
+is research, for the reason given in point 5. (Since then, IND-qCPA is proved for superposition confined to the last text
+block: § 4 septies, Theorem Q2-1; two blocks or more stay open.)
 
 ## 4 septies. Q2: superposition in the last block (written on 14 November 2026)
 
