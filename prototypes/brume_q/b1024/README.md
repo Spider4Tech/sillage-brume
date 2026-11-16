@@ -38,6 +38,7 @@ belongs to the author: c = 384 for 128 quantum bits, with a wider permutation to
 | `agregation34.c`, `verif_chemin3.py` | Exact aggregation of all trails at 2 to 4 rounds between fixed ends (kernel method at the last transition); independent numpy re-check of the best 3-round path |
 | `tronquees1024.py`, `tronquees_verif.c` | Truncated differentials: CP-SAT model (maximisation, and a decision mode that can prove absence) with GF(16) rank of the cancellations; empirical scan on the real permutation |
 | `invariants_quad1024.c` | Local quadratic invariants (monomials in a nibble or on an edge of M's graph, 14 848 unknowns), round by round and for all rounds |
+| `SPONGE_QROM.md`, `cm26_verif/` | Quantum collision and preimage bounds of the unkeyed sponge with our frame and domains (adaptation of Carolan–Majenz 2026, Theorem 5.5; not reviewed), and its checks: counting lemma exhaustive on small models (C), counts and witnessing (Python), classical end-to-end experiment, arithmetic in high precision |
 | `q1_verif/` | Mechanical checks for the Q1 and Q2-1 proofs: algebraic identities of the hybrids, the stitching lemma (exhaustive on small sizes), numerical checks around the two cited lemmas |
 | `../sat/audit_c4_K28.py` | Independent audit of the C4 ≥ 28 certificate from the result files |
 
@@ -441,8 +442,9 @@ permutation):
 - **Random function.** The quantum indifferentiability of the sponge is proved for a random internal function (Czajkowski,
   Majenz, Schaffner, Zur 2019).
 - **Invertible permutation.** The bounds of Alagic–Carolan–Majenz–Tokat (2025) are not tight (next point).
-- **What the 128-bit level rests on.** For the unkeyed modes it rests on the cost of the best known generic attacks, not
-  on a proof, as for SHA-3.
+- **What the 128-bit level rests on.** For the unkeyed modes it rests on the cost of the best known generic attacks, as
+  for SHA-3. For collisions and preimages a proof now comes within about 4 bits of it (2^123.8 standard queries, below;
+  ours, not reviewed); for indifferentiability the proved level stays far lower.
 - **AEAD, model Q1.** A proof of ours, not reviewed (`AEAD_SECURITY.md` § 4 quinquies): the keyed duplex is
   indistinguishable from its ideal counterpart up to 4σ·√(q_Q/2^384) + 2q_Q·√(2σ/2^384) + small terms, for σ calls and
   q_Q quantum queries to P; below 2^−30 at q_Q = 2^128 and σ = 2^64. Same method and same order as the published proofs
@@ -450,6 +452,21 @@ permutation):
 - **Proved quantum bounds** (Alagic–Carolan–Majenz–Tokat 2025): min(r, c) = 384, instead of 128 for a 512-bit permutation at
   the same capacity. Indifferentiability
   ≈ 2^42.7 instead of 2^14.2. Still far from 128 bits.
+- **Collision and preimage of the unkeyed sponge (16 November).** Carolan and Majenz (*Compressed Permutation Oracles
+  Revisited*, arXiv 2609.28469, September 2026, Theorem 5.5) prove, for a sponge on a random permutation with inverse
+  queries, digest d ≤ r and capacity c: p_col ≤ 32T³/2^d + 128T³/2^c + 32768T²/2^(r+c), and the same with 64T²/2^d for
+  preimages. Their sponge starts from 0^(r+c) and puts nothing in the capacity; ours starts from a profile frame in
+  the capacity and XORs a domain into it on the last block. **Adaptation written and checked on a reduced model**
+  (`SPONGE_QROM.md`, `cm26_verif/`: the counting lemma checked exhaustively on small models, case by case, by two
+  independent implementations; ours, not reviewed, and the article is a preprint): for the four domains at once,
+  p_col ≤ (64/3)T³/2^d + 384T³/2^384 + 23232T²/2^1024, and p_pre with 48T²/2^d and 192T³/2^384. Success 1/2 needs
+  about **2^124.8** swap queries for a collision (of one function, between two functions, or of the default hash with its
+  tree) and 2^125.1 for a preimage, that is **2^123.8** and 2^124.1 standard queries (one standard query = two swap
+  queries, as in the article; the sharp form of the bound gives 0.9 bit more), against 2^125.3 swap queries for the
+  article's sponge at the same sizes, 2^128 for the best
+  generic attack, and 2^(min(r,c)/5) ≈ 2^76.8 from Alagic et al. The frame costs nothing; the domains cost a factor 4
+  on the probability, about two thirds of a bit. Random-permutation model; it says nothing about indifferentiability,
+  nor about the keyed AEAD.
 - **At 32 rounds**, with the certified C4 ≥ 28 (15 November): at least 224 active S-boxes (8 × 28), so 2^224 quantum on
   characteristics, and 2^196 after 4 free rounds (7 × 28). With C3 ≥ 21 alone it was 218 and 190.
 - **Structural margin.** The guaranteed zero-sum reach is at least 22 rounds inside-out (Boura–Canteaut), against 20 at 512,
