@@ -51,6 +51,37 @@ the model reach (7 rounds at 2^128 pairs, 8 at 2^192), with the measured upper b
 - The measurement can only see |ε| ≥ about 2^{−12}. Below that, the model is the only argument.
 - The model bound is heuristic (characteristic-based, Markov); it is not a proof of DL resistance.
 
-## Results
+## Results (17 November 2026)
 
-(To be filled in after the measurements.)
+HyperCompute job 377b5a00 (33 units: 32 for r = 5 and 6, one for the checks), one thread per unit, 35 to 60 minutes
+per unit on the three machines; every unit ended with code 0. Outputs: `resultats/hypercompute/diff-lin/`.
+
+**r = 5 and r = 6: nothing.** 32 runs (r = 5 and 6 × 16 input nibbles), each 15 values of δ × 3 840 cells = 921 600
+cells at 2^28 pairs (noise 2^{−14.0}), 29.5 million cells in all. Bonferroni threshold per run |z| = 6.10. No cell
+crosses it: the largest |z| is 4.68 at r = 5 and 4.71 at r = 6, what the maximum of about a million roughly independent
+normal variables gives. No nibble keeps a zero difference at r = 5 (full diffusion). So, for one-nibble input
+differences and one-nibble output masks, **|ε| < 2^{−11.4} at r = 5 and 6** (6.1 × the noise). No cell needed the
+re-measurement step. **The alarm criterion is not met.**
+
+**Checks.** At r = 4 (2^24 pairs, 4 input nibbles × 15 δ), the 32 nibbles outside the radius-4 ball are found in every
+configuration (1 920 = 60 × 32 nibbles, ε = 1 for all 15 masks). The planted bias at r = 5 is found (30 cells,
+ε = 0.501). **One check did not come out as written:** at r = 4 the detector also flags 3 997 other cells, not "nothing
+else". They are real: the cells kept in the output have |ε| between 2^{−9} and 2^{−7} (z up to 38), on output nibbles at
+the edge of the radius-4 ball, which the input difference reaches through few paths. The same was seen on the first
+check run (233 such cells at 2^24 pairs with fewer inputs), noted then in the ROADMAP row but not in this plan.
+
+**What this says about the model.** At r = 4 the model of § "The model and its bound" gives at best 2^{−18}; the
+measurement gives 2^{−7}, a factor of about 2^{11}. The model counts the active S-boxes of the whole state, while a
+one-nibble mask at the edge of the diffusion only sees the few S-boxes on the paths that reach it; this is the
+clustering the plan lists as ignored. So the model is **not** a bound, as § "Limits" already said, and here it is
+off by 2^{11} at r = 4. At r = 5 and 6 every nibble is reached through many paths and nothing is measurable, so the
+gap there is unknown. Two readings of the reach:
+
+| Reading | r = 7 | r = 8 | r = 9 | Reach within 2^128 pairs | within 2^192 |
+|---|---|---|---|---|---|
+| model as planned | 2^{−60} | 2^{−74} | 2^{−100} | 7 | 8 |
+| model × 2^{11} (the r = 4 gap carried to every r) | 2^{−49} | 2^{−63} | 2^{−89} | 8 | 9 |
+
+The second reading is a pessimistic guess, not a measurement. Both leave 23 rounds or more of margin at 32 rounds.
+Recorded result: **DL reach 7 to 8 rounds within 2^128 pairs, 8 to 9 within 2^192; measured |ε| < 2^{−11.4} at
+r = 5 and 6.**

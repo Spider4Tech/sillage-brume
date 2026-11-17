@@ -62,7 +62,7 @@ A reduced-round distinguisher at r rounds becomes a full-round attack only if th
 | Truncated differentials | free to 4; nothing found at 5–7 (model UNKNOWN, empirical scan conforming) | measured | `ETUDE_GROUPE_STRUCTURE.md` |
 | Boomerang | 3 (2^−19.4); < 2^−32 at 4 | measured | ROADMAP § 3 |
 | Impossible differentials, zero correlation | 5 | structural | ROADMAP § 3 |
-| Differential-linear | model: 7 within 2^128 data, 8 within 2^192 | heuristic bound; measurement running | `DIFF_LIN.md` |
+| Differential-linear | 7–8 within 2^128 data, 8–9 within 2^192 (model, and model × 2^11 after the gap measured at 4 rounds); measured \|ε\| < 2^−11.4 at 5 and 6 | model + measured | `DIFF_LIN.md` |
 | Collision of the sponge (rebound type) | ≥ 3 at about 2^92 (model, validated on groups of up to 6 nibbles) | model + measured | `REBOND.md` (search running) |
 | Direct algebraic (CICO, SAT) | running | measured | `ALGEBRIQUE.md` |
 | Characteristics (any differential or linear trail) | none beyond 2^−448 / 2^−224 over 32 rounds (224 active S-boxes) | certified, Markov | README § 3 |
@@ -70,7 +70,8 @@ A reduced-round distinguisher at r rounds becomes a full-round attack only if th
 **Margin.** The largest reach is the inside-out zero-sum of the division property, 22 or 23 rounds, that is 9 or 10
 rounds of margin. It is a structural property with a cost of about 2^1023 evaluations, far above 2^192: by the
 definition of § 2 it is not a break. Among families that give attacks or distinguishers below 2^192, the largest reach
-is 8 rounds (differential-linear, model), so a margin of 24 rounds.
+is 8 or 9 rounds (differential-linear, model; 9 with the pessimistic correction of `DIFF_LIN.md`), so a margin of
+23 rounds or more.
 
 ## 5. What a level-3 campaign would do
 
