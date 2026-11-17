@@ -60,7 +60,7 @@ int main(int argc, char **argv)
     sl_init();
     long ok_aead = 0, ok_rej = 0, ok_te = 0, ok_ctx = 0, ok_multi = 0, ok_hash = 0, ok_p = 0;
     for (long i = 0; i < it; i++) {
-        int pr = (int)(alea() & 1);
+        int pr = 0;                                        /* v0.6 : un seul profil (BRUME-1024q) */
         size_t L = longueur(700), A = longueur(100), tl = sl_aead_tag_len(pr);
         uint8_t *m = malloc(L + 1), *c = malloc(L + 1), *p = malloc(L + 1), *a = malloc(A + 1);
         uint8_t k[64], n[SL_NONCE], t[32], t2[32], meta[8];
@@ -120,7 +120,7 @@ int main(int argc, char **argv)
         const uint8_t **pp = malloc(nmsg * sizeof *pp);
         uint8_t **cp = malloc(nmsg * sizeof *cp), **dp = malloc(nmsg * sizeof *dp);
         size_t *ln = malloc(nmsg * sizeof *ln);
-        int *codes = malloc(nmsg * sizeof *codes), pr = rep & 1, bon = 1;
+        int *codes = malloc(nmsg * sizeof *codes), pr = 0, bon = 1;
         remplir(cl, 64 * nmsg); remplir(no, SL_NONCE * nmsg);
         for (size_t j = 0; j < nmsg; j++) {
             ln[j] = longueur(300);
@@ -149,13 +149,13 @@ int main(int argc, char **argv)
         if (L <= 8192)
             br_eponge(x, L, 10, h2, 64);
         else {
-            size_t k = (L + 8191) / 8192, lr = 32 * k + 12;
+            size_t k = (L + 8191) / 8192, lr = 64 * k + 12;     /* v0.6 : CV de 64 octets (SPEC § 3.4) */
             uint8_t *r = malloc(lr);
             for (size_t j = 0; j < k; j++)
-                br_eponge(x + 8192 * j, L - 8192 * j < 8192 ? L - 8192 * j : 8192, 8, r + 32 * j, 32);
+                br_eponge(x + 8192 * j, L - 8192 * j < 8192 ? L - 8192 * j : 8192, 8, r + 64 * j, 64);
             for (int q = 0; q < 8; q++)
-                r[32 * k + q] = (uint8_t)((uint64_t)k >> (56 - 8 * q));
-            r[32 * k + 8] = 0; r[32 * k + 9] = 0; r[32 * k + 10] = 0x20; r[32 * k + 11] = 0;
+                r[64 * k + q] = (uint8_t)((uint64_t)k >> (56 - 8 * q));
+            r[64 * k + 8] = 0; r[64 * k + 9] = 0; r[64 * k + 10] = 0x20; r[64 * k + 11] = 0;
             br_eponge(r, lr, 9, h2, 64);
             free(r);
         }

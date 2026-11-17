@@ -1,5 +1,7 @@
 # BRUME-1024q — security of the AEAD (full-state keyed duplex, SpongeWrap orientation)
 
+> **v0.6 (17 November 2026).** This document now lives in `docs/brume1024/`. BRUME-1024q is the permutation of the suite: its code is `sillage/c/brume1024.c` and its checks are in the battery (`tests/c/brume1024.c`, `tests/c/brume1024_api.c`, `tests/test_b1024_*.py`). File names cited below without a path are documents of this folder (`*.md`) or tools of `prototypes/brume_q/b1024/` (programs, scripts, `dp1024/`, `gpu/`, `cm26_verif/`, …); `brume1024.c` meant the prototype, whose code is now the library.
+
 Written on 13 November 2026, revised the same day after the change of orientation (§ 6) decided by the author. The AE
 step (§ 4 bis) and the partial flag (§ 4 ter) were added on the evening of 13 November. **Status (16 November): a
 reduction to DMV17 Theorem 1, written in full (§ 4 bis); the proof of Theorem 1 was then checked step by step for our

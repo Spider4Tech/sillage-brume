@@ -1,24 +1,21 @@
 # SILLAGE — implémentation C de référence
 #   make          bibliothèque partagée + benchmark
-#   make tables   régénère brume512_tables.h depuis sillage/brume512.py
+#   les tables de BRUME-1024q (brume1024_*.h) sont générées par prototypes/brume_q/b1024/gen_b1024.c et gen_bitslice.c
 CC      ?= gcc
 CFLAGS  ?= -O3 -march=native -fopenmp -Wall -Wextra
-SRC      = commun.c brume512.c brume512_avx2.c kem.c sig.c vole.c isd.c
+SRC      = commun.c brume1024.c kem.c sig.c vole.c isd.c
 
 all: build/libsillage.so build/bench
 
-build/libsillage.so: $(SRC) sillage.h brume512_tables.h brume512_simd.h
+build/libsillage.so: $(SRC) sillage.h brume1024_tables.h brume1024_portable.h brume1024_bs.h brume1024_lot.h
 	@mkdir -p build
 	$(CC) $(CFLAGS) -shared -fPIC -o $@ $(SRC) -lm
 
-build/bench: bench.c $(SRC) sillage.h brume512_tables.h brume512_simd.h
+build/bench: bench.c $(SRC) sillage.h brume1024_tables.h brume1024_portable.h brume1024_bs.h brume1024_lot.h
 	@mkdir -p build
 	$(CC) $(CFLAGS) -o $@ bench.c $(SRC) -lm
-
-tables:
-	cd ../.. && python3 -m sillage.c.gen_tables   # brume512_tables.h + brume512_simd.h
 
 clean:
 	rm -rf build
 
-.PHONY: all tables clean
+.PHONY: all clean

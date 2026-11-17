@@ -19,13 +19,13 @@ python -m tests.test_fonctionnel                   # one test (each writes resul
 python -m tests.run_all                            # the full suite: about one hour on 12 cores
 ```
 
-`python -m tests.run_all <subset>` rewrites `resultats/SYNTHESE.md` with that subset only: to run a single test, call its module directly as above. Long campaigns (`scripts/rundenuit.sh`, `scripts/runlong`, `scripts/runspecial`, `scripts/rungpu`) take hours; see [`docs/CAMPAIGN_24H.md`](docs/CAMPAIGN_24H.md).
+`python -m tests.run_all <subset>` rewrites `resultats/SYNTHESE.md` with that subset only: to run a single test, call its module directly as above. Long campaigns (`scripts/rundenuit.sh`, `scripts/runlong`) take hours; see [`docs/CAMPAIGN_24H.md`](docs/CAMPAIGN_24H.md).
 
 ## Rules for changes
 
 1. **Outputs are frozen.** A change that alters an output (ciphertext, signature, hash, key format) changes the KATs. It needs a security argument, updated proofs and new test vectors; a performance gain alone does not justify it.
-2. **C and Python agree byte for byte.** `tests.test_c_impl` and `tests.test_api_c` must pass.
-3. **Constant time.** No branch or memory index may depend on a secret in the C code. Changes to secret-handling code should pass `tests.test_c_temps` and the Valgrind tests (`tests.test_c_kem_valgrind`, `tests.test_c_sig_valgrind`).
+2. **Implementations agree byte for byte.** For the KEM and the signature, C and Python: `tests.test_c_impl` and `tests.test_api_c` must pass. For BRUME-1024q (C only), the library with and without AVX2 and the second implementation written from `docs/brume1024/SPEC.md` must give the test vectors: `tests/c/brume1024_api.c` and `tests.test_b1024_seconde_implementation`.
+3. **Constant time.** No branch or memory index may depend on a secret in the C code. Changes to secret-handling code should pass the timing tests (`tests.test_c_temps`, `tests/c/temps1024.c`) and the Valgrind tests (`tests.test_c_brume1024_valgrind`, `tests.test_c_kem_valgrind`, `tests.test_c_sig_valgrind`).
 4. **Every claim has a status.** A new statement says whether it is proved (and in which model), certified by an exhaustive computation, measured, or assumed, and which test checks it. Measurements are not presented as proofs.
 5. **Section numbers are stable.** The code and the test names cite the documents in `docs/` by section (for example “PROOFS § 4.4” or “lead 8”, written “piste 8” in French comments); a change keeps the existing numbers.
 6. **Record corrections.** A flaw found and fixed is added to [`docs/AUDIT_REPORT.md`](docs/AUDIT_REPORT.md), with how it was found.

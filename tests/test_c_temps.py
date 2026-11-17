@@ -33,7 +33,7 @@ import subprocess
 from tests.commun import RACINE, sauver
 
 ICI = os.path.join(RACINE, "sillage", "c")
-SRC = ["commun.c", "brume512.c", "brume512_avx2.c"]     # kem.c et sig.c sont inclus par temps.c
+SRC = ["commun.c", "brume1024.c"]     # kem.c et sig.c sont inclus par temps.c
 SEUIL = 4.5
 
 

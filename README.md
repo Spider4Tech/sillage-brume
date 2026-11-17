@@ -4,18 +4,18 @@
 [![CodeQL](https://github.com/Spider4Tech/sillage-brume/actions/workflows/codeql.yml/badge.svg)](https://github.com/Spider4Tech/sillage-brume/actions/workflows/codeql.yml)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](LICENSE)
 
-**Experimental cryptographic research project — version 0.5.0**
+**Experimental cryptographic research project — version 0.6.0**
 
-SILLAGE is a research suite built around code-based constructions and noisy decoding. The repository contains a key-encapsulation mechanism, a binary-syndrome-decoding signature scheme, the BRUME-512 permutation, authenticated-encryption modes, hash functions, C implementations, and a collection of tests and cryptanalysis tools.
+SILLAGE is a research suite built around code-based constructions and noisy decoding. The repository contains a key-encapsulation mechanism, a syndrome-decoding signature scheme, the BRUME-1024q permutation, authenticated-encryption modes, hash functions, C implementations, and a collection of tests and cryptanalysis tools.
 
-> **Version status.** The library in `sillage/` and its test battery are **v0.5.0** (BRUME-512). **v0.6 is decided but
-> not integrated:** BRUME-1024q (1 024-bit permutation, c = 384, 128-bit quantum generic target) will replace BRUME-512
-> (`docs/MIGRATION_V06.md`). Until then it is a **prototype** in `prototypes/brume_q/b1024/` with its own specification,
-> checks and security notes (C3 ≥ 21 and C4 ≥ 28 certified; AEAD proofs written by us, **not reviewed**; full quantum
-> security of the AEAD with superposition queries is not claimed). The v0.5 battery does not test it; its checks run in a
-> separate CI step.
+> **Version status.** **v0.6.0** replaces BRUME-512 by **BRUME-1024q** (1 024-bit permutation, sponge capacity
+> c = 384, 32 rounds, 128-bit quantum generic target) in the library and in the test battery (`docs/MIGRATION_V06.md`).
+> Its specification, proofs and studies are in [`docs/brume1024/`](docs/brume1024/); C3 ≥ 21 and C4 ≥ 28 are certified;
+> the AEAD, parallel AEAD and TE proofs are written by us and **not reviewed**; quantum security of the AEAD under
+> superposition queries (Q2) is not claimed. The KEM and the signature are unchanged from v0.5. BRUME-512 and its tests
+> are archived in `tests/historique_v05/`.
 
-> **Research prototype — not for production use.** The parameters and constructions are experimental. The v0.5.0 designs have not received a complete independent cryptanalysis. The reductions and computational estimates documented here are conditional on the assumptions and models stated in [`docs/PROOFS.md`](docs/PROOFS.md). Passing the test suite is not evidence that a construction is secure.
+> **Research prototype — not for production use.** The parameters and constructions are experimental. The v0.6.0 designs have not received a complete independent cryptanalysis. The reductions and computational estimates documented here are conditional on the assumptions and models stated in [`docs/PROOFS.md`](docs/PROOFS.md) and [`docs/brume1024/`](docs/brume1024/). Passing the test suite is not evidence that a construction is secure.
 
 The measurements and test totals below refer to dated runs committed with the project; they are not live CI results. The documents in `docs/` are in English ([`docs/README.md`](docs/README.md) lists them); a few external review reports are kept in their original French. Code comments, test names and result files are in French. The C implementation and Python package are under `sillage/`.
 
@@ -30,7 +30,7 @@ The measurements and test totals below refer to dated runs committed with the pr
 - [Installation and build](#installation-and-build)
 - [Quick start](#quick-start)
 - [Sillage-KEM](#sillage-kem)
-- [BRUME-512](#brume-512)
+- [BRUME-1024q](#brume-1024q)
 - [Authenticated-encryption modes](#authenticated-encryption-modes)
 - [Hash functions](#hash-functions)
 - [Sillage-SIG](#sillage-sig)
@@ -54,8 +54,8 @@ The project explores a common design direction: use sparse secret vectors and no
 The current implementation contains three main cryptographic components:
 
 1. **Sillage-KEM**, a quasi-cyclic sparse-noise key-encapsulation mechanism with a Fujisaki–Okamoto transform and implicit rejection.
-2. **BRUME-512**, a 512-bit permutation used by a keyed duplex, a sponge hash, and a tree hash. A separate parallel duplex mode is provided for large messages.
-3. **Sillage-SIG**, a Fiat–Shamir signature scheme based on MPC-in-the-Head and binary syndrome decoding.
+2. **BRUME-1024q**, a 1 024-bit permutation used by a full-state keyed duplex (AEAD), a parallel AEAD, a self-correcting mode (TE), a sponge XOF and a tree hash (the default digest).
+3. **Sillage-SIG**, a VOLE-in-the-Head signature over regular syndrome decoding (v0.5), with the MPC-in-the-Head signature of v0.4 kept as a reference.
 
 The repository is intended to make the constructions inspectable and testable. It includes mathematical notes, reductions, parameter estimators, reduced-model experiments, C implementations, conformance tests and cryptanalysis programs. It is not a standards submission and does not claim production readiness.
 
@@ -64,14 +64,15 @@ The repository is intended to make the constructions inspectable and testable. I
 | Component | Construction | Current profiles | Main qualification |
 |---|---|---|---|
 | Sillage-KEM | Quasi-cyclic sparse-noise decoding, RM(1,7) code, FO transform | `Sillage-128`, `Sillage-256` | IND-CCA argument in the ROM, conditional on H1-P/H2-P and the stated correctness bound |
-| BRUME-512 | 512-bit, 32-round permutation over 128 GF(16) nibbles | `BRUME-512` | Structural and trail properties are documented; security of the full permutation is not proved |
-| Sequential AEAD | Keyed duplex over BRUME-512 | `BRUME-512`, `BRUME-512-256` | Ideal-permutation analysis; nonce policy differs by profile |
-| Parallel AEAD | Tree-like duplex with 4 KiB message leaves | `BRUME-512p`, `BRUME-512-256p` | Separate construction and ciphertext format; separate proof and tests |
-| Hash | Sponge and one-level tree hash over BRUME-512 | Variable output length | Generic sponge/tree analysis under the stated model |
+| BRUME-1024q | 1 024-bit, 32-round permutation over 256 GF(16) nibbles; sponge r = 640, c = 384 | — | C3 ≥ 21 and C4 ≥ 28 certified (≥ 224 active S-boxes over 32 rounds); security of the full permutation is not proved |
+| Sequential AEAD | Full-state keyed duplex over BRUME-1024q (key 64 B, nonce 24 B, tag 32 B) | `BRUME-1024q` | Ideal-permutation proof (repaired DMV17 Theorem 1) and Q1 proof, ours, not reviewed; unique nonces |
+| Parallel AEAD | Leaves of 8 KiB, two fork calls, 64-byte chaining values, root | `BRUME-1024qp` | Separate construction and ciphertext format; separate proof and tests |
+| TE mode | 7 parity bytes per 64-byte block, one byte corrected per block, then the AEAD tag | over `BRUME-1024q` | Exact reduction to the AEAD (Proposition TE) |
+| Hash | Default digest: sponge up to 8 KiB, one-level tree above (64-byte output); XOF | Variable output length, 64 B by default | Generic sponge bound 2^192 classical; quantum collision/preimage proved at ≈ 2^123.8 queries (ours, not reviewed) |
 | Sillage-SIG v0.5 | VOLE-in-the-Head over regular syndrome decoding (C only) | `VOLE-128`, `VOLE-256`, `VOLE-128f`, `VOLE-256f` | EUF-CMA/SUF-CMA in the ROM reduced to binary SD (Lemma 17.2); QROM sketch within ≈ 2 bits of Grover; not reviewed |
 | Sillage-SIG v0.4 (reference) | MPC-in-the-Head over binary syndrome decoding | `Sillage-SIG-128`, `Sillage-SIG-256` | Kept unchanged as a reference; superseded by v0.5 |
 
-The profile suffixes `128` and `256` are parameter labels. They must not be read as a blanket claim of 128-bit or 256-bit post-quantum security. The KEM and signature sections give the actual estimates and limitations. **v0.5.0 changes two formats.** The BRUME-512 S-box is now `AD412650BFEC7893`, which changes every AEAD, hash and TE output. The signature is now VOLE-in-the-Head (`SillageVOLE`, `sl_vole_*`). v0.4 ciphertexts, hashes and KATs are no longer valid; the v0.4 signature code is kept as a reference.
+The profile suffixes `128` and `256` are parameter labels. They must not be read as a blanket claim of 128-bit or 256-bit post-quantum security. The KEM and signature sections give the actual estimates and limitations. **v0.6.0 changes every symmetric format.** BRUME-1024q replaces BRUME-512: every AEAD, TE, hash and XOF output, the tag length (32 bytes) and the default digest length (64 bytes) change; there is a single AEAD profile. v0.5 ciphertexts, hashes and KATs are no longer valid. The KEM and signature outputs are unchanged.
 
 ---
 
@@ -91,7 +92,7 @@ The documented and benchmarked native build is on Linux with GCC. Other operatin
 - OpenMP support in the compiler;
 - a platform providing the system interfaces used by the C implementation.
 
-The full test suite also uses additional packages, including NetworkX, OR-Tools and `python-sat`. Matplotlib is used by optional plotting code when available. The repository does not currently provide a pinned dependency lockfile, so the exact package versions used for a run should be recorded with its results.
+The full test suite also uses additional packages, including NetworkX, OR-Tools, `python-sat` and SciPy, plus Valgrind and the SAT solvers `cryptominisat5` and `cadical` on the PATH. Matplotlib is used by optional plotting code when available. The repository does not currently provide a pinned dependency lockfile, so the exact package versions used for a run should be recorded with its results.
 
 ### Install the Python runtime dependency
 
@@ -105,7 +106,7 @@ python -m pip install -r requirements.txt        # NumPy
 For the full test and cryptanalysis suite:
 
 ```bash
-python -m pip install -r requirements-tests.txt  # NetworkX, OR-Tools, python-sat, Matplotlib
+python -m pip install -r requirements-tests.txt  # NetworkX, OR-Tools, python-sat, Matplotlib, SciPy
 ```
 
 Some tests require a working C toolchain and OpenMP even when the Python package is available.
@@ -123,15 +124,13 @@ This builds:
 
 The default Makefile flags are `-O3 -march=native -fopenmp -Wall -Wextra`. The resulting binary is tuned for the CPU on which it was built. It should not be copied to a different processor and assumed to be portable. The C loader fingerprints the build configuration, including CPU flags.
 
-To regenerate the BRUME C tables from the Python parameter tables:
-
-```bash
-make -C sillage/c tables
-```
+The BRUME-1024q tables (`sillage/c/brume1024_*.h`) are generated by `prototypes/brume_q/b1024/gen_b1024.c` and
+`gen_bitslice.c`; the battery and the CI check that the generator gives them back unchanged. Without AVX2 (for example on
+ARM), the library uses a portable constant-time kernel; there is no table-based fallback.
 
 ### Python fallback and the C requirement
 
-The public API in `sillage/rapide.py` uses the C implementation when it is available. If the library cannot be loaded or built, it emits a warning and falls back to the Python reference implementation.
+The public API in `sillage/rapide.py` uses the C implementation when it is available. If the library cannot be loaded or built, it emits a warning and falls back to the Python reference implementation for the KEM and the v0.4 signature. BRUME-1024q and the VOLE signature exist only in C: without the library their classes raise `RuntimeError`.
 
 The Python implementation is useful for inspection and cross-checking, but it is **not constant-time**. To make an unavailable C backend an error instead of silently using the Python fallback, set:
 
@@ -152,11 +151,11 @@ import secrets
 
 from sillage import (
     SillageKEM,
-    SillageSIG,
-    Brume512,
-    Brume512P,
-    brume512_hash,
-    brume512_hash_arbre,
+    SillageVOLE,
+    Brume1024,
+    Brume1024P,
+    brume1024_hash,
+    brume1024_xof,
 )
 
 # Key encapsulation
@@ -167,8 +166,8 @@ assert kem.decaps(sk, ct_kem) == shared_secret
 
 # Sequential authenticated encryption
 key = secrets.token_bytes(64)
-nonce = secrets.token_bytes(24)  # Random nonces are supported by BRUME-512 under its stated usage bound.
-aead = Brume512("BRUME-512", key=key)
+nonce = secrets.token_bytes(24)  # Must be unique per key.
+aead = Brume1024("BRUME-1024q", key=key)
 plaintext = b"example message"
 ciphertext, tag = aead.encrypt(nonce, plaintext, aad=b"context")
 assert aead.decrypt(nonce, ciphertext, tag, aad=b"context") == plaintext
@@ -176,25 +175,29 @@ assert aead.decrypt(nonce, ciphertext, tag, aad=b"context") == plaintext
 # Parallel authenticated encryption: a distinct mode and ciphertext format
 parallel_key = secrets.token_bytes(64)
 parallel_nonce = secrets.token_bytes(24)
-parallel = Brume512P("BRUME-512p", key=parallel_key)
+parallel = Brume1024P("BRUME-1024qp", key=parallel_key)
 large_message = b"example" * 10000
 ct_parallel, tag_parallel = parallel.encrypt(parallel_nonce, large_message)
 assert parallel.decrypt(parallel_nonce, ct_parallel, tag_parallel) == large_message
 
-# Hashing
-h = brume512_hash(b"message", 32)
-h_tree = brume512_hash_arbre(large_message, 32)
+# Self-correcting mode: one damaged byte per 64-byte block is repaired before the tag check
+ct_te, parities, tag_te, meta = aead.encrypt_te(nonce, plaintext)
+recovered, corrections = aead.decrypt_te(nonce, ct_te, parities, tag_te, meta)
 
-# Digital signatures
-sig = SillageSIG("Sillage-SIG-128")
+# Hashing: default digest (64 bytes; sponge up to 8 KiB, tree above) and XOF
+h = brume1024_hash(b"message")
+stream = brume1024_xof(b"seed", 200)
+
+# Digital signatures (v0.5: VOLE-in-the-Head)
+sig = SillageVOLE("VOLE-128")
 pk_sig, sk_sig = sig.keygen()
-signature = sig.sign(sk_sig, pk_sig, plaintext)
+signature = sig.sign(sk_sig, plaintext)
 assert sig.verify(pk_sig, plaintext, signature)
 ```
 
-**Nonce handling is the caller's responsibility.** Do not reuse a nonce with the same key. The 256-bit AEAD profiles require unique nonces to retain the stated 256-bit cost/advantage level; a random 24-byte nonce does not provide that guarantee. See [Authenticated-encryption modes](#authenticated-encryption-modes).
+**Nonce handling is the caller's responsibility.** Do not reuse a nonce with the same key: the proofs are nonce-respecting. See [Authenticated-encryption modes](#authenticated-encryption-modes).
 
-The package exports the public classes and profiles from `sillage/__init__.py`. The reference implementations remain available from `sillage.sillage_kem`, `sillage.sillage_sig` and `sillage.brume512` for comparison with the C-backed API.
+The package exports the public classes and profiles from `sillage/__init__.py`. The reference implementations of the KEM and the v0.4 signature remain available from `sillage.sillage_kem` and `sillage.sillage_sig` for comparison with the C-backed API.
 
 ---
 
@@ -263,11 +266,14 @@ The proof and parameter analysis are in [`docs/PROOFS.md`](docs/PROOFS.md), §§
 
 ---
 
-## BRUME-512
+## BRUME-1024q
+
+Normative specification: [`docs/brume1024/SPEC.md`](docs/brume1024/SPEC.md); proofs condensed in
+[`docs/PROOFS.md`](docs/PROOFS.md) § 4; full arguments and studies in [`docs/brume1024/`](docs/brume1024/).
 
 ### Permutation design
 
-BRUME-512 is a 512-bit permutation with 32 rounds. The state is represented as 128 nibbles over
+BRUME-1024q is a 1 024-bit permutation with 32 rounds. The state is represented as 256 nibbles over
 
 $$
 \mathbb{F}_{16} = \mathbb{F}_2[x]/(x^4+x+1).
@@ -275,113 +281,80 @@ $$
 
 Each round applies:
 
-1. XOR with a round-constant vector derived from SHAKE256;
-2. the same 4-bit bijective S-box to each of the 128 nibbles;
-3. a linear diffusion layer over GF(16).
+1. XOR with a round-constant vector;
+2. the 4-bit S-box `AD412650BFEC7893` (that of BRUME-512 v0.5: differential uniformity 4, linearity 8, degree 3) to each of the 256 nibbles;
+3. a linear diffusion layer over GF(16): the weighted adjacency matrix plus identity of a 6-regular Cayley graph on the dihedral group `D₂₅₆` (shifts {0, 105, 71, 76, 72, 31}), 7 terms per row.
 
-The S-box has differential uniformity 4, nonlinearity 4 and algebraic degree 3 in each component. The documented checks also report no fixed points, no linear structures and trivial self-equivalences for the selected table.
-
-The diffusion support is the adjacency matrix plus the identity of a 6-regular Cayley graph on the dihedral group `D₁₂₈`. The graph is bipartite; its two trivial eigenvalues are `+6` and `−6`. The largest absolute value among the other eigenvalues is reported as `3.5076`, below the 6-regular Ramanujan bound `2√5`. Each edge has a non-zero GF(16) coefficient.
-
-The branch number is **exactly 8**, certified for the linear layer and its relevant adjoints. The support sizes of successive powers are reported as `7, 37, 94, 127, 128` in the forward direction and full support after two inverse steps. Thus the linear layer reaches all 128 nibbles after five forward applications and two inverse applications.
+Diffusion is complete after 5 forward rounds; `M⁻¹` is dense. As a sponge: rate r = 640 bits (80 bytes), capacity c = 384 bits, chosen so that the generic quantum collision cost on the capacity (BHT) is 2^128.
 
 ### What the structural results establish
 
-The exact branch-number result gives a wide-trail lower bound of at least 128 active S-boxes over 32 rounds. Under the independent-round Markov model, the documented characteristic bounds are:
+The branch number is exactly 8 over 2 rounds, and two SAT certificates (LRAT proofs checked by two independent checkers) give **C3 ≥ 21** and **C4 ≥ 28** active S-boxes over 3 and 4 rounds. Hence **at least 224 active S-boxes over 32 rounds** and, in the independent-round Markov model:
 
-- differential characteristic probability: at most `2⁻²⁵⁶`;
-- linear trail correlation: at most `2⁻¹²⁸`.
+- differential characteristic probability: at most `2⁻⁴⁴⁸`;
+- linear trail correlation: at most `2⁻²²⁴`;
 
-A certified 3-round bound strengthens this: every characteristic over 3 rounds activates at least 21 S-boxes (C3 ≥ 21, SAT with LRAT proofs checked by two independent checkers; `prototypes/brume_q/sat/README.md`), so **at least 218 active S-boxes over 32 rounds**, hence `2⁻⁴³⁶` and `2⁻²¹⁸` in the same model (PROOFS, Corollary 11 bis). The certificate is machine-checked; its encoding is not reviewed by a human.
-
-These are **characteristic/trail bounds in the stated model**, not bounds on the sum of all differential characteristics or linear trails for the concrete fixed permutation. The Markov model is an assumption for a permutation without subkeys. In exact reduced models (mini-BRUME, 24 bits), fixed-constant instances deviate from it by no more than the dispersion measured between random constant sets, of which the Markov chain is the exact average (PROOFS § 4.2 bis); this does not extend to 512 bits by itself. A two-round aggregation bound is documented separately. No corresponding general aggregation proof is claimed for arbitrary numbers of rounds.
-
-The permutation is not proved to be an ideal permutation or a secure PRP. Its structural properties rule out or constrain particular attack families; they do not prove the security of the full 32-round construction.
+and 196 active S-boxes (`2⁻³⁹²`, `2⁻¹⁹⁶`) with 4 rounds left free (PROOFS, Corollary 11). These are characteristic/trail bounds in the stated model, not bounds on differentials or hulls; aggregation is measured exactly at 2 rounds (max DP `2⁻¹⁶`, hull `2⁻⁷·⁸³`) and at chosen ends of 3 and 4 rounds (factor ≤ 1.25). The permutation is not proved to be an ideal permutation.
 
 ### Current cryptanalysis results
 
-The repository contains searches and experiments covering differential and linear trails, hulls, boomerang transitions, impossible differentials, cube/integral distinguishers, algebraic degree, invariant structures and reduced-state models.
+All of it is our own analysis (no third-party cryptanalysis yet). Reaches in rounds of 32 ([`docs/brume1024/NIVEAU3.md`](docs/brume1024/NIVEAU3.md) § 4):
 
-The current documented results include:
-
-| Analysis | Result | Scope and qualification |
+| Analysis | Reach | Scope and qualification |
 |---|---|---|
-| Differential / linear trails | Best searched 14-round trails: approximately `2⁻²⁸³⁰` differential and `2⁻¹⁴¹⁷` linear | Results of the specified search, not global bounds on all trails |
-| Impossible differentials / zero correlations | Up to 5 rounds | Nibble-level patterns covered by the current search; not a bound for all possible masks or patterns |
-| Boomerang | A 3-round signal was measured | No general upper bound follows from this experiment |
-| Cube / integral experiments | 4-round forward and 2-round inverse in the baseline full-width C campaign; an extended campaign reached 3 inverse rounds | Experimental reach depends on the tested cube family and sample budget |
-| Reduced-state integral models | 24-bit models reached 4 rounds; 32-bit models reached 5 rounds in the reported instances | Reduced models do not establish the same reach at 512 bits |
-| State recovery | One-round state recovery by linear solving | Does not extend to the full permutation |
-| Division property | Exact method reach of 10 rounds in each direction, 20 rounds inside-out, for every cube | This is the reach of the method, not a 20-round integral attack |
+| Statistical battery, avalanche | 4 rounds forward, 2 backward | measured |
+| Cubes, zero sums | 5 | measured |
+| Exact division property | 11 inverse, 11 or 12 forward; 22 or 23 inside-out at ≈ 2^1023 | proved / verified trails; a structural property, not an attack |
+| Truncated differentials | free diffusion to 4; nothing found at 5–7 | model + real permutation |
+| Impossible differentials, zero correlations | 5 | structural |
+| Boomerang | 3 rounds (2^−19.4); below 2^−32 at 4 | measured on GPU |
+| Differential-linear | 7–8 rounds within 2^128 pairs, 8–9 within 2^192 | model (off by ≈ 2^11 at 4 rounds); measured \|ε\| < 2^−11.4 at 5 and 6 |
+| Sponge collision, rebound type | 3 rounds at ≈ 2^92 | optimal in the nibble model; 4–6 not found below 2^192, not excluded |
+| Direct algebraic attacks (CICO by SAT) | advantage over brute force up to 3 rounds | 4 with a linearised first round |
 
-The division-property result is obtained by combining degree arguments, trail stitching and exact completion of reduced suffixes with CP-SAT. At 11 rounds, verified monomial trails exist for every output bit in each direction, so the method no longer proves balance. Whether trails cancel modulo two and what integral distinguisher exists for the full permutation remain open questions.
-
-The linear layer has 16 invariant subspaces. The current experiments indicate that the selected S-box does not preserve their individual lines; this does not amount to a general proof that the full round has no exploitable invariant structure.
-
-For the derivations, experiment definitions and remaining attack space, see [`docs/PROOFS.md`](docs/PROOFS.md), §4.2 bis, and the BRUME-related tests under `tests/`.
+Largest reach of an attack or distinguisher below the claimed level: 8 or 9 rounds, a margin of at least 23 rounds.
 
 ---
 
 ## Authenticated-encryption modes
 
-BRUME provides two different keyed-duplex constructions. They have separate profiles, initialisation domains, ciphertexts and proofs. A ciphertext produced by one mode is not expected to be accepted by the other.
+BRUME-1024q provides two keyed constructions with one profile each, plus a self-correcting layer. They have separate initial states (mode nibble), ciphertexts and proofs.
 
-### Sequential keyed duplex
+### Sequential AEAD (full-state keyed duplex)
 
-The sequential mode absorbs the key, nonce and associated data, then encrypts by XORing the plaintext with the rate portion of the state. The ciphertext is absorbed back into the state. Padding and domain separation distinguish the AAD, text and final length phases. The tag is extracted from the final state.
+The key (64 bytes) and the nonce (24 bytes) fill the initial state together with the profile frame; associated data and text are absorbed with 0x01 padding and phase domains; the rate is overwritten by the ciphertext (SpongeWrap orientation); the 32-byte tag is read after the last text block. Three permutations for a short message.
 
 | Profile | Key | Nonce | Rate | Capacity | Tag | Stated level |
 |---|---:|---:|---:|---:|---:|---:|
-| `BRUME-512` | 64 bytes | 24 bytes | 256 bits | 256 bits | 16 bytes | 128 bits |
-| `BRUME-512-256` | 64 bytes | 24 bytes | 128 bits | 384 bits | 32 bytes | 256 bits |
+| `BRUME-1024q` | 64 bytes | 24 bytes, unique per key | 640 bits | 384 bits | 32 bytes | classical: forgery 2^256 per attempt, inner state 2^192; Q1: ≈ 127 bits (σ ≤ 2^64) |
 
-The ideal-permutation analysis is given in [`docs/PROOFS.md`](docs/PROOFS.md), §4.3. It accounts for the total number of permutation calls, data processed, decryption queries and tag length. It does not prove that the concrete BRUME permutation behaves as a random permutation.
+The ideal-permutation proof ([`docs/brume1024/AEAD_SECURITY.md`](docs/brume1024/AEAD_SECURITY.md), PROOFS § 4.3) rests on our repaired form of Theorem 1 of Daemen–Mennink–Van Assche (2017); the repair is needed (the published Theorem 1 is exceeded when L + Ω > 0, see `prototypes/brume_q/b1024/dmv17_verif/papier/`). Superposition queries to the mode (Q2) are not claimed. Lengths are limited to 2^63 − 1 bytes.
 
 ### Nonce policy
 
-The API receives the nonce from the caller; it does not allocate or track nonces.
+The API receives the nonce from the caller; it does not allocate or track nonces. The proofs are nonce-respecting: a nonce must never be reused with the same key (reuse leaks the XOR of plaintexts up to the first differing block). Uniqueness must survive process restarts and be coordinated across devices sharing a key.
 
-- **`BRUME-512`:** the proof permits random 24-byte nonces under the stated cost/advantage definition and usage bound. The nonce-collision term is at most `qₑ² / 2¹⁹³`. The documented 128-bit level is retained for up to `2⁶⁴` encryptions per key under that definition.
-- **`BRUME-512-256`:** unique nonces per key are required to retain the stated 256-bit level. With random nonces, the collision term prevents that level; the proof estimates the collision-limited scale at roughly `2⁹⁶` encryptions.
+### Parallel AEAD (`Brume1024P`)
 
-For applications using the 256-bit profile, uniqueness must survive process restarts and must be coordinated across devices sharing a key. The implementation does not enforce this policy. The same policy applies to the corresponding parallel profiles.
-
-### Parallel duplex (`Brume512P`)
-
-The parallel mode is designed for larger messages. It first derives a common trunk state from the key, nonce and AAD. The message is split into 4 KiB leaves. Each leaf runs a keyed duplex derived from the trunk and a leaf index; the final state of each leaf produces a chaining value. The trunk absorbs the ordered chaining values, the number of leaves and the message length, then produces the tag.
-
-Profiles:
-
-- `BRUME-512p`;
-- `BRUME-512-256p`.
-
-The parallel mode has its own IV/domain separation and produces different ciphertexts from the sequential mode. Its proof is stated in §4.5 of [`docs/PROOFS.md`](docs/PROOFS.md). In addition to the sequential-mode terms, the bound includes a term for collisions among leaf chaining values. The same nonce policy applies as for the matching sequential profile.
-
-A 4 KiB leaf size was selected from experiments with 2, 4 and 8 KiB leaves. On the benchmark machine, the parallel mode becomes useful when messages are large enough to amortise the per-leaf and root costs; the measured 16 MiB case is reported below. For short messages, the sequential mode is usually faster.
+For large messages: a trunk absorbs the AAD; each leaf of 8 KiB starts from the trunk, makes two fork calls with its index, and encrypts its chunk as the text phase of the sequential mode; its 64-byte chaining value goes to a root that also absorbs the number of leaves and the length, and gives the tag. Leaves are processed on all cores. Different ciphertexts from the sequential mode. Proof: Theorem P (PROOFS § 4.5, [`V06_MODES.md`](docs/brume1024/V06_MODES.md) § 2).
 
 ### Error-correction mode (`TE`)
 
-The `TE` mode adds seven bytes of parity for each 64-byte ciphertext block. It uses per-bit-plane SEC-DED syndromes to correct one altered byte per block and detect many multiple-error patterns.
-
-This mechanism is intended to handle accidental corruption. The parity data is **not authenticated** and does not provide adversarial integrity. The AEAD tag remains the cryptographic integrity check. The documented overhead is approximately 10.9% of ciphertext length.
+The `TE` mode adds seven bytes of parity for each 64-byte ciphertext block and corrects one altered byte per block before checking the tag. The parity data is **not authenticated** and does not provide adversarial integrity; the AEAD tag remains the integrity check. It reduces exactly to the AEAD (Proposition TE, PROOFS § 4.6). Overhead ≈ 10.9 % of the ciphertext.
 
 ---
 
 ## Hash functions
 
-### Sequential sponge
+One unkeyed sponge (rate 640 bits, capacity 384 bits) with four domains.
 
-`brume512_hash(data, out_len)` uses BRUME-512 as a sponge with a 256-bit rate and 256-bit capacity. The output length is selectable. Padding is injective and includes a domain value in the capacity.
+### Default digest (`brume1024_hash`, `sl_hash`)
 
-The generic classical collision scale associated with the 256-bit capacity is `2¹²⁸`. The repository estimates the generic quantum collision scale at approximately `2⁸⁵`; this is a generic sponge estimate, not a cryptanalysis result against the concrete permutation.
+Messages up to 8 KiB are hashed by the sponge alone; longer messages are split into 8 KiB leaves, each hashed to a 64-byte chaining value (in parallel, in batches of 256 bitsliced states), and a root sponge absorbs the chaining values and the tree metadata. Output length is free, **64 bytes by default** (a 32-byte output would cap quantum collisions at 2^85). Generic classical collision and preimage cost: 2^192. Quantum: collision and preimage proved at about 2^123.8 and 2^124.1 standard queries for a random permutation (PROOFS § 4.4, [`SPONGE_QROM.md`](docs/brume1024/SPONGE_QROM.md); ours, not reviewed), against 2^128 for the best generic attack. Indifferentiability: only ≈ 2^42.7 proved.
 
-### Tree hash
+### XOF (`brume1024_xof`, `sl_xof`)
 
-`brume512_hash_arbre(data, out_len)` is a separate function with separate test vectors and domain separation. Messages up to 8 KiB use a single-node domain. Larger messages are divided into 8 KiB leaves, each leaf is hashed independently, and a root sponge absorbs the ordered chaining values and tree metadata.
-
-The construction currently uses one level of leaves and a 256-bit chaining value. The indifferentiability argument is documented in §4.4 of [`docs/PROOFS.md`](docs/PROOFS.md). It is proved in the stated ideal-sponge model, subject to the conditions in that section. The implementation processes leaves in batches and can use OpenMP.
-
-The tree hash is **not interchangeable** with the sequential sponge hash. Applications must identify which function was used when storing or verifying digests.
+The sequential sponge with domain 0 and any output length. A distinct function from the default digest.
 
 ---
 
@@ -447,28 +420,26 @@ security for either signature.
 
 ## C implementation and SIMD
 
-The `sillage/c/` directory contains the C implementation of BRUME, the AEAD modes, the hash functions, Sillage-KEM, Sillage-SIG and SHAKE256 support code. The C API is exposed to Python through `ctypes` in `sillage/sillage_c.py` and used by the public wrappers in `sillage/rapide.py`.
+The `sillage/c/` directory contains the C implementation of BRUME-1024q and its modes (`brume1024.c`), Sillage-KEM, Sillage-SIG and SHAKE256 support code. The C API (`sillage/c/sillage.h`) is exposed to Python through `ctypes` in `sillage/sillage_c.py` and used by the public wrappers in `sillage/rapide.py`.
 
-### BRUME kernels
+### BRUME-1024q kernels
 
-The C implementation contains several execution paths:
+All kernels are constant time with respect to the state (no table indexed by secret data):
 
-- **AVX2, one state:** the S-box and GF(16) multiplication use `vpshufb` with lookup tables held in vector registers. The diffusion is expressed using fixed byte rotations and swaps derived from the Cayley-graph generators. The state does not index a conventional memory table in this kernel.
-- **AVX2, 32-state batches:** the state is transposed so that the same nibble position from 32 independent states is processed in parallel. The substitution and diffusion are applied vertically across the batch. This path is used by multi-message AEAD and hashing.
-- **ARM NEON:** corresponding single-state and batched kernels are present. The batch implementation processes 16 states at a time internally. Output conformance has been tested under QEMU when the cross-compiler and emulator are available; native ARM timing and side-channel measurements have not been reported.
-- **Reference path:** the table-based permutation is retained as a reference implementation. It is used for cross-checking and should not be treated as a constant-time fallback.
+- **AVX2, one state:** the state is kept unpacked (one nibble per byte, 8 registers) from block to block; the S-box and the GF(16) products are register shuffles (`vpshufb`), the diffusion uses fixed rotations.
+- **AVX2, 32-state batches** (vertical) and **AVX2 bitsliced, 256 states** (one register per bit of a nibble, S-box as a 22-gate circuit): used for tree leaves and multi-message AEAD.
+- **Portable kernel** (`brume1024_portable.h`, plain C on 64-bit words, S-box as a 17-gate circuit): used when AVX2 is not available (for example on ARM). There is no table-based fallback and no NEON kernel yet.
+- **Dense reference** (explicit M and M⁻¹, `sl_brume_permute_ref`, `sl_brume_permute_inv_ref`): for cross-checking only, not constant time.
 
-The AVX2 path is selected at compile time by the current Makefile's `-march=native` flags. The repository does not yet provide a general runtime dispatcher across separately compiled CPU backends.
+The kernel is selected at compile time (`-march=native`). Every kernel is checked against the dense reference and the 23 test vectors, with and without AVX2 (`tests/c/brume1024.c`, `tests/c/brume1024_api.c`).
 
 ### Parallel processing
 
-The multi-message API groups independent states into batches and distributes batches across available cores with OpenMP. The parallel AEAD mode also distributes message leaves across worker threads. OpenMP scheduling and the number of threads affect throughput; single-core and multi-core measurements are identified separately in the benchmark report.
+Tree leaves, parallel-AEAD leaves and multi-message batches are distributed across cores with OpenMP. Single-core and multi-core measurements are identified separately in the benchmark report.
 
 ### Side-channel testing
 
-The C paths have been tested with dudect-style timing experiments and, for KEM and SIG, Valgrind/ctgrind checks and control-flow instrumentation. The current results did not detect secret-dependent timing or control-flow differences in the tested builds and inputs. These are empirical checks, not a proof of constant-time execution. A key-dependent timing difference in the AEAD, tied to where the 64-byte duplex state fell within a cache line, was found and fixed on 2026-11-02 by aligning that state to 64 bytes (`docs/AUDIT_REPORT.md`, errata of 2026-11-02). Results depend on compiler, flags, CPU, operating system and test methodology.
-
-The Python reference implementation is not constant-time. The generic table-based BRUME reference path is also not intended as a constant-time implementation. NEON output conformance under QEMU does not establish native timing behaviour.
+dudect-style timing experiments (`tests/c/temps1024.c` for BRUME-1024q: AVX2 and portable kernels, AEAD with key and plaintext secret, verified decryption on the accept and reject paths; `tests/c/temps.c` for the KEM and SIG) and Valgrind/ctgrind checks (`tests/test_c_brume1024_valgrind.py`, `tests/test_c_kem_valgrind.py`, `tests/test_c_sig_valgrind.py`), each with a witness that must be detected. These are empirical checks, not a proof of constant-time execution; results depend on compiler, flags, CPU, operating system and methodology. The Python reference implementation of the KEM is not constant-time. Timing on ARM is not measured.
 
 ---
 
@@ -485,113 +456,68 @@ The orchestrator runs the Python tests concurrently and schedules the intensive 
 Useful subsets and options:
 
 ```bash
-python3 -m tests.run_all aead kem       # select test groups
-python3 -m tests.run_all -j 4           # use four concurrent Python test workers
-SILLAGE_INTENSITE=8 python3 -m tests.run_all c_integral c_sac
-python3 -m tests.noyau_c                # C kernel conformance and throughput
-python3 -m tests.bench_c                # C implementation benchmark
-python3 -m tests.bench_tailles          # reference implementation size/throughput sweep
-python3 -m tests.empreintes             # source, KAT and result fingerprints
+python3 -m tests.run_all brume1024 b1024_preuves kem    # select tests
+python3 -m tests.run_all -j 4                           # four concurrent Python test workers
+SILLAGE_INTENSITE=4 python3 -m tests.run_all b1024_statistiques
+python3 -m tests.bench_c                                # C implementation benchmark
+python3 -m tests.empreintes                             # source, KAT and result fingerprints
 ```
 
-For a longer campaign:
-
-```bash
-./scripts/rundenuit.sh 10
-```
-
-To resume a campaign using the repository's resume script:
-
-```bash
-./scripts/reprendre_nuit.sh 10
-```
-
-For a long run on any machine, `./scripts/runlong [hours]` checks it, starts the campaign in the background, monitors temperature and stuck campaigns, resumes after an interruption, and writes a results archive; see [`docs/CAMPAIGN_24H.md`](docs/CAMPAIGN_24H.md).
-
-On Windows, `scripts/rundenuit.cmd [hours]` runs the same campaign inside WSL 2, blocks sleep, and copies the results archive back to Windows; see the same guide.
-
-The extended campaign is compute-intensive and uses all available cores during some C tests. Its outputs are generated locally; not all raw campaign files are committed.
+The long BRUME-1024q campaigns (cryptanalysis studies, certificates) are run with the tools of `prototypes/brume_q/b1024/` and `prototypes/brume_q/sat/`; their results are written into the studies of `docs/brume1024/`. `./scripts/rundenuit.sh`, `./scripts/runlong` and `scripts/rundenuit.cmd` still run the long KEM, signature, fuzzing and timing campaigns ([`docs/CAMPAIGN_24H.md`](docs/CAMPAIGN_24H.md)); their BRUME-512 phases were retired in v0.6.
 
 ### Coverage by area
 
-The 51 tests in `tests/run_all.py` cover the following areas. Individual test modules and C programs contain the precise parameters and assertions.
+Individual test modules and C programs contain the precise parameters and assertions.
 
 | Area | Main checks and experiments | Selected modules / programs |
 |---|---|---|
-| Functional behaviour | KATs, round trips, malformed inputs, API behaviour, table fingerprints | `test_fonctionnel`, `test_aead`, `test_kem`, `test_sig`, `test_te` |
-| BRUME structure | S-box properties, exact branch number, diffusion support, graph invariants, self-equivalences | `test_branch_exact`, `test_symetries_invariants`, `diffusion_support`, `test_brume_algebre` |
-| Differential and linear analysis | Trail search, beam search, two-round differentials and hulls, truncated patterns, impossible differentials, zero correlations | `test_banc_cryptanalyse`, `test_diff_lin_empirique`, `test_cycles`, `test_beam_trails`, `test_hull`, `structure_miss`, `brume_attaques` |
-| Integral and algebraic analysis | Degree bounds, cube sums, division-property trails, forward/inverse reach, reduced-state models | `test_integral_degre`, `test_division_property`, `test_dp_modele`, `test_dp_tous_cubes`, `test_dp_exact`, `test_dp_validation`, `test_c_integral`, `test_c_degre`, `test_c_cube_init`, `mini_brume` |
-| AEAD and hash modes | Padding and domain separation, model-to-implementation comparison, tamper rejection, tree-hash conditions, parallel-leaf alterations | `test_mode_aead`, `test_aead_modele`, `test_aead_parallele`, `test_hachage`, `test_hachage_arbre`, `test_indiff_arbre` |
+| Functional behaviour | KATs, round trips, malformed inputs, API behaviour, table fingerprints, demo | `test_fonctionnel`, `test_kem`, `test_sig`, `test_vole` |
+| BRUME-1024q modes | 23 test vectors through the API with and without AVX2; kernels against the dense reference; AEAD against a literal transcription of DMV17; decoder of the final path; tamper rejection; parallel AEAD; TE corrections and refusals; multi-message batches | `brume1024`, `brume1024_api`, `brume1024_api_portable` |
+| Specification | Second implementation from the specification alone; table generator reproduces the library tables; portable kernel against an independent dense reference | `test_b1024_seconde_implementation` |
+| Proof checks | Encoding lemma of the parallel AEAD; quantum hash bound (counting lemma exhaustive on small models, witness); Carolan–Majenz chain evaluated exactly; Q1 identities and lemmas; numerical instantiations of PROOFS | `test_b1024_preuves`, `test_bornes_preuves` |
+| BRUME-1024q permutation | C4 ≥ 28 certificate tree re-read; structure (Frobenius, invariants, invariant subspaces, quasi-symmetries); local quadratic invariants; exact 2-round aggregation; statistical battery and avalanche | `test_b1024_certificats`, `test_b1024_structure`, `test_b1024_statistiques` |
+| Cryptanalysis tools | Algebraic (CICO by SAT), rebound and differential-linear tools, each against its witness | `test_b1024_etudes` |
 | KEM assumptions and estimators | Error distributions, δ-bound experiments, reduced-instance ISD, estimator consistency, parity and correlation checks | `test_isd_parametres`, `test_c_kem_bruit`, `isd_reel`, `isd_comparaison`, `kem_distributions` |
-| Signature protocol | Reduced-model checks, intermediate-scale Kales–Zaverucha attack against the C verifier, challenge distribution, false-positive/hidden-party analysis, malformed signatures, witness-hiding tests | `test_sig_modele`, `sig_kz`, `sig_flux` |
-| C implementation | Byte-for-byte conformance, SIMD output comparison, API interoperability, fuzzing, guard pages, UBSan, Valgrind/ctgrind and dudect-style timing tests | `test_c_impl`, `test_api_c`, `test_c_simd`, `test_c_fuzz`, `test_c_kem_valgrind`, `test_c_sig_valgrind`, `test_c_temps` |
-| Statistical tests | Avalanche/SAC measurements and statistical batteries on generated streams and hash outputs | `test_diffusion_stats`, `test_c_sac`, `test_c_statistiques` |
+| Signature protocol | Reduced-model checks, Kales–Zaverucha attacks against the C verifier, challenge distribution, malformed signatures | `test_sig_modele`, `sig_kz`, `sig_flux`, `test_vole_kz` |
+| C implementation | Conformance, API interoperability, fuzzing, guard pages, UBSan, Valgrind/ctgrind and dudect timing tests | `test_c_impl`, `test_api_c`, `test_c_fuzz`, `test_c_brume1024_valgrind`, `test_c_kem_valgrind`, `test_c_sig_valgrind`, `temps1024`, `test_c_temps` |
 
-The reduced-model tests are useful for checking proof steps and attack code. They do not establish that the same attack or proof condition scales unchanged to the full 512-bit construction.
+The tests of BRUME-512 (v0.5) are archived in `tests/historique_v05/` and no longer run.
 
 ### Latest committed test summary
 
-The committed [`resultats/SYNTHESE.md`](resultats/SYNTHESE.md) reports the v0.5 run of 11 November 2026: **800 of 800 controls passed, 70 tests**.
+The committed [`resultats/SYNTHESE.md`](resultats/SYNTHESE.md) reports the v0.6 run of 17 November 2026: **615 of 617 controls passed, 44 tests**, 37 minutes (21:23–21:59).
 
-The full battery ran from 14:01 to 16:44 in the campaign container (gcc 13.3, Python 3.12, Valgrind included) and gave 783 of 793 controls. All ten failures were in the tests themselves, revealed by the new S-box:
-- a frozen AEAD KAT left in the self-test;
-- an unsigned overflow in a keystream-balance check;
-- trails built as tuples, which a mutation witness could not modify (it crashed `division_property`, and `dp_tous_cubes` after it);
-- CP-SAT queries left undecided by `dp_validation` within 60 s, in the inverse direction at 3 and 4 rounds; a second pass at 600 s now settles them.
+**The two failures are one finding, still open.** The dudect test of the BRUME-1024q *portable* kernel (`temps1024`, `permutation_portable_sans_fuite_detectee`, and the exit code that follows from it) gave |t| = 9.7 at the first measurement; repeated runs of the same build give |t| between 4 and 20 at 2·10⁶ measurements. The same source compiled for `x86-64-v3` is clean on the same machine (|t| ≤ 1.2), and clean on two other machines (|t| ≤ 1.4); ctgrind finds no secret-dependent branch or memory access in that kernel; the AVX2 kernels and the AEAD are clean everywhere. The portable kernel is only used where AVX2 is absent. The cause is not identified, and **v0.6.0 is not released until it is** (the work stays on the `v0.6` branch). Details: [`docs/AUDIT_REPORT.md`](docs/AUDIT_REPORT.md), changes of 2026-11-17.
 
-The tests concerned were fixed and rerun, and are marked "relancé" in the summary. `vole_kz` (Kales–Zaverucha transposed to VOLE) was added during the run. `brume_algebre` was rerun after an external review with three Frobenius checks: `M ⊕ M⁽²⁾` has full rank 128 over GF(16), so a Frobenius relation costs 512 bits per round (PROOFS § 4.2 bis).
-
-This is a snapshot of one test run on the machine used to produce the report. It is not a statement that every possible input, compiler, architecture or adversarial strategy has been tested. In particular, the full suite does not prove the hardness assumptions, the security of the full BRUME permutation or the completeness of the QROM arguments.
+The tests that ran before a header guard was added to `sillage/c/brume1024_tables.h` during the run (no change of outputs) were rerun on the final sources: all pass. This is a snapshot of one run on one machine; passing it does not prove the hardness assumptions or the security of the full permutation.
 
 ---
 
 ## Measured performance
 
-The committed C benchmark [`resultats/BENCH_C.md`](resultats/BENCH_C.md) was produced on:
-
-- **CPU:** AMD Ryzen 5 5600G with Radeon Graphics (6 cores / 12 threads);
-- **Compiler:** GCC 13.3.0;
-- **Flags:** `-O3 -march=native` and OpenMP;
-- **Python reference:** Python 3.12.3;
-- **Date:** 31 October 2026.
-
-Unless stated otherwise, single-core values are reported. Multi-core rows use all 12 hardware threads. These figures are measurements of this implementation on this machine; they should not be treated as portable performance guarantees.
-
-### Selected C measurements
+The committed C benchmark [`resultats/BENCH_C.md`](resultats/BENCH_C.md) was produced on 17 November 2026 on an AMD
+Ryzen 5 5600G (6 cores / 12 threads), GCC 13.3, `-O3 -march=native`, OpenMP, Python 3.12 for the reference. Unless
+stated otherwise, values are single-core. They are measurements of this implementation on this machine, not portable
+guarantees.
 
 | Operation | Measured result |
 |---|---:|
-| BRUME-512 permutation, AVX2, one state | 0.390 µs |
-| BRUME-512 permutation, table reference | 4.88 µs |
-| BRUME-512 permutation, 32-state batch | 193 ns per state |
-| BRUME-512 AEAD, 1 MiB, profile 128 | about 83 MiB/s |
-| BRUME-512-256 AEAD, 1 MiB | about 41 MiB/s |
-| Tree hash, 16 MiB, one core | 161 MB/s |
-| Tree hash, 16 MiB, 12 threads | 793 MB/s |
-| Parallel AEAD, 16 MiB, one core | 150 MB/s |
-| Parallel AEAD, 16 MiB, 12 threads | 777 MB/s |
+| BRUME-1024q permutation, AVX2, one state | 0.771 µs |
+| BRUME-1024q permutation, 32-state batch | 725 ns per state |
+| AEAD, 64-byte message | 2.35 µs |
+| AEAD, 1 MiB | 101 MiB/s |
+| Default hash, 16 MiB, one core / 12 threads | 240 / 873 MB/s |
+| XOF, 16 MiB | 106 MB/s |
+| Parallel AEAD, 16 MiB, one core / 12 threads | 103 / 627 MB/s |
+| Multi-message AEAD, 16 KiB messages, 12 threads | 523 MB/s (674 MB/s with a common key) |
+| TE, 1 MiB: encryption / correction | 29.8 / 48.7 ms |
 
-### KEM and signature timings
-
-| Operation | Sillage-128 / SIG-128 | Sillage-256 / SIG-256 |
-|---|---:|---:|
-| KEM key generation | 6.27 ms | 26.7 ms |
-| KEM encapsulation | 0.206 ms | 1.19 ms |
-| KEM decapsulation | 0.317 ms | 1.86 ms |
-| SIG key generation | 0.276 ms | 1.04 ms |
-| SIG signing, one core | 34.4 ms | 121 ms |
-| SIG verification, one core | 34.3 ms | 121 ms |
-| SIG signing, 12 threads | 5.47 ms | 18.4 ms |
-| SIG verification, 12 threads | 6.5 ms | 17.8 ms |
-
-### Parallel AEAD scaling
-
-For a single 16 MiB message, the benchmark records approximately 86 MB/s for sequential AEAD, 150 MB/s for the parallel mode on one core, and 777 MB/s for the parallel mode on 12 threads. The parallel mode has additional per-leaf and root work; the speed-up is workload- and machine-dependent.
-
-For multi-message AEAD with a total of 32 MiB, the 12-thread throughput ranges from 157 MB/s for 64-byte messages to 685 MB/s for 16 KiB messages. When the key is shared across messages, the measured figures are 195 MB/s and 690 MB/s respectively. The full size sweep is in [`resultats/BENCH_C.md`](resultats/BENCH_C.md).
-
-The Python/NumPy implementation is a reference implementation, not the performance target. Its timings are recorded separately in [`resultats/BENCH_TAILLES.md`](resultats/BENCH_TAILLES.md).
+KEM and signature timings are unchanged from v0.5 (the code did not change): Sillage-128 key generation 5.2 ms,
+encapsulation 0.19 ms, decapsulation 0.31 ms; Sillage-SIG-128 signing 34.9 ms on one core, 5.5 ms on 12 threads. The
+full tables, including Sillage-256, SIG-256 and the C/Python factors, are in [`resultats/BENCH_C.md`](resultats/BENCH_C.md).
+Against BRUME-512 (v0.5, same machine): the AEAD at 1 MiB goes from about 83 to 101 MiB/s, the tree hash on 12 threads
+from 793 to 873 MB/s, at a larger capacity (384 bits instead of 256). Known gap: multi-message batches with a common key
+(`sl_aead_*_multi_ctx`) do not yet use the batch kernels for short messages (177 MB/s against 265 MB/s at 64 bytes).
 
 ---
 
@@ -599,13 +525,12 @@ The Python/NumPy implementation is a reference implementation, not the performan
 
 The status of each claim matters. The repository distinguishes exact structural results, bounds proved in a specified model, computational estimates, reduced-model experiments and open assumptions. They should not be conflated.
 
-### BRUME-512
+### BRUME-1024q
 
-- The S-box properties, graph data, branch number and diffusion supports are checked exhaustively or by the documented certificates.
-- The 128-active-S-box wide-trail lower bound is structural. The stated 32-round differential-characteristic and linear-trail probabilities use the independent-round Markov model.
-- Aggregated differentials and linear hulls beyond the proven two-round bounds remain open. Experimental clustering measurements do not replace a general proof.
-- The mode proofs model BRUME as an ideal permutation. They do not prove that the concrete 32-round permutation is ideal or pseudorandom.
-- Reduced-state, cube, boomerang and differential experiments constrain particular attack families; they do not establish security against all attack classes.
+- The S-box properties, branch number and diffusion supports are checked exhaustively; C3 ≥ 21 and C4 ≥ 28 are certified by SAT with LRAT proofs checked by two checkers. The 224-active-S-box bound over 32 rounds is structural; the probabilities derived from it use the independent-round Markov model.
+- Aggregated differentials and hulls are computed exactly only at 2 rounds and at chosen ends of 3 and 4 rounds; no general aggregation bound is claimed. The differential-linear model is not a bound (off by about 2^11 at 4 rounds).
+- The mode proofs model BRUME-1024q as an ideal permutation. They do not prove that the concrete 32-round permutation is ideal or pseudorandom.
+- The permutation is new; all its cryptanalysis is ours. Third-party cryptanalysis is the main missing item.
 
 ### Sillage-KEM
 
@@ -623,17 +548,15 @@ The status of each claim matters. The repository distinguishes exact structural 
 
 ### AEAD and hashing
 
-- Sequential and parallel AEAD bounds are proved in an ideal-permutation model and under the nonce restrictions stated above. The quantum Q1 setting, where the permutation can be queried in superposition, has not been analysed. Grover key search against a 512-bit key gives a nominal `2²⁵⁶` work factor, but this is not a proof of a 256-bit quantum security level for the mode.
-- The parallel mode includes a separate proof term for leaf chaining-value collisions. Reduced-model forgeries are used to check selected terms, not to prove the full-size construction.
-- The tree-hash proof is in the stated ideal-sponge model and has been tested on a reduced model; independent human review remains pending. It does not establish the security of the concrete BRUME permutation.
+- The sequential AEAD, the parallel AEAD and TE are proved in the ideal-permutation model, nonce-respecting, without release of unverified plaintext (PROOFS § 4.3–4.6). The classical proof rests on our repaired form of DMV17 Theorem 1. Model Q1 (quantum queries to the permutation) is proved by us at about 127 bits for σ ≤ 2^64; superposition queries to the mode (Q2) are not claimed beyond two partial results. **None of these proofs has been reviewed by a third party.**
+- The hash's 128-bit quantum level for collisions rests on the generic attack cost (BHT on c = 384); our adaptation of Carolan–Majenz proves about 2^123.8 queries (preprint, ours, not reviewed). Indifferentiability is proved only at about 2^42.7.
 - The TE parity data is not authenticated. Only the AEAD tag protects against adversarial modification.
 
 ### Implementation and side channels
 
-- The Python reference code is not constant-time.
-- The AVX2/NEON kernels are designed to avoid state-dependent memory lookups and branches. The current x86 timing and control-flow tests found no secret-dependent behaviour in their tested configurations; this is not a formal guarantee for every compiler or CPU.
-- The NEON path has output-conformance tests under QEMU, but no native ARM timing or side-channel campaign is reported.
-- The table-based reference permutation is retained for correctness comparisons and is not a constant-time backend.
+- The Python reference code of the KEM is not constant-time.
+- The BRUME-1024q kernels (AVX2 and portable) avoid state-dependent memory accesses and branches; dudect and ctgrind found no secret-dependent behaviour in the tested configurations on x86-64. This is not a formal guarantee for every compiler or CPU; timing on ARM is not measured.
+- The dense reference permutation is for correctness comparisons and is not a constant-time backend.
 - Compiler flags, optimisation, CPU microarchitecture and surrounding application behaviour can change side-channel properties.
 
 ### Use restrictions
@@ -655,8 +578,10 @@ sillage-brume/
 ├── requirements-tests.txt   Dependencies of the full test suite
 ├── docs/
 │   ├── README.md            Index of the documents
-│   ├── SPEC.md              Normative specification (English)
-│   ├── PROOFS.md            Proofs, assumptions and parameter derivations
+│   ├── SPEC.md              Normative specification of the suite (BRUME-1024q in § 2, by reference)
+│   ├── PROOFS.md            Proofs, assumptions and parameter derivations (BRUME-1024q in § 4)
+│   ├── MIGRATION_V06.md     The v0.6 change: decisions D1–D7
+│   ├── brume1024/           BRUME-1024q: SPEC, test vectors, AEAD and hash proofs, modes, studies, roadmap
 │   ├── AUDIT_REPORT.md      Development audit history and corrected issues
 │   ├── LEADS.md             Measured optimisations and research leads
 │   ├── DESIGN_NOTE.md       Original design note
@@ -666,51 +591,42 @@ sillage-brume/
 ├── sillage/
 │   ├── sillage_common.py    Rings, sparse vectors, SHAKE helpers and estimators
 │   ├── sillage_kem.py       Sillage-KEM reference implementation
-│   ├── sillage_sig.py       Sillage-SIG reference implementation
-│   ├── brume512.py          BRUME permutation, modes and hash functions
-│   ├── brume512_tables.py   Frozen S-box, graph and coefficient tables
-│   ├── select_params.py     Parameter/table generation
-│   ├── rapide.py            Public API with C backend and Python fallback
+│   ├── sillage_sig.py       Sillage-SIG v0.4 reference implementation
+│   ├── rapide.py            Public API with C backend (Brume1024, Brume1024P, hash, XOF, KEM, SIG, VOLE)
 │   ├── sillage_c.py         ctypes bindings to the C library
 │   ├── demo.py              End-to-end example
 │   └── c/
-│       ├── brume512.c       BRUME reference and sequential modes
-│       ├── brume512_avx2.c  AVX2 and NEON kernels, batches and parallel AEAD
-│       ├── brume512_simd.h  Generated SIMD diffusion tables/macros
-│       ├── brume512_tables.h Generated BRUME tables
+│       ├── brume1024.c      BRUME-1024q: kernels, sponge, tree, AEAD, parallel AEAD, batches, TE
+│       ├── brume1024_*.h    Generated tables, portable, bitsliced and batch kernels
 │       ├── kem.c            KEM implementation
-│       ├── sig.c            Signature implementation
+│       ├── sig.c, vole.c    Signature implementations (v0.4 reference, v0.5 VOLE)
 │       ├── isd.c            ISD estimators
 │       ├── commun.c         SHAKE256 and common C routines
 │       ├── bench.c          C benchmarks
 │       └── Makefile
 ├── tests/
 │   ├── run_all.py           Test orchestrator
-│   ├── test_*.py            Functional, proof-model and cryptanalysis tests
-│   ├── nuit_brume.py        Extended BRUME campaign
-│   ├── c/                   C/OpenMP cryptanalysis, validation and size-study programs
-│   └── gpu/                 CUDA cryptanalysis campaigns (byte-for-byte conformant to the C code)
-├── prototypes/              Measured prototypes that are not part of the suite
-│   ├── vole/                VOLE-in-the-Head signature over regular SD (docs/LEADS.md, lead 9)
-│   ├── brume_bitslice/      Bitsliced 256-state BRUME-512 kernel (docs/LEADS.md, lead 10)
-│   └── brume_sbox8/         Idea note: BRUME with 8-bit S-boxes (not implemented)
+│   ├── test_*.py            Functional, proof-model and cryptanalysis tests (test_b1024_*: BRUME-1024q)
+│   ├── c/                   C programs of the battery (brume1024*.c, temps1024.c, ct1024.c, KEM and SIG studies)
+│   ├── gpu/                 CUDA tools (signature attack)
+│   └── historique_v05/      BRUME-512 and its tests, archived at v0.6 (not run)
+├── prototypes/              Research tools and prototypes that are not part of the library
+│   ├── brume_q/b1024/       BRUME-1024q analysis tools (generators, cryptanalysis, proof checks, campaigns, DMV17 paper)
+│   ├── brume_q/sat/         SAT certificates of C3 and C4 (with the C4 ≥ 28 reproduction package)
+│   ├── vole/                VOLE-in-the-Head signature prototype
+│   ├── brume_bitslice/      Bitsliced kernel study (BRUME-512)
+│   └── brume_sbox6/, brume_sbox8/  S-box selection of v0.5; idea note on 8-bit S-boxes
 ├── resultats/
 │   ├── SYNTHESE.md          Latest committed test summary
 │   ├── BENCH_C.md           C benchmark report
-│   ├── BENCH_TAILLES.md     Python reference size/throughput report
-│   ├── EMPREINTES.md        Source and test fingerprints
-│   ├── pistes_division.json Division-property certificates
-│   └── pistes_exactes.json  Exact-trail certificates
+│   ├── EMPREINTES.md        Source, KAT and result fingerprints
+│   └── pistes_*.json        Division-property certificates of BRUME-512 (v0.5, history)
 └── scripts/                 Campaign launchers, run from the repository root
     ├── rundenuit.sh         Extended (night) campaign
     ├── reprendre_nuit.sh    Resume an interrupted campaign
     ├── runlong              Long campaign in the background, with monitoring and resume
     ├── preparer_campagne.sh Machine check and Python environment setup
-    ├── runspecial           Targeted dudect measurements (timing investigations)
-    ├── rungpu               GPU cryptanalysis campaigns (tests/gpu)
-    ├── surveillance_gpu     Watches the GPU during a campaign; reboots the host if the card drops off the bus
-    ├── rungpu2080           The same on a slower card (e.g. RTX 2080): extended plan, 72 h
-    ├── rungpu_cloud         The same on a rented multi-GPU machine, time-bounded (10 h)
+    ├── surveillance_gpu     Watches the GPU during a campaign
     ├── rundenuit.cmd, .ps1  Windows launcher (runs the campaign in WSL 2)
     └── rundenuit_wsl.sh     Linux side of the Windows launcher
 ```
@@ -725,11 +641,11 @@ Copyright (C) 2026 Spider4Tech. This project is free software, released under th
 
 The current research priorities recorded in the project are:
 
-1. **BRUME cryptanalysis:** improve the analysis of aggregated trails, the actual integral reach, boomerang behaviour and attacks against the keyed modes. The exact division-property reach is established as a method result; the real integral distinguisher remains open.
+1. **BRUME-1024q cryptanalysis:** third-party cryptanalysis first; then the open points of [`docs/brume1024/ROADMAP.md`](docs/brume1024/ROADMAP.md) and the level-3 attack models of [`docs/brume1024/NIVEAU3.md`](docs/brume1024/NIVEAU3.md) (multi-block rebound beyond 3 rounds, conditional cubes around the 22–23-round zero sums, the keyed duplex). Human review of the AEAD, parallel AEAD, Q1 and TE proofs.
 2. **Sillage-KEM:** seek a tighter correctness bound that accounts for XOR cancellations without adding an unsupported independence assumption (a parameter search at equal guarantees gains only about 1 and 2 %, [`docs/LEADS.md`](docs/LEADS.md), lead 9); continue structured and multi-block decoding attacks; improve the classical and quantum cost models.
 3. **Sillage-SIG:** strengthen the protocol analysis, evaluate VOLE-in-the-Head as the main route to smaller signatures (a prototype in `prototypes/vole/vole_proto.c` measures 4,112 and 15,906 bytes; it is not a format of this suite, and the conditions for adopting it are listed in [`docs/LEADS.md`](docs/LEADS.md), lead 9), and determine what additional work is required for a meaningful QROM security statement.
-4. **AEAD modes:** continue checking the correspondence between the proof models and the C/Python implementations, including nonce handling, multi-user use and parallel-leaf boundary cases.
-5. **C portability:** measure the NEON implementation on native ARM hardware, improve runtime backend selection, and continue testing across compilers and CPU generations.
+4. **AEAD modes:** continue checking the correspondence between the proof models and the C implementation, including nonce handling, multi-user use and parallel-leaf boundary cases.
+5. **C portability:** a NEON kernel for BRUME-1024q and timing measurements on native ARM hardware (the portable kernel is used there today), runtime backend selection, testing across compilers and CPU generations.
 6. **Reproducibility:** retain complete run manifests, compiler/CPU metadata, source fingerprints and raw outputs for long cryptanalysis campaigns.
 
 Optimisations that change the construction or its parameters must be accompanied by updated proofs, test vectors and conformance tests. Performance changes alone do not justify changing the algorithm.
@@ -749,6 +665,7 @@ The repository records earlier design failures and the changes made in response.
 | KEM correctness | A Gaussian estimate overstated the failure bound | Replaced by a certified Chernoff bound evaluated per key |
 | Signature protocol | The Stern-based signature format was too large and had earlier challenge/response issues | Replaced in v0.4.0 by the hypercube MPC-in-the-Head construction; transcript binding and auxiliary-field checks added |
 | Signature protocol (v0.5) | The MPC-in-the-Head signature was 8.5 / 34.9 KB, and its QROM reduction proved only half its bits | Replaced by VOLE-in-the-Head over regular SD: −50 % size, an exact reduction to SD, a QROM sketch close to Grover. Found and fixed on the way: empty blocks when `Π μ` exceeds the block, a shared hash prefix between the short and fast profiles, and a flawed attack harness (the fake witness was 2 bits from the real one) |
+| Permutation width (v0.6) | BRUME-512 at c = 256 gave only 2^85 against quantum collisions; its 256-bit profile was slow | Replaced by BRUME-1024q (c = 384, 2^128 BHT), with C3 and C4 certified, a full-state keyed duplex AEAD proved on a repaired DMV17 Theorem 1, and faster than BRUME-512 on almost every size |
 | BRUME S-box (v0.5) | The S-box came from a seeded search; a tie-break among the optimal 4-bit S-boxes found a better one | Replaced by `AD412650BFEC7893` (decision rule fixed beforehand, `prototypes/brume_sbox6/departage/`): BCT 8 against 10, D3, L3, D2 and 3-round boomerang better, exact division-property reach unchanged |
 | C implementation | State-indexed tables and secret-dependent operations produced side-channel concerns | Added AVX2/NEON kernels, masked operations, fixed-work sampling and dedicated timing/control-flow tests |
 | Division property | Earlier upper-bound claims were limited to particular cubes | Extended the trail construction and verification to all 512 bit cubes; exact method reach documented as 10 rounds per direction |
@@ -764,8 +681,10 @@ On every push and pull request, the C/C++ workflow:
 - builds the C library, the benchmark and the native test programs;
 - runs the C review checks (`tests/c/revue_c.c`), the exact-spectrum checks of Lemma 0 (`tests/c/h1p_fourier.c`) and the VOLE prototype's known-answer tests;
 - fuzzes the VOLE verifier briefly under AddressSanitizer and UndefinedBehaviorSanitizer;
-- checks that the generated C tables match their Python generator;
-- runs three quick Python tests: known-answer tests, the TE mode, and byte-for-byte conformance between C and Python.
+- checks that the BRUME-1024q tables are those of their generator;
+- runs the BRUME-1024q checks on the library with and without AVX2 (23 test vectors, kernels, modes, TE);
+- runs quick Python tests: known-answer tests, C ≡ Python conformance for the KEM and the signature, the second implementation of BRUME-1024q written from its specification, the C4 ≥ 28 certificate audit, and the numerical instantiations of the proofs;
+- checks the quantum bound of the hash on small models, with a witness that must fail.
 
 A CodeQL workflow analyses the C and Python code. The CI does **not** run the full cryptographic test suite (about one hour on 12 cores), nor the timing, Valgrind or long cryptanalysis campaigns: run `python3 -m tests.run_all` and the scripts in `scripts/` locally for those.
 
@@ -788,4 +707,5 @@ A CodeQL workflow analyses the C and Python code. The CI does **not** run the fu
 - [`docs/AUDIT_REPORT.md`](docs/AUDIT_REPORT.md) — development audit history, previously identified flaws and their corrections.
 - [`resultats/SYNTHESE.md`](resultats/SYNTHESE.md) — committed test-suite snapshot.
 - [`resultats/BENCH_C.md`](resultats/BENCH_C.md) — C performance measurements.
-- [`resultats/BENCH_TAILLES.md`](resultats/BENCH_TAILLES.md) — Python reference throughput and message-size measurements.
+- [`docs/brume1024/README.md`](docs/brume1024/README.md) — BRUME-1024q: design, certified bounds, modes, measurements, security summary.
+- [`docs/MIGRATION_V06.md`](docs/MIGRATION_V06.md) — the v0.6 change and its decisions.

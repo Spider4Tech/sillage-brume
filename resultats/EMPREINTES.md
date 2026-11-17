@@ -1,274 +1,273 @@
-# Empreintes SHA-256 — SILLAGE v0.4
+# Empreintes SHA-256 — SILLAGE v0.6
 
-Batterie : 574/574 contrôles, 59 tests.
+Batterie : 615/617 contrôles, 44 tests.
 Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 
 ## KAT
 
 | Entrée | Sortie |
 |---|---|
-| `brume512_hash(b'abc', 32)` | `ce516e8c2af5a81909dbfb9d59225809c86dfcb8e13998392962fd65691dd7bd` |
-| `brume512_hash_arbre(b'abc', 32)` | `5dd1dcb0b955987a48097577392c12507b5c4f5726a5ba73687c45bb4496c115` |
-| `BRUME-512 AEAD(cle=00..3f, nonce=00..17, aad='kat', 'SILLAGE')` | `1e27b2f1c1e6f77ee42d609bce1c6643ec0525ab11e3fc` |
-| `BRUME-512p AEAD(cle=00..3f, nonce=00..17, aad='kat', 'SILLAGE')` | `2bd5853b6dc2c65ab7b555e169695de65ecb2c365eaffa` |
+| `brume1024_hash(b'abc', 64)` | `062a5ef271ad9bd6447ba12a02771e2337adcc35a525103309ce4bcb4e28dbfe7dbd80b3941e1e836c3f10218cb4f84fd9909aed1bcb3c47d5c1e2e95f776916` |
+| `brume1024_xof(b'abc', 64)` | `657f93a6eafa3bd4f65f35d032ffd5fb8484f404fe3f56beb450de5da35d53fc0a789eed4108ec185528314652741e90a83036f8e27d9e38bcb6f23eb2519dd3` |
+| `BRUME-1024q AEAD(cle=00..3f, nonce=00..17, aad='kat', 'SILLAGE')` | `2d1d2d247174820fa96ed225fa5d7592243da760bb1652e2db8b40a2e5d5f5bbc232f87aebf743` |
+| `BRUME-1024qp AEAD(cle=00..3f, nonce=00..17, aad='kat', 'SILLAGE')` | `a763507b3aa82d81a862111dd678bf7303deeaabf61a5204598f76fce867807d323cd3eccdbfe9` |
 
 ## Sources Python
 
 | Fichier | SHA-256 |
 |---|---|
-| `sillage/__init__.py` | `ed6fe89e2f5edf82c3cffece84abddb6d07d35cb97fcb8d4abf5a66381bfb23f` |
-| `sillage/brume512.py` | `89e4a506c1bd3192ce6f205400a10bff46551d2cb800c3a7a71f7d824f090a15` |
-| `sillage/brume512_tables.py` | `3c621e2c86896d46b198301afbe41dd374c7d9f7bd7b78473fa4117765c7c111` |
-| `sillage/demo.py` | `71b63d0414bf103ef9fdf7da5012141c499ba444aa1d72819649e447585df5ab` |
-| `sillage/rapide.py` | `eac8be0af6d8e6061c210e36ab508d5cbbb328ffbcfaeaa5049f5cfdafcb7600` |
-| `sillage/select_params.py` | `fd18de70eb6796e192b9d73b9cc8a9a5c78250f59344ac0843013b9bccd8e4c6` |
-| `sillage/sillage_c.py` | `09385de54d153d9a1169402f5e38cda6a3b910d694f4240beb441902ebd76c40` |
-| `sillage/sillage_common.py` | `a6eed082af65906daac7f1fbc7a9280da03f071bd421ee96f79ff3e34b5f23be` |
-| `sillage/sillage_kem.py` | `522385739deb78e2f34153d46494bd3b16fc8095c42e44363506e80d1786c37f` |
+| `sillage/__init__.py` | `9b5567a31b316028f5e3d651113693fbf4b21c0e25d57f54a267c3d5d6b5ea09` |
+| `sillage/demo.py` | `c440c6a3e2e495dcdd631c628cd188a9a7c4ff49d54478a4455ba0e46338afce` |
+| `sillage/rapide.py` | `f704a689faab7e6e2c2bee4ad3ed719ad63c7699e78874f7e9ce104806a06dc8` |
+| `sillage/sillage_c.py` | `0983e3c806523c050f39624034167b794524368b65e6eb7fab3a797250c1e813` |
+| `sillage/sillage_common.py` | `e5dd1340fe088def8e9caea363ff4bfb9c8bc3589222b9eafd4a4763658baa59` |
+| `sillage/sillage_kem.py` | `5ca543efd599051938b762ab902b685560b20ea9d219dd9746b43cb7cc2bccaf` |
 | `sillage/sillage_sig.py` | `c3a66765be93150ce88242b20b56ad28d533cfbee794ef0e20dc983e2e4db112` |
 
 ## Sources C et en-têtes générés
 
 | Fichier | SHA-256 |
 |---|---|
-| `sillage/c/Makefile` | `895fa40561ef4c0c7069644a819ef5daf789d08d5030b4cf809e9291f02a1c1e` |
-| `sillage/c/bench.c` | `1239353fa3bb6e3b2b43eb1eca85381ab68a0ff34233db6576c7f134ba17a12e` |
-| `sillage/c/brume512.c` | `c5658c11125fabc6bef197aa8153e43e7118f818ae00b4c949c9c59fa61ff262` |
-| `sillage/c/brume512_avx2.c` | `333ee50ddde81c87d626f2ee9f71a332b5f1fded21c8ac8643ccc824559222d3` |
-| `sillage/c/brume512_simd.h` | `a4f5e25a633485e6569587326eee727eceaa5e49f440a80c0e3f5ab1ffb34afe` |
-| `sillage/c/brume512_tables.h` | `007d80ff07b85d9c8f909c09c965375f8fcd92c81df09c3c54007bf09d856792` |
-| `sillage/c/commun.c` | `86fcc8eeaae2ab2ce5090c554aba059803201470da38e7bc49b7925cc13498a2` |
+| `sillage/c/Makefile` | `3989972893b8287de6a458eb227ed35a355fc87534f09394ea86e86cbf1ad987` |
+| `sillage/c/bench.c` | `7f03bc8d0cb5ced8e0857ae6c8739a52643501c3263dbcd45c476f93f12f2069` |
+| `sillage/c/brume1024.c` | `dd5861eee3ab6bc2e3f08ef1f7367c1eee5cd40e3dddede3e28d28d03ac004be` |
+| `sillage/c/brume1024_bs.h` | `9d04e6e4d707144d16ccb7a463af9f840a9ace0966256c5ac169daea7db45a30` |
+| `sillage/c/brume1024_lot.h` | `d169caa6b3f191cf8407bead92a6c830cbaf1aed54aa4d699c0e9de80f6f1f80` |
+| `sillage/c/brume1024_portable.h` | `26fd97d391f3b6c33b37e17572cd068bb4aa5b0323785329040bf7423bf782b3` |
+| `sillage/c/brume1024_tables.h` | `ce89885c6626affbfdad4f2a07de9dd5385f3ec2835d1d329326912fe0a09c4a` |
+| `sillage/c/commun.c` | `6494c3479457aaa65b8ecfc40465ddc09e566ec99909d06c5b891099aff36909` |
 | `sillage/c/isd.c` | `b2885305a022218073c77181275d1d9cae3c327abe3025c4f0da0452d59eed50` |
 | `sillage/c/kem.c` | `02af924eda3838923bcc2e3608648f9c8a872a5869425fede59d39cc98499f4a` |
 | `sillage/c/sig.c` | `071f9d2449d6dc6e7d416e122f48b0f2957710fa9e880d7c7662ccfb11e66e70` |
-| `sillage/c/sillage.h` | `34605dce4d11652bb3865fc996ae2ce3b29f28a0e8500ace1d5adfa760d542b2` |
+| `sillage/c/sillage.h` | `9fb7bdb707069c08a6b53ce5fc0863d92673949ef2f44fc9eaadc551cc41d7e2` |
+| `sillage/c/vole.c` | `88c2586dd60d3d89909dc590ea05da8e2445b8a5a5659babc9560ba652c85614` |
 
 ## Tests
 
 | Fichier | SHA-256 |
 |---|---|
 | `tests/__init__.py` | `bc7d93e2923d07458b29793d8272372e5f66fd8cdbb31688205f6a17cb9b126d` |
-| `tests/banc_statiques.py` | `5dc23fa9b575d056ec433c139f93a15757f643149ff4762708703e184fc6d91f` |
-| `tests/banc_trails.py` | `72696ef0e252522eb9d99c96ebb690c2a978a3f2e2249ede0232d630b8d18ff5` |
-| `tests/banc_wide_trail.py` | `5135fc76d41f2854c40f7bba73d55902da201faf5abb9ed65a0133d0abf6c939` |
-| `tests/bench_c.py` | `a38d6f6c857d0f6d52612086bceeff23130ee3796c2e2da1f619e3e5cc8fd651` |
-| `tests/bench_perf.py` | `6cd03cbe715503e47756818136b1459964600ed091a7b592c40e4af64e708ba3` |
-| `tests/bench_tailles.py` | `2ed7703c77770fb778de05b6b089cecbeccbdedc43acbcf7aac5e22ad1e2dc94` |
-| `tests/c/Makefile` | `25bfe69c783e40fc231521595a33b28150a8a9bf8cec8b3466a82d2e2d37dd2b` |
-| `tests/c/brume_attaques.c` | `f2d3976342e4f9c7feeab4448f53afa4dfd7912acce7713b0011ad5853b1dec7` |
-| `tests/c/brume_gd2.c` | `82f88c7c407a0c5a86a03ba29cb7ca273ca973bfb25614343b16a68e76c2bde4` |
-| `tests/c/brume_ref.h` | `9b26ab8feb9c109c0ca47d0d030e0693c2226413b52872acffd815f99f3f701b` |
+| `tests/b1024_outils.py` | `35012eeb40d422dbc7c9cee08651808bba6e692ebb9821d314a65d1028323d17` |
+| `tests/bench_c.py` | `2cf46f5e432628e58e9149d7f804cf746cc98863e1fefb9f78d2273d26e98cf9` |
+| `tests/c/Makefile` | `b1ecccd5fab9c0f7539fb04bfb68b9e5de45f841ba88346eb6e2be5fe6344b8f` |
+| `tests/c/brume1024.c` | `abcfa562aec6955c0ef5eb151c13d243344e4d02a47ee0569481577b42f0319f` |
+| `tests/c/brume1024_api.c` | `ac03016ab77a738bde8a3ae49951ea7b75642973f7b7fa5d9100328d1cab2cdf` |
 | `tests/c/compression_kem.c` | `768bd0e181c7db82feb087a6354e90d7a62c11075153e5bf760efb306f0ba201` |
 | `tests/c/compression_sig.c` | `b97477e549d98c8262bcc702539ebb72cf9a97472241369a50d1aaadd7eef0e4` |
-| `tests/c/diffusion_support.c` | `c7fabb6e23e96763cff33f2126da322404fd9a90c9bf882a7f8e0961fd425d42` |
-| `tests/c/fuzz.c` | `a7dd9427cf60f7ad4e838adba96f035b7d552cc5740068cd0ce628aa67eedc0b` |
+| `tests/c/ct1024.c` | `9d46ae566c48f045a0420ac7e50948c28a5cdefccf13abc76edae5300e411cfb` |
+| `tests/c/fuzz.c` | `9dfc591890b729e853703560da4c5e4182fb4a86b44a8f0938bcd2c670ed0550` |
 | `tests/c/garde.c` | `50930a275b518b36a5a63edf1f4c48aeb5c56ab98335f4eec9891908a282dee7` |
-| `tests/c/garde_test.c` | `84909ac34274d51460fd223197ab293abe75fe1729021a65cf3796ce4f5b06ce` |
+| `tests/c/garde_test.c` | `a250f2e8d513bb4e53b59d3446cde4f0c1a93ac508bd74b23061deaf4acdd323` |
 | `tests/c/h1p_fourier.c` | `6f40edad0b61aa8e2350fd5df77814f4d4acb47c13a42fb828f2f762e283a52b` |
-| `tests/c/invariants.c` | `dad2131e018a05087f07a18c0d0603212704c46cbc42492660b86f45a6714285` |
 | `tests/c/isd_comparaison.c` | `8a6933df5d2267711887c0ea59fd0be2946d6708d28c03bbc0a2a5aea75609fb` |
 | `tests/c/isd_reel.c` | `1b1c6853cbded1d0b1c86ee38c33208a4f6ddeb9b900946436529d84fd729f12` |
+| `tests/c/kat_b1024.h` | `28d0923165ba7b5d251279b2dd9ed2bae18e4853d716a6f75def4d48f37732cb` |
 | `tests/c/kem_distributions.c` | `ccd75e0606fdafcfd86e89032e4eb49fda6e76e07f6a321ff06d1bf6e5ec432b` |
 | `tests/c/kem_rejet.c` | `095a5718b149e03d99139453a50d2d8625e531e7206de111cf8a98756e4db170` |
 | `tests/c/kem_valgrind.c` | `4000bfb3352ac1b94ff3fd336eb71142adcec13675a50b7da9dbb93bc945deba` |
-| `tests/c/mini_brume.c` | `756bde1881bacc74d3b7dab1e82449ec2c97b517e46a370a1873dc5b05e1d637` |
 | `tests/c/noyau.c` | `4b6e7584b0f1fba466c11a9a034cda790167556d6e4c4ef3a6463526c1d263d4` |
-| `tests/c/nuit_cryptanalyse.c` | `05e5d2588b9689f2cc404d04c3a145a51ee65c1e2a9909997a4788e31fff47b5` |
-| `tests/c/nuit_isd.c` | `2c91530e47187ea9e68982b80b292a07a68cae37f4401670ec82b8f6179a1f3e` |
+| `tests/c/nuit_isd.c` | `c9cfe21532e0490e2db42a4d3a374c24299a9ffd8ee2347e209f12b9fe1479e9` |
 | `tests/c/nuit_kem_reel.c` | `19f0f62098944fce2b301ccbc26a9abe3087c4e9446e28f579b3e164e105aa24` |
 | `tests/c/resultat.h` | `65186d1ad0cf9aa1e9b191277d2f73fffbfc58ef00120f841901bd0cf735d2b1` |
 | `tests/c/revue_c.c` | `f285a467bb7c66c71e2b6be0f06e0f7cebc5eb061baeadf5e45d239cd9d821cc` |
-| `tests/c/rsd_attaques.c` | `e47a1c6af326c7804098bbb873f69eb2fc738b55eebb2ed1684c0d3d0f41d740` |
-| `tests/c/sat_trails.c` | `843b03c9c827e3a66bf7f8d75420b6b69e50e96c9af03000aeb3c02503fb8e6d` |
+| `tests/c/rsd_attaques.c` | `25c48171966923668a2bbdbada1851acad930100ed08b20fe2a522525fb46351` |
 | `tests/c/sig_ct.c` | `17a9a1dde668cd44f84ebeb05da74c96e176c916110d79f39deb655d09e92920` |
 | `tests/c/sig_flux.c` | `b2f36ca2694e12b11b7800b59350d08b71f0d2f2257e5d34b7e3e4105aeac697` |
 | `tests/c/sig_kz.c` | `dfa8cc225159292c25abd10cac39b4235f15aa68a579e5c3408f9dff5d043bf2` |
 | `tests/c/sig_kz_commun.h` | `a35a29224c2983318d442d2aa378d06a3caa6c97dd330c7b83d70c3135daf25e` |
 | `tests/c/sig_valgrind.c` | `834f634ed3f1b0c5321fd693b345632f7970855b32a97b88c7fd1d0984d188d3` |
-| `tests/c/simd_conformite.c` | `73c2b1507eb2d7a9ee162dcb7a884aaf72cfae10027c6e01d9931b5effa63603` |
-| `tests/c/structure_miss.c` | `8064bb4d1267a2f41607723b98920d58b037c1c7ec2b284c006041e0378dc69a` |
-| `tests/c/temps.c` | `6179243c8afb959d0c4b79356825f70c044793acbba406592d9c5e7419b57e32` |
+| `tests/c/temps.c` | `b470a1e2c67044cb7705da020e928cd314be45e097d255cd990a0dc69087abcd` |
+| `tests/c/temps1024.c` | `780223848ff677d3292c69dbb4a6d6ed3051eb05d49992aa4a61453d19095c27` |
 | `tests/c/trace_pc.c` | `97300089809ac8bb53d3fc3f183a4c7eff4a069e9737d9aecf58b683383f0741` |
 | `tests/commun.py` | `4c42c8e3bb8ff345006777c6ffa1fe08a8cc78ec45181be2d5c044f3edef968e` |
-| `tests/dp_cpsat.py` | `9f7efe1431e9a0e0286bb88c77cbaa6484689d7c974a8627ea9e578512013370` |
-| `tests/dp_queue.py` | `fdad527d13321006d4a3cedbadb4fca77bfffeb3a3c865da4391481bcfe61425` |
-| `tests/dp_sat.py` | `98b1fb72dba68d1acae98369747458819bdb837def7f054d4e30dc81b2aa8733` |
-| `tests/empreintes.py` | `6670a7924bfab8370742a8201a62b1008f3f17924c90765150cae3a78c8de68a` |
-| `tests/noyau_c.py` | `8b2531d11172dd1a013c40044fa779b2d7d06f53c68bf6623a6981f47a275588` |
-| `tests/nuit_brume.py` | `103bf05648c97f70a1dab2184d28aeeb212a3c6f912deb2b6f71d095f77e89c3` |
-| `tests/pistes_monomiales.py` | `d3e71c04cd304e754967867f4a2d5fcaafbd646e41d2406ab2b53fcd3ee5f840` |
-| `tests/run_all.py` | `ddfd124a1c3798d75375d95e0af168e968d0a627563552bc97ba67fec183be1c` |
-| `tests/test_aead.py` | `174b1d4eded90afb749947f1e7ead1470c838aba7b9797b4cf9da55e96fe23a7` |
-| `tests/test_aead_modele.py` | `e663adb2d461585c2f492522edadfec7c804e2c381a1e77aa6c30c6299846c5c` |
-| `tests/test_aead_parallele.py` | `12cf87ea26acb7b51064dcb0c383457fd9d3bd2cdfb8bc5af119da78182c81ee` |
-| `tests/test_api_c.py` | `f208c554c99501c7795996c10e2fe2e4c850ea0504dc050d1328dee84e8ea2b3` |
-| `tests/test_banc_cryptanalyse.py` | `8e9333cd247b8f13865e1d1fd4160ce4a17c0b750b156be98720e793451a6b96` |
-| `tests/test_beam_trails.py` | `56ec9933df2913378e03dbee67f446524e9fb53feae262c4efa5b492cdf650a4` |
-| `tests/test_branch_exact.py` | `992dc0212a81eb6d4e099f9bcc88f124a049f60603c22e4ce0849453a00854cb` |
-| `tests/test_brume_algebre.py` | `3c69ee1770987821d63316b32f7f4ff7ad655367d17d344dc97a382f9c4c83ac` |
-| `tests/test_c_cube_init.py` | `396b0375b79e50097a872013c615592fe56e7a0938637ef4ec87e713c178c137` |
-| `tests/test_c_degre.py` | `620251a9c1693b1c5c9826038463f62238377eda9c1330afad877e937f60b629` |
-| `tests/test_c_diff_lin.py` | `67d65a871148e40db872b08df9120be51c7d48818a1873bea98de8980693abd8` |
-| `tests/test_c_fuzz.py` | `33733b99ea4da652d7132aac1bac20f13b27a1b85224cc3216ac0f649b5b9be8` |
-| `tests/test_c_impl.py` | `aac0692862bfb5ecfc2531fcadb5be8d6a5655dfd9a3cbbb30b73e0c230a9d09` |
-| `tests/test_c_integral.py` | `cce3c1eecd94ceb3d7a6c0b7d97d1288ac9272ba67bc8b15c9327e37bef2fba8` |
+| `tests/couverture.py` | `817ad7c0cb8689f1cd90d346bc7469da0680dd5941e448d75cda263a6bb67aa4` |
+| `tests/empreintes.py` | `afe5affe6567042d7d6441b02df06f065a70d306f2c2a3bbeb259c07a263a2da` |
+| `tests/noyau_c.py` | `bbab194f6687532783bb3e1a7149a3cbb5c3a70aceab656c810b2435abe7ca66` |
+| `tests/run_all.py` | `a2671c89216a9c7ab660c07e6e20d77cec4b5b96d375de4f45b31093ddec5934` |
+| `tests/test_api_c.py` | `3e1e97a752ce95e5b7636e45874d26e0b25aafe93f94a968a2c8ff9260f9399e` |
+| `tests/test_b1024_certificats.py` | `6670b125eb8aec9af6395918bf9c360ef947e99b3249a55d640575e6f550d69d` |
+| `tests/test_b1024_etudes.py` | `2744c8c228823203a7814d0c3609a23156771cf3947ebe3e5880c7f283546829` |
+| `tests/test_b1024_preuves.py` | `a774a1437a1e68714faf2ff409df099cafdf680e24b3ef9518f23dd1d5159eb9` |
+| `tests/test_b1024_seconde_implementation.py` | `78816be90990147cc5a9f1645f86169d9b6b8813186e8e7b258a1dd111465602` |
+| `tests/test_b1024_statistiques.py` | `dea5251440698887e0c95b3c407579c0a6f06dfe0b8644c8da3e3eb9b28ef1fe` |
+| `tests/test_b1024_structure.py` | `015b898f57d60e474d55721660df3f9d9860fb2dbb5eb13ac80d1e765ba08482` |
+| `tests/test_bornes_preuves.py` | `04ed4b93b36cb8a7ba323b1bd8dff1a2df8e57c0746fce7045a45b43cc31cfb9` |
+| `tests/test_c_brume1024_valgrind.py` | `35d2f402da39dbaa3cf61a5bb69a0007a8edc1284ccc74e08a10f2b6d6edffcb` |
+| `tests/test_c_fuzz.py` | `4fd95935c0f7be173c6b4defa8597a8b33f926f9cc325e2061b649be6c75c352` |
+| `tests/test_c_impl.py` | `f9129131785886b6c163c7a0c17fd65c4b5676b613bdfbc0ec6b5dd68436789d` |
 | `tests/test_c_kem_bruit.py` | `886ae7c06a634728bb73136ea20157d4a6255033d791fed0dadfd083eb26711b` |
-| `tests/test_c_kem_valgrind.py` | `a0b9af2b9453a9376e2e645af4058d004b356fc399a089e64e2a24cbec1242ec` |
-| `tests/test_c_sac.py` | `96f05eb652fdba3287255323133d71409753e1e086418bd13ae3f74cc60a0a7b` |
-| `tests/test_c_sig_valgrind.py` | `ee36d0c92fc538fc368646917717ef35c4b99de3c25c6fd9837adeff88e1f3cc` |
-| `tests/test_c_simd.py` | `14693c84c45bf2da834bd78ea746c5c0b0eeca4e965bdffeb31ad973e31514fa` |
-| `tests/test_c_statistiques.py` | `20f3b4d5f278e17a16e6fd4cd8a11eddd9985ef27231d426d8cd2833aab9996a` |
-| `tests/test_c_temps.py` | `567abb8f22b40864fa8f92cfce2eb39f663337e2614637fa102820ac8c4d9bfd` |
-| `tests/test_cycles.py` | `51a723218088e50988fcb480dd42515e366ccc360bf81bdc72e52a76c5861165` |
-| `tests/test_diff_lin_empirique.py` | `a6dd68f75f356982c89929b5d0f7b9c21f66f2b7f227bc7797596192ec7ddaab` |
-| `tests/test_diffusion_stats.py` | `c2cf152e8aa7f13f6aed5a806f1bce05af6b5c5bf14d613c6e5f8d02646d7a9c` |
-| `tests/test_division_property.py` | `0ea52a7add42fd4b2ed8ef41cfba0a1b989511fe52994515a0b3a6358f5992ff` |
-| `tests/test_dp_exact.py` | `ede53abeb2360a6c53150e5e2ac7f846a6d2d90cb93b7edb5ce5cf6e5fb37b7c` |
-| `tests/test_dp_modele.py` | `604bd5b3453e496bd3337a7390d8aad81d7adff379f70b60255279c941e83b2b` |
-| `tests/test_dp_tous_cubes.py` | `5d5f724895a1a4e820b0bcc4bcb08aa3377a79a59d7459b616a47f8b8dc89275` |
-| `tests/test_dp_validation.py` | `656d51bb814ef190f95add9ba1cc8dd6bb0eeddb60e338baf8ee332305f5d368` |
-| `tests/test_fonctionnel.py` | `f0e4a39ebf502c8ed392669e90f658e14731b082b17e4c04cba1aac4581af6ee` |
-| `tests/test_hachage.py` | `11b615831c5b07fbf822ecffda9a46ef348bf31018e6ffbb70af5b7a39b3c61c` |
-| `tests/test_hachage_arbre.py` | `938d3a4745d47c545ceef2a2dc8e1936e582c9bb13969bb496320a90a0665713` |
-| `tests/test_hull.py` | `4a5fd66aec69e3c241951306459769ca1ff099f6eee719990eb1b416e4e01dab` |
-| `tests/test_indiff_arbre.py` | `96a13d3acbfedffe4efc316af2be5d9c06d4cec459380c67dfc785eab0186aa1` |
-| `tests/test_integral_degre.py` | `faf0a3f4ebe36036b32f2ce9ccb9de4ba325717d89993b4549c34d6af24c6211` |
-| `tests/test_isd_parametres.py` | `f04e1feaf26ba80f3db912b27aec4abf70d0ab8656f0c45b92e86cd60779f65c` |
+| `tests/test_c_kem_valgrind.py` | `13e1e0757b40f9e78d6ee29a8c178ab195ec9d0c38ddc2a3d9572fcf5fcf6ed8` |
+| `tests/test_c_limites.py` | `9098029446741e4cca82fc34ba16c7375cfc91a6a8bdbcba918250553fcff71c` |
+| `tests/test_c_sig_valgrind.py` | `1e52bfe6e42f8e3d4afe9de79137d11ba72065b94cafb9f27025c5c26bf27b63` |
+| `tests/test_c_temps.py` | `6730a7e00de8b5df30f5914e04dbafdef95735d6ed75b67f2908d4733c56d937` |
+| `tests/test_c_vole_temps.py` | `5fe2a1c7cd51a6f696cdb46bf60f4e81ff0cdb9fe73438184909dcac653af937` |
+| `tests/test_c_vole_valgrind.py` | `96d6fb20fd578fcac6145696ee297bf75fc760f133a88054a7b5188b3bf06ed7` |
+| `tests/test_erreurs_api.py` | `711959fbe5b33c54d6768c14bf79d5d33d5cea9001c0fe1c0897c3db7113a8b8` |
+| `tests/test_fonctionnel.py` | `3c4258998b45f75375bb11dac0c91167d6a3442722f272a0221038f6327f7928` |
+| `tests/test_isd_parametres.py` | `c0589cdff1c51418f9d4a7f226566fd07aacf45b9e023d3d44881980cdd5d8f3` |
 | `tests/test_kem.py` | `ee187d8c7c12f59a4f92fe237374b178497bc28ce770de30106427e3d77a4402` |
-| `tests/test_mode_aead.py` | `dc9d8b9fbc4fff0264011e62e6163c47f9b03c75d1f836009ce2c133dddd1483` |
-| `tests/test_robustesse.py` | `4cdd96f277111e518018058451042c265aa9e93da6908d96a2a47fe5f3ba9783` |
+| `tests/test_kem_lemme3.py` | `280bb6618c924a247e5eac9d9c7fa46ca880bcefadb7f52343ff6379e9f6fb8e` |
+| `tests/test_kem_theta.py` | `6007068e6a16a8c0a0c2fdbc934d3949458d66293bb22c69fc3a84374e5e0ebd` |
+| `tests/test_robustesse.py` | `0fe645dd92c798eebc860237b4c10446e1c78af3e78ada27892c698791a1164e` |
 | `tests/test_sig.py` | `53231c7da1e69fa5557f84f49923f59fa64a48264c6a365d5326b087d527e12c` |
+| `tests/test_sig_hvzk.py` | `5755b92d4abe4d237c2edc1301d5385230e3c750778e8366c5ae8d7530acfbff` |
 | `tests/test_sig_modele.py` | `db283b3a25e019fcc5a78bded7761efe1c8be6b3b86ff452c31f6272b8154880` |
-| `tests/test_symetries_invariants.py` | `44a97254544ed4ece405b6e84dae21184b842484ff8da1bb82a18327642252a0` |
-| `tests/test_te.py` | `889c1dfaf9aad82478719bd734e95ae2be08d3ff606f641891be2c4d9da4cc45` |
+| `tests/test_vole.py` | `65908ba8c5b82dabbba4ba3377c15919b32393755af63d8691a6faca57090006` |
+| `tests/test_vole_kz.py` | `e0e832d24ebfec12fc254120ef45c3a6605a7a97e3e0bed1e0bad312cf81c4f8` |
 
-## Prototypes (hors suite)
-
-| Fichier | SHA-256 |
-|---|---|
-| `prototypes/brume_bitslice/Makefile` | `733cfdcfeec79f955ea2b8f6200ce9ef0d57ae50a6abba7c04975483504a508d` |
-| `prototypes/brume_bitslice/banc.c` | `b30751a251d3f9882c9c5ef7f59e5e5216091ae64a3a73f463a9ce1b48198804` |
-| `prototypes/brume_bitslice/bs.c` | `8a06d5e138c6a587bf3751060e8bc8238428b098e85868f764449ebb3b12f3ee` |
-| `prototypes/brume_bitslice/bs.h` | `05e3338b02269a7b487d6a4ba9662b6a961ef18c43ad337b8dd6dad4c0ce3fba` |
-| `prototypes/brume_bitslice/compteurs.h` | `c854a3e337bb312ddb548f25b8b2b71185f1b480c52284070afea52b9760ab0c` |
-| `prototypes/brume_bitslice/gen_asm.c` | `e481285c3f0fefb0c0217da14ce09b48fe65244423fbed997732de2068923783` |
-| `prototypes/brume_bitslice/sbox_bs.h` | `59d1dd128cc13212b981c832287fede57fce947eb0bf62e7e1abc157e70c3691` |
-| `prototypes/vole/vole_kat.h` | `b72f26bc437c4685f5175cc3956a3b35540a5fa2f608de77b6d923dfc56cf256` |
-| `prototypes/vole/vole_params.c` | `f84f53c714832f392d63a593b3ee84ead5bc0a48f194683dabf4e57ebdf57f06` |
-| `prototypes/vole/vole_proto.c` | `a6527cc3f58bdbd7e18c44d909b9900bb7e9b4a57ed8e328071bfad0b66db207` |
-
-## Certificats (pistes de division property)
+## Outils de recherche BRUME-1024q (hors bibliothèque)
 
 | Fichier | SHA-256 |
 |---|---|
-| `resultats/pistes_division.json` | `494c340bc8e669378098f19fed72b49ecc00e11b10e23b65e7ccbb220fe17a6c` |
-| `resultats/pistes_exactes.json` | `2c511cd9f6a5a0bed47188d92a5161218fb91f4ff4b49d0d37f65773f7349bfb` |
+| `prototypes/brume_q/b1024/agregation2.c` | `19cdf3df1a84233be3824ea470380b7c2332699c5e30a6adb16d58b4998106d2` |
+| `prototypes/brume_q/b1024/agregation34.c` | `9c224fc6ae4759fb7f0a65dc8835f218fd8f87d079bfe0b8367ea50114573021` |
+| `prototypes/brume_q/b1024/algebrique1024.py` | `87f37ac6f65beffc3d7dbf725be291414c91d21d86c0cbe4bf6f0374020fb26a` |
+| `prototypes/brume_q/b1024/b1024_bs.h` | `3dfb2ac753047ff8639eec3b127436a76ff1e7264e9fcdc564d8e749814eee12` |
+| `prototypes/brume_q/b1024/b1024_lot.h` | `c31ecb44cde6c296c5fafc13e952df829c30559ae33161943f60a3c482a154e0` |
+| `prototypes/brume_q/b1024/b1024_lot_var.h` | `30b7b57c49a077224fe5a7a8376f12c57c6fa204befba872a7e82b35725a96e1` |
+| `prototypes/brume_q/b1024/b1024_portable.h` | `07914cf55f57912e99d034d027291ae883d903d01a69e346912012d46e6d412f` |
+| `prototypes/brume_q/b1024/b1024_tables.h` | `a84aa8b37490a3b8c347d138601aa53f6296b9c7ff31514b6b0e7e8f192647fa` |
+| `prototypes/brume_q/b1024/bench_comparatif.c` | `cc8c60bc07322d1f9b01e3b3dc5d4e1e75aed732bdbb565f2a59c49578627324` |
+| `prototypes/brume_q/b1024/bench_lot.c` | `a0927ee875fc620c55588b9c680638e6e754988792dc206e3924d1194e385298` |
+| `prototypes/brume_q/b1024/bench_tailles_1024q.c` | `1d5b91add17c2a743b59b4f1b00e3beaae108dd162dcbb9a664256b4f0e2bb0b` |
+| `prototypes/brume_q/b1024/brume1024.c` | `c7550a0448fd3651e743ab7b882956469353c73b8bba72aa996afb133f31051e` |
+| `prototypes/brume_q/b1024/campagne_aead.c` | `b18b8231632fcee96e8b109e9eb29a3218aff70a353984970e4de2827839bfe2` |
+| `prototypes/brume_q/b1024/circuit_sbox.c` | `170b16e0f341313d9eff5b9822dc9349175648178406aea6896d0aa135b18daf` |
+| `prototypes/brume_q/b1024/controle_portable.c` | `0810cce84ef64f92bce11da859ce9c996cb998d52e297e4c0ea73f2eec6c298a` |
+| `prototypes/brume_q/b1024/cubes_degre.c` | `3aaac2e54939be3b39220f12e28ee9cab87081b493a5d9c0b603747d018018cf` |
+| `prototypes/brume_q/b1024/dl_verif.c` | `d8e60568d223236926405125f3b649b0475d6a2de7232cc272b9b18ba1561e26` |
+| `prototypes/brume_q/b1024/gen_b1024.c` | `f46ecbbdf652ab8244f7d941dbc2e07573f63b07dfc334b9f5e4e60aaaa566a7` |
+| `prototypes/brume_q/b1024/gen_bitslice.c` | `9de5943ce8fe7ead6d7cc3caed05c6ed36d54b5112b5817d82be4ac262d1f642` |
+| `prototypes/brume_q/b1024/gen_lot_variantes.c` | `43b83192355fc8e48212c254ac65906293e0e6cb08338122ce26dd9364365f6a` |
+| `prototypes/brume_q/b1024/gf16.py` | `76be18b1ee2f6f7878455cdd13a59d4cbe7d50e4a28354f6018dc7337488cb12` |
+| `prototypes/brume_q/b1024/invariants_quad1024.c` | `0f111dc1987c34e3fe8f330b580e8c99a170ac2298cc8dce98d2f83d29a5fd1e` |
+| `prototypes/brume_q/b1024/kat_b1024.h` | `647bd80e29cea2c3870221436e9eca8e77de3eb9754ef40f24abfe8362eea612` |
+| `prototypes/brume_q/b1024/mutants.c` | `c3a805f3a31ba89204b12292fbd38f88b46b2512c2bcf6936387d17804d64e11` |
+| `prototypes/brume_q/b1024/rebond1024.py` | `4e73b59621eface487df4498b81ce8a831544a0e6682b70784ce21c163498818` |
+| `prototypes/brume_q/b1024/rebond_verif.c` | `ba46fae5a0e5516f3a51b1eb39b3b483a9ee2343a97e273c5958bcbd33cf7ac8` |
+| `prototypes/brume_q/b1024/spec_ref.c` | `df89c0eef6417710801ac4807e67478ff7cda5824f3bd60ad931cd35f110d17e` |
+| `prototypes/brume_q/b1024/stats1024.c` | `35b87106df339860d558a7da243d1514d0985746b698099b4fff3c585a0fadd2` |
+| `prototypes/brume_q/b1024/structure1024.py` | `d7e0d6a7c567befdea3f3d38ebd554451fad405930ab3b60524197bca709cddf` |
+| `prototypes/brume_q/b1024/trails1024.py` | `9f7da6a99b26bcfe0b03d22f76c3c6a28f46f763ba7fd39fb29deb3894e6f87e` |
+| `prototypes/brume_q/b1024/tronquees1024.py` | `9875c0d8de6b43bf82443dcc77f290c6c98c9bd51a26617db806cc65de71f21b` |
+| `prototypes/brume_q/b1024/tronquees_verif.c` | `b7db89086787ee0c939a8ac3e1db8bb116913a609c23158a7a3941f261b3aaee` |
+| `prototypes/brume_q/b1024/verif_chemin3.py` | `846776076951dcd44f22c87e3c6f6523df5b12b6da2911e99abec1775e2921cf` |
+| `prototypes/brume_q/sat/audit_c4_K28.py` | `cd230d5cc1636e639bd78aba2f5bb2893a337050a9a0540620cb06ae785d31e9` |
+| `prototypes/brume_q/sat/c3_cnf.c` | `b34508ea937e526fb1776a44f0ec47b0376c31ac2161cff034af8ca170b9147e` |
+| `prototypes/brume_q/sat/lrat_verif.c` | `2efead346cdfc09bd456138dcb2b12e4e567e7f5dad73194bb92ea80e7872165` |
+
+## Certificats BRUME-1024q (C4 ≥ 28 : découpages et complétude)
+
+| Fichier | SHA-256 |
+|---|---|
+| `prototypes/brume_q/sat/c4_K28/README.md` | `e8b221159459d38a60cfafeb98118757b4548aff2a78073dd71f3b6fda0eeadf` |
+| `prototypes/brume_q/sat/c4_K28/chaine_P4.txt` | `51a324369c7be8e042336a24f7e4083c338117a2c184d382d89fab5c2d8b9074` |
+| `prototypes/brume_q/sat/c4_K28/chaine_W2.txt` | `325624c71165907b8b55757c30a10a010171d413992107d080985befdfa05f46` |
+| `prototypes/brume_q/sat/c4_K28/chaine_W3.txt` | `5b779eab495e40435bcbd2d18ff196ef3e5c3fc6906cca893f93afe2b3d325ae` |
+| `prototypes/brume_q/sat/c4_K28/completude.cnf` | `b089409229f5f64a3e9235f488496dd0b76c38a13f7ba8933135a5eead9f99e0` |
+| `prototypes/brume_q/sat/c4_K28/completude.txt` | `81c1c420891476df9fa934e5242c5febff41f0311c1fe0f056b2c6a4d965eb8f` |
+| `prototypes/brume_q/sat/c4_K28/completude_P4.cnf` | `45ba37cbd69d9d24c9ab2045cd2f7d6158054e1408e7dfb4fd634f621097fff0` |
+| `prototypes/brume_q/sat/c4_K28/completude_P4.txt` | `e424ebbc38d4846b116b9a9e978f4718dde07303ac8132159447434301a4ab4c` |
+| `prototypes/brume_q/sat/c4_K28/completude_W2.cnf` | `93530a671f50df58d06b45c8d5661d57f0c1be0ca32b55d380da0fbbc47e247f` |
+| `prototypes/brume_q/sat/c4_K28/completude_W2.txt` | `bb53e562e183e4a40356c1269965c265744d338eeea4a85e200e571836015fcc` |
+| `prototypes/brume_q/sat/c4_K28/completude_W3.cnf` | `9d3df3557f1101beba0a82bd6b27e6d36a250dcdef3fef2b4bd57ec890964dc1` |
+| `prototypes/brume_q/sat/c4_K28/completude_W3.txt` | `e424ebbc38d4846b116b9a9e978f4718dde07303ac8132159447434301a4ab4c` |
+| `prototypes/brume_q/sat/c4_K28/cubes.txt` | `8f73742627ed3653c8709fb9eae227a0056b6eef81d62c6776ee949da516d0c0` |
+| `prototypes/brume_q/sat/c4_K28/cubes_phase3.txt` | `30bb6fd3c9b600a46f5d93d87ad5e757ae193c5ac2d40577d49a89ddc886cc2a` |
+| `prototypes/brume_q/sat/c4_K28/cubes_phase3b.txt` | `66cb8cf4db1d2f1e5fcc4ad6934bdc2aa9fa6bb2c21fc1c0f4c94d19cedea878` |
+| `prototypes/brume_q/sat/c4_K28/cubes_phase3c.txt` | `3a578c91758cd0d504bcb313f4997557df2c094e030bb1a08e4e104dda708fd9` |
+| `prototypes/brume_q/sat/c4_K28/cubes_phase4.txt` | `910c8a5bfddccf913341cfc608715d6a17b61bb21c49cc02a76c32e6e13d268e` |
+| `prototypes/brume_q/sat/c4_K28/cubes_phase4c.txt` | `db68c269c1a9e0608dd79d0724409655eb0ee1533eac04352f4328723b66369a` |
+| `prototypes/brume_q/sat/c4_K28/feuilles_prouvees.txt` | `b21efdcb7ac6ab456edd36a8de4c97d51a8197589d480ee2acf00db8ef7f5c87` |
+| `prototypes/brume_q/sat/c4_K28/sous_cubes.txt` | `1c583d202ad7807680ee86ece09bd869a7b797478e85f4ec4ae8044a46251ef0` |
+| `prototypes/brume_q/sat/c4_K28/verif.txt` | `cdd4c39e20c01f1f478dc8010e6a27a66ba1753c2756ff171fdde91eba0d879f` |
+
+## Certificats v0.5 (BRUME-512, historique : pistes de division property)
+
+| Fichier | SHA-256 |
+|---|---|
+| `resultats/pistes_division.json` | `b4c596d22d96a7df68964fbc07b0815c2645e9c64c6a139b6121ea25e61b2274` |
+| `resultats/pistes_exactes.json` | `f3dc65dd67b646eb05edaa0d5b5a7688df5c77911cb2df1eac01b6d6c02ca00a` |
 
 ## Résultats de la batterie
 
 | Fichier | SHA-256 |
 |---|---|
-| `resultats/SYNTHESE.md` | `6865c713902411a7df4aa16d65264dd6c214c89d3a55adff2243b16927c01700` |
-| `resultats/aead.json` | `b91185ddf202b24c80d815a17efa9342e1e833cedd33d2524a2c353ec6dd8d7d` |
-| `resultats/aead_modele.json` | `99f38fca951ef123211b2b4d706d70f8a5429e5824af617e6acdd0ad6f703185` |
-| `resultats/aead_parallele.json` | `4fb6e0e56e82c5edac3d138353e818e2d4959b883e7ab2acc9d289ddde0efa60` |
-| `resultats/api_c.json` | `a6e07688dc0df3fb28ef606ddcbaf99500c9186d2068114fca5cc5389806ec58` |
-| `resultats/banc_cryptanalyse.json` | `f2db4cd157152947fdd9701464503e80e982d94d23683a4ee3fc63ce696b006d` |
-| `resultats/beam_trails.json` | `c25f4c31e407ebd70df0edf97926eb606cb87b48cb1c4d7ab002dae0d84edfe6` |
-| `resultats/bench_c.json` | `f2e2ce15bdd8846a0299918dd86ed3bec59a34a0a80058b7960af98e7f563dad` |
-| `resultats/bench_tailles.json` | `e247d79fc9975b776f60d070d59dcd0f01e7e7b021be7d9b94746bba8a71e5d4` |
-| `resultats/branch_exact.json` | `cb8b463cbca6c10f59a33532f6bcb2d2d699cd0519ba6687a91d11a91838ca61` |
-| `resultats/brume_algebre.json` | `c9b2cfe93c5bd7ca8c151ed8ec1c128caff991e23220cab3de713d0a4900fdae` |
-| `resultats/brume_attaques.json` | `4d33c538cee2941ca4b74dc056e99a598de14a5410e7c187cc4665d3d0c2c115` |
-| `resultats/brume_gd2.json` | `592a2acdc96337a1ee38801258e22412ab75f2d5f22a55be4dc6619222aa8d7c` |
-| `resultats/brume_gpu.json` | `680830ff99cf9ed43e69bf47262ddca943ac3409db16ed46c08b2cb4f54c379c` |
-| `resultats/c_cube_init.json` | `fa6cd415f544625ea053f444e2ade7aad33dff8f017d942e632fac8a695aa91a` |
-| `resultats/c_degre.json` | `61a75ceb9b0498710adcd614823ca9fbcd1bb8236fdde8fda4f66d75ce164acb` |
-| `resultats/c_diff_lin.json` | `b32482ded8dcac7b8901d777cc60ab3f6f322fd3c9384750fc47008b25a695ed` |
-| `resultats/c_diff_lin_x4.json` | `5000755ba3699799516cd4e061e294f9d82296ba46bb6920637041941126537b` |
-| `resultats/c_fuzz.json` | `0c4c0eef52395633eb33f1d76363f8584b8515b4da2a0cbbeb9bffa0d7c8e5a3` |
-| `resultats/c_impl.json` | `5b68d34b38d532b09d26080b3dbe62c8cf14657f81c5c4cfa94d1eb7a1b85e89` |
-| `resultats/c_integral.json` | `fe17e47315c4fb3969e4b86977b234ed7416ff26ed6234d91d8504eda98b4157` |
-| `resultats/c_integral_x8.json` | `886d2341ef7325edd1ecb465617f98c7cea2180ada2cc73b4140830cefdcef13` |
-| `resultats/c_kem_bruit.json` | `1f50ee040f65cde03400cf88610d39d3e2a86f0eff5c143661dddd7d393890d2` |
-| `resultats/c_kem_bruit_x4.json` | `776cebd292199f6f376f7975ca4b903dc6e7c01ff0f119753d11545229097989` |
+| `resultats/SYNTHESE.md` | `2facef762fe1c028edc0ed1b973fbb499e69e2ac9cde539ec737d0183e4ba96d` |
+| `resultats/api_c.json` | `afc46d6be37c2fe7c7d62e18fb2daecf450a77dec3a7a51400921e6d4ab11383` |
+| `resultats/b1024_certificats.json` | `d9fef4bf1cb83ee0d806ba580d8fa1093f37c5d35e5d1fe4e71e8cf58571be82` |
+| `resultats/b1024_etudes.json` | `c7c19912e1851b338d727df7413f0b809939a1354d8425588d2eb262506195ee` |
+| `resultats/b1024_preuves.json` | `04fdf6f117b318071da5432897df4553ff210501501f5944485b808e45b5fc63` |
+| `resultats/b1024_seconde_implementation.json` | `8d183cd49b81c6bd616a069dfa44819adee862ca671c0e2fdcf5b484dcb303f4` |
+| `resultats/b1024_statistiques.json` | `0b877baf567a22fbae1bc5d892a861d6e1718e31c7bc55af52441c24b77988ac` |
+| `resultats/b1024_structure.json` | `17c912a885bfa635dbb7c909073a8c6f9c26c180c71c3acfb6055fe47ad66972` |
+| `resultats/bornes_preuves.json` | `e310918b21cd343fe8858bccc793b1379baa41a7cb2a4e0d36998de5931f1717` |
+| `resultats/brume1024.json` | `a00fdea56568d6cd49e9ab0c13844a22602844c54d87546022151581462ad735` |
+| `resultats/brume1024_api.json` | `01bdfb431b62adedb6abf01f59647635a32710f165d95d8b8a8530bfff5eb5a1` |
+| `resultats/brume1024_api_portable.json` | `ffc5410542286f3cc73bc983e36e43b74f794bedc752b592a7bb67cd64f5788b` |
+| `resultats/c_brume1024_valgrind.json` | `ed900e06ed5ea84771c22488011d532edc4632fdb24c58a414a5cae320b3c098` |
+| `resultats/c_fuzz.json` | `b7cc01078bb7a5fa767c413d0fa5607d2f7da72df4b35b39845d1914a391c1f8` |
+| `resultats/c_impl.json` | `98385ccd3fd2bf3d08930cebdb382ee44447ac9e55bbcc594ddbcbfd9a5bb8bd` |
+| `resultats/c_kem_bruit.json` | `1274bcc83ba9d75998079df8a4127cb9b5218bb335da26b34d16acbcc1ce1b8a` |
 | `resultats/c_kem_valgrind.json` | `b9ec1bc5a3fd0c71bf23539ebf54afb120c26a4207456ab7e3718301fa07cb0f` |
-| `resultats/c_sac.json` | `abaeea3551c2d705fc67a3adf0831e98f2667821e6dbfe03ab5ef3bbc3859582` |
-| `resultats/c_sac_x4.json` | `591df87caff6c769a69a8445b2d1068bc64e5dd44d9661014f19288ee9bbff3f` |
+| `resultats/c_limites.json` | `ca964c6bdf37bb47bf93fc11925620f0a455934e5904013a1eea1d1217a630c6` |
 | `resultats/c_sig_valgrind.json` | `0bc530416f6d361f1e523c8f22d70982e4ddaa1c6f2d67f88f9edb43357837b3` |
-| `resultats/c_simd.json` | `1831c6a5c65f744ca2f8a037c1600e760b5f86faa6db8e08396449bd09aebf45` |
-| `resultats/c_statistiques.json` | `871cf2efb1925d19001c1296f67ae7582ee3a63391c9b0977df8c02d4b0f85f6` |
-| `resultats/c_statistiques_x4.json` | `cd06d13fc74fba027fffeeb6ffc592326eacba48922cd57a58b16bfad88d8610` |
-| `resultats/c_temps.json` | `a874d23eadd80a77ee3c9dfa8e61e5236397e457f01190f0aa97f5c7e05dad6c` |
-| `resultats/cache_trails.json` | `4833b63ca63002838b96bcdc17487a3dfd682868fde7d00bd3213e46b141cb14` |
-| `resultats/compression_kem.json` | `ad2119229ebf21ea5907c8aeb4e62f7dcd1b35815b5b6aff087aecc3de248785` |
+| `resultats/c_temps.json` | `f3bcb458af9caef8fed1ef27854de75b20217b29d7c7ea528835683da5f23bb8` |
+| `resultats/c_vole_temps.json` | `120f0fa35ba37e15be3d75dd067da015d33492a788cea7d3559912c072af226d` |
+| `resultats/c_vole_valgrind.json` | `3b933f5c95f881d81af0b2ecf92840adab33a566c6d69384ceb62e499003ebb3` |
 | `resultats/compression_sig.json` | `feee314a3c2e1aec4d1bfd5adb84f8a737c1de0e224c436a0b93e176e38c6bf8` |
-| `resultats/cycles.json` | `1325f0c84f64a060da5fee19555a1949e11a011106b1c046d10de0ddc76b847d` |
-| `resultats/diff_lin_empirique.json` | `6b38121822fadfef4c7d2f8f7fc6dd7c37385d5a157c3e5cd9ed9d14b7776836` |
-| `resultats/diffusion_stats.json` | `815bb71b5c1f6acd0f8ca8a9d0addd27d7cd3646b39052605622987f610d324d` |
-| `resultats/diffusion_support.json` | `290d83404f63dfecfd311429ea6e1df23826703f091a89771abc125abd2254ea` |
-| `resultats/division_property.json` | `df0ee81372305023144cbc21f8822484b922609095997d2af05b1bbef0c4a625` |
-| `resultats/dp_exact.json` | `e3c7fd727e4a83b4dd722e48c81bfd53a9e6d9577e6fa1c019a00dbb2a43f009` |
-| `resultats/dp_modele.json` | `43b7e88054650f5bb9222963dcf91806d7df60188adadf0abbe8c279bb10a7d1` |
-| `resultats/dp_tous_cubes.json` | `c8074279fe3b598b82c1c292f417149859deb37ad73ef8cee15e8d5ede1c7564` |
-| `resultats/dp_validation.json` | `8d0497b43e5d55c10d9bedb273cafa133aebc85a58855ca931482fdd9e410ca5` |
-| `resultats/fonctionnel.json` | `a4a6f4f43956f1c7db8754dd93f106e633e325eb97b31c48a3d1f77544c0ff7f` |
-| `resultats/gpu_dl.json` | `fdbc0497ff58afec5e729ad90e1ce18b3f1aeb7c8c18c40b91f03f36152c3ef4` |
+| `resultats/erreurs_api.json` | `32c31a6b348394f33eab114e9fcde4b6a6dacbb3cc4eb8cee93c8d6068158a72` |
+| `resultats/fonctionnel.json` | `26e250e706d58117dc42046a6e88098905a624106189f7c98c8d3e30d7f5b954` |
 | `resultats/h1p_fourier.json` | `0dec37c4f7dcb819f05149ec119af45fccbbedef48ac9bc748174f4d55e3c7a0` |
-| `resultats/hachage.json` | `bf1f99c5dc6f8ca3d595abe4cebd66f684dfa25829afa403219d587d150e3719` |
-| `resultats/hachage_arbre.json` | `886483087de7e4ead5ba8063dff669effbc3941401baf3538a7c742e988c5936` |
-| `resultats/hull.json` | `90342c2b045a3233873297de0461a8962785c69086ccba82fff224999d83e43b` |
-| `resultats/indiff_arbre.json` | `2d8bc1405130c7539c4849e1e2d6c1a20fd0a736a8d1eed71f421d8776959b8c` |
-| `resultats/integral_degre.json` | `5f03cdcea50d8d2482c954b85bde8e947dcc8c4d311c8d34f1e440f39e6a0ca5` |
-| `resultats/invariants.json` | `da13f3f5027ba37f8449286621e401017c775ad3ae962f337660b9ffd18f1463` |
 | `resultats/isd_comparaison.json` | `cbf2bd2e5de2cb5385abbe0bb2e1dc3c455f20e90738816e16b6a5f66f104d4e` |
-| `resultats/isd_parametres.json` | `a9e29894105ece7d9157eae1fab5961a0faea6e5df2eabe958c849fe9d7aebf8` |
+| `resultats/isd_parametres.json` | `490b9676b82999277dfa7b1a9fb91b6869a133973ee71d2c024bd0c2822719cd` |
 | `resultats/isd_reel.json` | `ff79972f5125fd007c12cc27e1155d424384db95478ea00c87fce73a44e7f339` |
-| `resultats/kem.json` | `a9f38fca78f1083568c97884d03530a1c71abb92682b09c08d01c774e0d97088` |
-| `resultats/kem_distributions.json` | `411c3cdd0adf88173757fd7491e39a4cb53774b9feee18adaf9074341636e95c` |
-| `resultats/kem_rejet.json` | `781b9c91d10c51a18698ea52a4ac4194eb6310dc63e6ddbe470b42895ef12fe9` |
-| `resultats/mini_brume.json` | `107136a548045c2209cac0021c10caabf898d1eaf2fb32f3404f869a73528573` |
-| `resultats/mini_brume_detail.json` | `11df7f972256f1ef88728b3f871619d4331a80965bbef71c17a868a347d031b3` |
-| `resultats/mini_brume_instances.json` | `2b3faff303072706ac13b888384474b173fa1ee0a859013d12eeecc366c71cf4` |
-| `resultats/mode_aead.json` | `d1cdd256eb031796b28dd9c790a180aa411a63225dc7de0c0d82a7aa4053c389` |
-| `resultats/nuit_brume.json` | `2909aae8eda445af818cd70e677718f605980331bfd7b344bd7dd71087050650` |
-| `resultats/nuit_cryptanalyse.json` | `2972fd2241473f8f20b2c776c4a1e440409c61de8fa2b287ba410c1a0f49519d` |
-| `resultats/nuit_fuzz.json` | `820f29006ad65afeb5f89677ef64874eaa66bc479b6b334577d8b7316d8e1570` |
-| `resultats/nuit_isd.json` | `ec4ec849e7c5e65d4e8edf4f74faf3dc23b0d11b5512c4f89da5ae9cf44293bd` |
-| `resultats/nuit_kem_reel.json` | `0886be6f0f952e2e570d7071a8ce4c7cb0c3acd7aba8e587ae3ff9bbe599a128` |
-| `resultats/nuit_temps.json` | `394576598e1e4df1d48a569013a4ce385dadf6c2f5f8dd680d2638b0ac5c6447` |
-| `resultats/nuit_vole.json` | `841454e0bc6bb932e3ed18f9db09e8e003e76b85abc40a63282f7c8e20430f03` |
+| `resultats/kem.json` | `3f367e7ac09e56f8387cebbc9c9af92e94aed7d7f5d7c1a2c8b73fe2f2a88e6c` |
+| `resultats/kem_distributions.json` | `6810198f28a58ee23ce2faec79b2c6a269bee68954208ab243d298d949523db5` |
+| `resultats/kem_lemme3.json` | `1e9d48d22ae4fa3ec075a9dfd690e2649f73ba69689a7913d95cc14c136f2996` |
+| `resultats/kem_rejet.json` | `a96162e293c92c4ffe8ea1612e4a8b5afa6ea188764c288fbbe1f8567a106649` |
+| `resultats/kem_theta.json` | `41b7d574f1d43c7bcb762e3f2296dc4f0f078dbac3f36f84dc97e6cece744386` |
 | `resultats/revue_c.json` | `4ba04534bbc9821d8b1184407d492669946877f654f9271b024298a5bf78debf` |
-| `resultats/robustesse.json` | `dee2869f81b3969019cde6a36cb8c83227bf7405f22f48b77c2e193cf5cdff5b` |
-| `resultats/rsd_attaques.json` | `a42b56e8b9b273549675547ef4bb9b5a5a5844375c265596ca4a8b91e54a2ebc` |
-| `resultats/sig.json` | `2c83f5f37976ebeceb1b331e28ce0fe1865f936bf13796a7ad90dfa560d24853` |
-| `resultats/sig_flux.json` | `e121427e838cc942b7f91b43a854cd9b5cfdb754e9f1d44572fcf0c00344ef67` |
+| `resultats/robustesse.json` | `276d6dcdc2ca58da90fedeb43c8adc0bd51669978cdce6f6b5186c1371f4ea2d` |
+| `resultats/sig.json` | `c63e33c7fb4967f45d2c11e25d683f9c7b4b20be1921c8a4f323de1a8d19d80b` |
+| `resultats/sig_flux.json` | `455390b89e79417ec2bdf7f75b94de95c062883eaf20f07d6f748f6fd2dfe5bb` |
+| `resultats/sig_hvzk.json` | `51a45e80db33f36b3a48b3dfd0099922bb74f0b56d0c668e647ce9990e17c46f` |
 | `resultats/sig_kz.json` | `f46ab751ab9461b5690f01042698bd4acc185e6563173e3e880c3072b976b3a8` |
-| `resultats/sig_modele.json` | `adcf2ad501e8d2a3d0658cb810f9af9f2a76ab3e804aa81ba98c5ce65580304e` |
-| `resultats/statiques.json` | `3a82c07a40ce053af6bb5815c193ae0a865099e1d7cbf907f604e0584193ea5f` |
-| `resultats/structure_miss.json` | `792d62c718361c1fbbbfda9a320889fdec7dd8d414e2608cd2699483be50df7d` |
-| `resultats/symetries_invariants.json` | `14c13d99a122f55bcdae93efb5e6e7abfb7d9c4e678822482983a13ac7d534a9` |
-| `resultats/synthese.json` | `d0a72ee43a0f4e68be4c4d8702459bf4f7e6ca18675296ccb3f853c0072c9d3d` |
-| `resultats/te.json` | `19b3b92d061b07253c7b7dc732bc4d1169c01cdfc66036566ac47dc88ad4838c` |
-| `resultats/trails.json` | `f149e63c675ec2061ffdd1d9240ae9a34a72b2b72d8f9f34f45180a3ec59797f` |
-| `resultats/vole_params.json` | `30e65f8e34624898f81e0c2c512615eb9568226da2d185414e95c709ccc71973` |
-| `resultats/vole_proto.json` | `d7822a9312d5e4848958a4126940be3a84ebb8fed831846cd794901ba437cb72` |
-| `resultats/wide_trail.json` | `908b2ded5bf3ecfb84c1a3a4071b4d1fd8e5c6baa7bce91a6a89a56926ba3657` |
+| `resultats/sig_modele.json` | `2852be4ba29bda9431eb0302d99d50bcd001b1c6b7c6d8277006ddf66ae557cc` |
+| `resultats/temps1024.json` | `5997b12e601a57e1a727a703df9d4d5647f708bba311fcca01a4a68f48efdff3` |
+| `resultats/vole.json` | `3cd4e052a16612b55e6ef3b8ab167bea16e99e3621944d5ab4a5c08f290ac1e4` |
+| `resultats/vole_kz.json` | `f8e741812573f7b3c0142d9f89384dc865894e6c1055e0e2e96f3954c838e220` |
+| `resultats/vole_proto.json` | `51fbe27752a3a34194f411c6c69dbc7c99c923cc2fc717fc9b1c0c77387cf549` |
 
-## Preuves et rapports
+## Spécification, preuves et rapports
 
 | Fichier | SHA-256 |
 |---|---|
 | `docs/AUDIT_EXTERNE.md` | `15181ffed3a873c321f66b349144a0030f07e45f021e088b030613a554ca0a31` |
-| `docs/AUDIT_REPORT.md` | `77edab51ac73500339fea3f17d27174534a00955ba74c3d30294bc39363b3f10` |
-| `docs/CAMPAIGN_24H.md` | `b043a4c2e76e9e3702fc9213a4f38acd940ae537e432d6dbbe74a4a23548ad5a` |
+| `docs/AUDIT_REPORT.md` | `1059cb8b233cd2d7eac0fd8562bb501318f276a5a092f11c932339dc6b6051a7` |
+| `docs/CAMPAIGN_24H.md` | `e2773b4e8aae053d0a6eea15c59050409f1950e9b0f4031b54c939344caa11d4` |
 | `docs/DESIGN_NOTE.md` | `ade0afa112999029530930f6312ffe3df5cd65f9b6a827357326ff7bf560c29e` |
-| `docs/GPU_CRYPTANALYSIS_PLAN.md` | `1a5e1c43ac2bfd0ba070296d917d7cd5c5630b52bc51e5ab21b2deb9048016dc` |
-| `docs/LEADS.md` | `bc0a762fd59d7485e682bfc87b6b1ff3ce6b37aaa75c23c9fe7a542d5ce8c901` |
-| `docs/PROOFS.md` | `834f018b002b1d243d76ceca33ecf486465785d3223d16f8882e05b45e1ba9c8` |
-| `docs/README.md` | `4f0e217d68503311cf42fbc8d4405146959d5bc5462d9a67e36e17ec5ba8efdb` |
+| `docs/GPU_CRYPTANALYSIS_PLAN.md` | `58ffa7a0da65ec8186eb16f8278d6a7030a1d6f23f6cee58780977489631db7a` |
+| `docs/LEADS.md` | `e2a6ac832fa1890ea3a39e0e1033c6d910574351324b017582bd3c2baac1ee96` |
+| `docs/MIGRATION_V06.md` | `0ad12311dd9e25d42b5952b6275fd32625d31411c2cb710e4f864eb3385522b9` |
+| `docs/PROOFS.md` | `62048d9a372912d1cc201a372a2cfb8fc582967508acc1bb5cd218ddc0c5a852` |
+| `docs/README.md` | `6a5b5e83b0db75cde1e4d785bfd9b0ae647c51cc73dafdd4b8fdab559af152e9` |
 | `docs/REVUE_CODE_DEPOT_C.md` | `9185183f7c008508342eae0f3ce3b19077c6bbe671645584c766337c88c7e2f1` |
-| `docs/SPEC.md` | `a43e07484913c3730768340304714353b77f020850e13fbc79b4de982919008c` |
+| `docs/SPEC.md` | `59c31577b98164fd118b300db02aaa7614828d7ac1c0fa12fec695113de06f5a` |
 | `docs/VOLE_CODE_REVIEW.md` | `6ac1e10eb0acb9392a80dcf50820734b20555713997b7f948ab76c59e4df4e1b` |
+| `docs/brume1024/AEAD_SECURITY.md` | `5014af09dacb9ffad3eb29e7414af1097bbc6caeb535cb6630c45354f98f1bd6` |
+| `docs/brume1024/ALGEBRIQUE.md` | `46b21249b45430295a5e429d11e79a9cd531208111546d2301004ee794ad1f2b` |
+| `docs/brume1024/CM_VERIFICATION.md` | `a7d4adb5205c1862b5ffc3202c00bd9efd04928961af94c2c8a46fcdbf1f4717` |
+| `docs/brume1024/DIFF_LIN.md` | `012bcd02221ba6d01eb8a80a2aeccfb26aec83cd2ac676695b4c83594da0920f` |
+| `docs/brume1024/DOMAINS.md` | `0f96039cad7e3590531974c7ac4d58a72503cad4c51813d08f9ca88f0849b297` |
+| `docs/brume1024/ETUDE_GROUPE_STRUCTURE.md` | `00e8dcae601f02f570e6469e35521edd1f3c521e47b06e853422eedea1222ab4` |
+| `docs/brume1024/NIVEAU3.md` | `2abfdbc5b3a4195ea42d20916153ee411890fd5e15aaf3c4778a4894970c9818` |
+| `docs/brume1024/README.md` | `47f1a9dfbc5a1384764fc4392e4a04b9a4ef55238787ca7fd8369286243b64c2` |
+| `docs/brume1024/REBOND.md` | `4f34d00aa5932e2cd01179dc05317892521b9f6866d37b78dc659e1f63b36965` |
+| `docs/brume1024/ROADMAP.md` | `22cc0e7bf7e905618885c2dbcd82692bfd5310390b92feb722d249693102f193` |
+| `docs/brume1024/SPEC.md` | `7018c40b508358cbf6ef8eedeedf92879dfcd08f85e6a4da55ef54dc08c237ed` |
+| `docs/brume1024/SPONGE_QROM.md` | `45f5ba8db62b572d7d7aa249d4accf22de1943bcd0402e136121b48a3ab886e4` |
+| `docs/brume1024/V06_MODES.md` | `783bd37e7390023e627ea597858ea9d505c83d4c457b05cdea11eb16a20c647e` |
+| `docs/brume1024/WIDTH_ANALYSIS.md` | `3145eab73934cccf76c022fc0823d87bcf8d3157a00fa9063b175513b7e794cd` |
 | `docs/rapport-piste-compression.md` | `1d79705c40b5be919a7c0124543868c777a5994373a4da25d248baa75f40ccac` |
 | `docs/rapport31codex.md` | `367dac368aa8582b826df979f3323ad822dd42b0252294d3956373283e181c60` |

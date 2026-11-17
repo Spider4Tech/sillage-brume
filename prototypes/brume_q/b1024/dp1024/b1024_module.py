@@ -2,18 +2,20 @@
 """Paramètres de BRUME-1024q sous l'interface de `sillage.brume512` utilisée par tests/pistes_monomiales.py et
 tests/dp_queue.py (N, N_ROUNDS, SBOX, GMUL, RC, E_SEG, E_I, E_C, _gauss_gf16_inverse).
 
-Tout est relu dans les en-têtes C dont se sert brume1024.c : b1024_tables.h (graphe, coefficients, constantes) et
-sillage/c/brume512_tables.h (S-box BR_SBOX). Rien n'est recopié à la main. La conformité est contrôlée par dp1024.py
+Tout est relu dans l'en-tête C de la bibliothèque v0.6, sillage/c/brume1024_tables.h (graphe, coefficients, constantes,
+S-box BR_SBOX). Rien n'est recopié à la main. La conformité est contrôlée par dp1024.py
 (permutation recalculée ici contre les vecteurs de brume1024.c, gpu/vecteurs_b1024.c)."""
 import os
 import re
 
 import numpy as np
 
-from sillage import brume512 as _B512
+import sys
 
 _ICI = os.path.dirname(os.path.abspath(__file__))
 _RACINE = os.path.normpath(os.path.join(_ICI, "..", "..", "..", ".."))
+sys.path.insert(0, os.path.join(_ICI, ".."))
+import gf16 as _B512  # noqa: E402  (v0.6 : corps GF(16), sans BRUME-512)
 
 
 def _tableau(texte, nom):
@@ -21,8 +23,8 @@ def _tableau(texte, nom):
     return [int(x, 0) for x in re.findall(r"0x[0-9a-fA-F]+|\d+", m.group(1))]
 
 
-_T = open(os.path.join(_ICI, "..", "b1024_tables.h")).read()
-_T512 = open(os.path.join(_RACINE, "sillage", "c", "brume512_tables.h")).read()
+_T = open(os.path.join(_RACINE, "sillage", "c", "brume1024_tables.h")).read()
+_T512 = _T
 
 N = int(re.search(r"#define B1_N (\d+)", _T).group(1))           # 256 nibbles
 M = int(re.search(r"#define B1_M (\d+)", _T).group(1))           # 128 par moitié

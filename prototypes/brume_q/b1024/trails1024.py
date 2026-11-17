@@ -29,7 +29,7 @@ _RACINE = os.path.normpath(os.path.join(_ICI, "..", "..", ".."))
 sys.path.insert(0, os.path.join(_ICI, "dp1024"))
 sys.path.insert(0, _RACINE)
 import b1024_module as B  # noqa: E402
-from sillage import brume512 as B512  # noqa: E402
+import gf16 as B512  # noqa: E402  (v0.6 : corps GF(16), sans BRUME-512)
 
 N, NB = B.N, 4 * B.N
 GMUL, GMUL_T = B512.GMUL, B512.GMUL_T

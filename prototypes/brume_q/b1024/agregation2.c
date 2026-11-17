@@ -18,7 +18,7 @@
  * Borne prouvée à 2 tours (Park, Sung, Lee, Lim 2003), pour un nombre de branchement 8 : MEDP₂ ≤ max_u Σ_v DP(u,v)^8,
  * MELP₂ ≤ max_u Σ_v LP(u,v)^8. Au-delà de 2 tours, MEDP_R ≤ MEDP₂.
  *   cc -O3 -march=native -fopenmp -DSANS_MAIN -I sillage/c -I tests/c -I prototypes/brume_q/b1024 \
- *      prototypes/brume_q/b1024/agregation2.c sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c -lm \
+ *      prototypes/brume_q/b1024/agregation2.c sillage/c/commun.c -lm \
  *      -o agregation2 && ./agregation2 [log2 du nombre d'échantillons, 26 par défaut] > agregation2.json */
 #include <math.h>
 
@@ -237,7 +237,7 @@ static double emp_lin(int u, int e, uint32_t cle, long N, uint64_t graine, int *
 int main(int argc, char **argv)
 {
     int lg = argc > 1 ? atoi(argv[1]) : 26;
-    if (!bref_init() || !ref_init() || !init_noyaux())
+    if (!ref_init() || !init_noyaux())
         return 2;
     prepare_iv();
     for (int a = 0; a < 16; a++)

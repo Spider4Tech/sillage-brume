@@ -1,5 +1,7 @@
 # Verification of Carolan–Majenz, *Compressed Permutation Oracles Revisited* (§ 3.3–§ 5.3)
 
+> **v0.6 (17 November 2026).** This document now lives in `docs/brume1024/`. BRUME-1024q is the permutation of the suite: its code is `sillage/c/brume1024.c` and its checks are in the battery (`tests/c/brume1024.c`, `tests/c/brume1024_api.c`, `tests/test_b1024_*.py`). File names cited below without a path are documents of this folder (`*.md`) or tools of `prototypes/brume_q/b1024/` (programs, scripts, `dp1024/`, `gpu/`, `cm26_verif/`, …); `brume1024.c` meant the prototype, whose code is now the library.
+
 Written on 16 November 2026; the exact runs for N = 6 and N = 7 were completed on 17 November. `SPONGE_QROM.md` uses the article ([CM], arXiv 2609.28469, v1 of 23 September 2026, the only
 version on that date) through Lemma 5.1, Lemma 5.2 and Theorem 5.3, which rest on the soundness theorem (Theorem 4.2)
 and on all of § 4. This note goes through that chain statement by statement. Each statement is:

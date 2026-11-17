@@ -5,8 +5,8 @@
  * Ce n'est PAS une proposition de BRUME-1024 : les coefficients et les constantes sont tirés au hasard (non nuls), seule la
  * vitesse est mesurée, et la conformité du noyau est contrôlée contre une référence scalaire du même tour. Le noyau 512 est
  * contrôlé contre sl_brume_permute (32 tours) avec les vrais coefficients, pour que la comparaison porte sur le même code.
- *   cc -O3 -march=native -I sillage/c -I tests/c prototypes/brume_q/largeur/noyau1024.c sillage/c/commun.c \
- *      sillage/c/brume512.c sillage/c/brume512_avx2.c -lm -o tests/c/build/noyau1024
+ *   cc -O3 -march=native -I sillage/c -I tests/c -I tests/historique_v05/c_tests -I tests/historique_v05/c prototypes/brume_q/largeur/noyau1024.c sillage/c/commun.c \
+ *      sillage/c/brume1024.c -lm -o tests/c/build/noyau1024
  */
 #include <immintrin.h>
 #include <stdio.h>

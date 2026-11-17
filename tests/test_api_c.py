@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """API publique (sillage/rapide.py, servie par le C) contre les classes de référence
 Python : interopérabilité dans les deux sens, mêmes erreurs sur entrées malformées ; repli
-de la borne δ quand une fenêtre compte ≥ 16 bits ; estimateur ISD en C contre sa référence."""
+de la borne δ quand une fenêtre compte ≥ 16 bits ; estimateur ISD en C contre sa référence.
+BRUME-1024q (v0.6) : C seulement ; ses classes sont contrôlées contre les liaisons (sillage_c) et sur leurs erreurs."""
 import os
 from concurrent.futures import ThreadPoolExecutor
 
 from tests.commun import sauver
 import sillage
 from sillage import sillage_common as SC
-from sillage.brume512 import Brume512 as RefB, brume512_hash as ref_hash, brume512_hash_arbre as ref_arbre
 from sillage.sillage_kem import SillageKEM as RefK, borne_echec_log2
 from sillage.sillage_sig import SillageSIG as RefS
 from sillage import sillage_c as C
@@ -58,31 +58,40 @@ def sig(c, lvl):
 
 
 def brume(c):
-    for prof in ("BRUME-512", "BRUME-512-256"):
-        cle, no = os.urandom(64), os.urandom(24)
-        A, R = sillage.Brume512(prof, key=cle), RefB(prof, key=cle)
-        pt, aad = os.urandom(1000), b"aad"
-        ct, tag = A.encrypt(no, pt, aad)
-        c[f"{prof}_meme_chiffre"] = (ct, tag) == R.encrypt(no, pt, aad)
-        c[f"{prof}_dechiffre"] = A.decrypt(no, ct, tag, aad) == pt
-        c[f"{prof}_rejets"] = (_leve(sillage.Brume512TagError, A.decrypt, no, ct, tag[:-1], aad)
-                               and _leve(sillage.Brume512TagError, A.decrypt, no, ct, bytes(len(tag)), aad)
-                               and _leve(ValueError, A.encrypt, no[:-1], pt))
-        t = A.encrypt_te(no, pt, aad)
-        c[f"{prof}_te_identique"] = t == R.encrypt_te(no, pt, aad)
-        ct2, par, tag2, meta = t
-        err = bytearray(ct2)
-        err[3] ^= 0x5A
-        pa, co = A.decrypt_te(no, bytes(err), par, tag2, meta, aad)
-        pb, cb = R.decrypt_te(no, bytes(err), par, tag2, meta, aad)
-        c[f"{prof}_te_correction"] = pa == pt == pb and co == cb
-        err[4] ^= 0x33
-        c[f"{prof}_te_alteration_multiple"] = _leve(sillage.Brume512TamperError, A.decrypt_te, no, bytes(err), par, tag2, meta, aad)
-        c[f"{prof}_te_meta"] = _leve(sillage.Brume512TamperError, A.decrypt_te, no, ct2, par, tag2, meta[:-1], aad)
-    m = os.urandom(5000)
-    c["hachage_identique"] = sillage.brume512_hash(m, 100) == ref_hash(m, 100)
-    c["hachage_arbre_identique"] = sillage.brume512_hash_arbre(m, 64) == ref_arbre(m, 64)
-    c["hachage_tours_reduits_reference"] = sillage.brume512_hash(m[:64], 32, 3) == ref_hash(m[:64], 32, 3)
+    prof = "BRUME-1024q"
+    cle, no = os.urandom(64), os.urandom(24)
+    A = sillage.Brume1024(prof, key=cle)
+    pt, aad = os.urandom(1000), b"aad"
+    ct, tag = A.encrypt(no, pt, aad)
+    c[f"{prof}_meme_chiffre_que_les_liaisons"] = (ct, tag) == C.aead_encrypt(prof, cle, no, pt, aad) and len(tag) == 32
+    c[f"{prof}_dechiffre"] = A.decrypt(no, ct, tag, aad) == pt
+    c[f"{prof}_rejets"] = (_leve(sillage.Brume1024TagError, A.decrypt, no, ct, tag[:-1], aad)
+                           and _leve(sillage.Brume1024TagError, A.decrypt, no, ct, bytes(len(tag)), aad)
+                           and _leve(ValueError, A.encrypt, no[:-1], pt)
+                           and _leve(ValueError, sillage.Brume1024, prof, cle[:-1])
+                           and _leve(ValueError, sillage.Brume1024, "BRUME-512", cle))
+    t = A.encrypt_te(no, pt, aad)
+    c[f"{prof}_te_identique_aux_liaisons"] = t == C.te_encrypt(prof, cle, no, pt, aad)
+    ct2, par, tag2, meta = t
+    err = bytearray(ct2)
+    err[3] ^= 0x5A
+    pa, co = A.decrypt_te(no, bytes(err), par, tag2, meta, aad)
+    c[f"{prof}_te_correction"] = pa == pt and co == [3]
+    err[4] ^= 0x33
+    c[f"{prof}_te_alteration_multiple"] = _leve((sillage.Brume1024TamperError, sillage.Brume1024TagError),
+                                                A.decrypt_te, no, bytes(err), par, tag2, meta, aad)
+    c[f"{prof}_te_meta"] = _leve(sillage.Brume1024TamperError, A.decrypt_te, no, ct2, par, tag2, meta[:-1], aad)
+    P = sillage.Brume1024P(key=cle)
+    gros = os.urandom(3 * 8192 + 5)
+    cp, tp = P.encrypt(no, gros, aad)
+    c["BRUME-1024qp_aller_retour_et_distinct_du_sequentiel"] = (P.decrypt(no, cp, tp, aad) == gros
+                                                               and (cp, tp) != C.aead_encrypt(prof, cle, no, gros, aad)
+                                                               and _leve(sillage.Brume1024TagError, P.decrypt, no, cp, bytes(32), aad))
+    m = os.urandom(20000)
+    c["hachage_identique_aux_liaisons_64_octets_par_defaut"] = (sillage.brume1024_hash(m) == C.hash(m, 64)
+                                                               and len(sillage.brume1024_hash(m)) == 64
+                                                               and sillage.brume1024_hash(m, 100)[:64] == sillage.brume1024_hash(m))
+    c["xof_identique_aux_liaisons"] = sillage.brume1024_xof(m, 300) == C.xof(m, 300)
 
 
 def borne(c, m, sk128):

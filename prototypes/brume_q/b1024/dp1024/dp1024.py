@@ -25,7 +25,16 @@ sys.path.insert(0, _ICI)
 sys.path.insert(0, _RACINE)
 import b1024_module as B  # noqa: E402
 import pistes1024 as P  # noqa: E402
-from tests.test_division_property import bornes_degre  # noqa: E402
+
+
+def bornes_degre(deg_s=3, n=1024, m=4, R=40):
+    """Borne de Boura–Canteaut tour par tour (recopiée de tests/test_division_property.py de la v0.5, archivé)."""
+    d, out = 1, []
+    for _ in range(R):
+        d = min(deg_s * d, n - -(-(n - d) // (m - 1)) if d < n - 1 else n - 1, n - 1)
+        out.append(d)
+    return out
+
 
 RES = os.path.join(_RACINE, "resultats")
 CACHE = os.path.join(RES, "pistes_division_1024q.json")

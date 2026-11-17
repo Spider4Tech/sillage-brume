@@ -16,7 +16,7 @@
  *
  *   invariants_quad1024 controle | reel [tours] | tous
  *   cc -O3 -march=native -fopenmp -DSANS_MAIN -I sillage/c -I tests/c -I prototypes/brume_q/b1024 \
- *      prototypes/brume_q/b1024/invariants_quad1024.c sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c -lm
+ *      prototypes/brume_q/b1024/invariants_quad1024.c sillage/c/commun.c -lm
  * Sortie : JSON. */
 #include <omp.h>
 

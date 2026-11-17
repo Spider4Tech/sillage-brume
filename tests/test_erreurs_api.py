@@ -7,13 +7,14 @@ La mesure de couverture (resultats/COUVERTURE.md) a montré que ces lignes n'ét
    chacun lève l'exception annoncée. Une clé publique de signature mal formée est refusée, sans exception.
 2. Mode TE. Deux erreurs de même valeur dans un bloc (dm = 0, syndromes non nuls) donnent un échec bruyant, de même
    que des parités tronquées, et ce dans les deux implémentations (référence et C).
-3. Repli sans C (compilateur absent, simulé). disponible() avertit, SILLAGE_C_OBLIGATOIRE refuse. KEM, SIG, AEAD
-   séquentiel et parallèle, TE et hachage passent sur la référence et restent interopérables avec le C.
+3. Repli sans C (compilateur absent, simulé). disponible() avertit, SILLAGE_C_OBLIGATOIRE refuse. KEM et SIG passent
+   sur la référence et restent interopérables avec le C. BRUME-1024q (v0.6) n'existe qu'en C : sans C, ses classes et
+   ses fonctions refusent (RuntimeError) au lieu de rendre autre chose.
    L'estimateur ISD sans le noyau C rend les mêmes coûts qu'avec.
 4. Codes d'erreur du C. Un code ≠ 0 de l'aléa système devient une OSError, et n'est jamais un tampon nul rendu en
    silence. Une recompilation retire l'ancienne bibliothèque.
-5. Témoins. Les auto-tests (brume512.selftest, demo) signalent une implémentation sabotée : leurs branches d'échec
-   sont atteignables, et leurs contrôles ne sont donc pas vrais par construction.
+5. Témoins. La démo signale une implémentation sabotée : ses branches d'échec sont atteignables, et ses contrôles ne
+   sont donc pas vrais par construction.
 """
 import contextlib
 import io
@@ -24,7 +25,6 @@ import warnings
 import numpy as np
 
 from tests.commun import sauver
-from sillage import brume512 as B
 from sillage import rapide as R
 from sillage import sillage_c as C
 from sillage import sillage_common as SC
@@ -43,14 +43,14 @@ def leve(exc, f, *a, **k):
 
 
 def refus(c):
-    x = np.zeros(B.N, np.uint8)
-    c["tours_hors_domaine_refuses"] = leve(ValueError, B.brume_v1, x, 0) and leve(ValueError, B.brume_v1, x, B.N_ROUNDS + 1)
-    c["profil_inconnu_refuse"] = leve(ValueError, B.Brume512, "BRUME-0") and leve(ValueError, B.Brume512P, "BRUME-0")
-    c["cle_de_mauvaise_taille_refusee"] = leve(ValueError, B.Brume512, "BRUME-512", bytes(63))
+    c["profil_inconnu_refuse"] = (leve(ValueError, R.Brume1024, "BRUME-0") and leve(ValueError, R.Brume1024P, "BRUME-0")
+                                  and leve(ValueError, R.Brume1024, "BRUME-512") and leve(KeyError, C.aead_encrypt, "BRUME-512", bytes(64), bytes(24), b"m"))
+    c["cle_de_mauvaise_taille_refusee"] = (leve(ValueError, R.Brume1024, "BRUME-1024q", bytes(63))
+                                           and leve(ValueError, R.Brume1024P, "BRUME-1024qp", bytes(65)))
     ok = True
-    for cls in (B.Brume512, B.Brume512P, R.Brume512, R.Brume512P):
-        br = cls("BRUME-512" if cls in (B.Brume512, R.Brume512) else "BRUME-512p", bytes(64))
-        ok &= leve(ValueError, br.encrypt, bytes(23), b"m") and leve(ValueError, br.decrypt, bytes(25), b"m", bytes(16))
+    for cls, prof in ((R.Brume1024, "BRUME-1024q"), (R.Brume1024P, "BRUME-1024qp")):
+        br = cls(prof, bytes(64))
+        ok &= leve(ValueError, br.encrypt, bytes(23), b"m") and leve(ValueError, br.decrypt, bytes(25), b"m", bytes(32))
     c["nonce_de_mauvaise_taille_refuse_partout"] = ok
     c["kem_niveau_ou_mode_inconnu_refuse"] = (leve(ValueError, K.SillageKEM, "Sillage-64")
                                               and leve(ValueError, K.SillageKEM, "Sillage-128", h_mode="autre"))
@@ -73,17 +73,17 @@ def refus(c):
 def te(c):
     msg = bytes(range(200))
     ok = True
-    for cls in (B.Brume512, R.Brume512):
-        br = cls("BRUME-512", bytes(64))
-        ct, pars, tag, meta = br.encrypt_te(bytes(24), msg)
-        canal = bytearray(ct)
-        canal[3] ^= 0x5A
-        canal[17] ^= 0x5A                                 # même valeur : dm = 0, syndromes non nuls
-        ok &= leve(B.Brume512TamperError, br.decrypt_te, bytes(24), bytes(canal), pars, tag, meta)
-        ok &= leve(B.Brume512TamperError, br.decrypt_te, bytes(24), ct, pars[:-1], tag, meta)
-        ok &= leve(B.Brume512TamperError, br.decrypt_te, bytes(24), ct, pars, tag, (len(ct) + 1).to_bytes(8, "big"))
-        ok &= leve(B.Brume512TagError, br.decrypt, bytes(24), ct, bytes(16))
-        ok &= br.decrypt_te(bytes(24), ct, pars, tag, meta) == (msg, [])
+    br = R.Brume1024("BRUME-1024q", bytes(64))
+    ct, pars, tag, meta = br.encrypt_te(bytes(24), msg)
+    canal = bytearray(ct)
+    canal[3] ^= 0x5A
+    canal[17] ^= 0x5A                                     # même valeur : dm = 0, syndromes non nuls
+    ok &= leve(R.Brume1024TamperError, br.decrypt_te, bytes(24), bytes(canal), pars, tag, meta)
+    ok &= leve(R.Brume1024TamperError, br.decrypt_te, bytes(24), ct, pars[:-1], tag, meta)
+    ok &= leve(R.Brume1024TamperError, br.decrypt_te, bytes(24), ct, pars, tag, (len(ct) + 1).to_bytes(8, "big"))
+    ok &= leve(R.Brume1024TagError, br.decrypt, bytes(24), ct, bytes(32))
+    ok &= leve(R.Brume1024TagError, br.decrypt_te, bytes(24), ct, pars, bytes(32), meta)
+    ok &= br.decrypt_te(bytes(24), ct, pars, tag, meta) == (msg, [])
     c["te_dm_nul_parites_tronquees_tag_faux_refuses"] = ok
 
 
@@ -122,15 +122,9 @@ def repli(c, m):
         spk, ssk = sig.keygen()
         sg = sig.sign(ssk, spk, b"m")
         sig_ref_ok = sig.verify(spk, b"m", sg)
-        aead_ref = {}
-        for cls, prof in ((R.Brume512, "BRUME-512"), (R.Brume512P, "BRUME-512p")):
-            br = cls(prof, bytes(64))
-            aead_ref[prof] = br.encrypt(bytes(24), b"message")
-            aead_ref[prof + "_dec"] = br.decrypt(bytes(24), *aead_ref[prof]) == b"message"
-        bt = R.Brume512("BRUME-512", bytes(64))
-        te_ref = bt.encrypt_te(bytes(24), b"t" * 70)
-        te_ref_ok = bt.decrypt_te(bytes(24), *te_ref)[0] == b"t" * 70
-        h_ref = (R.brume512_hash(b"h"), R.brume512_hash_arbre(b"h"))
+        brume_refuse = (leve(RuntimeError, R.Brume1024, "BRUME-1024q", bytes(64))
+                        and leve(RuntimeError, R.Brume1024P, "BRUME-1024qp", bytes(64))
+                        and leve(RuntimeError, R.brume1024_hash, b"h") and leve(RuntimeError, R.brume1024_xof, b"h", 8))
         est_ref = SC.isd_estimate(2048, 1434, 103)
         c_absent = SC._c_isd() is None
     # interopérabilité avec le C, une fois le C revenu
@@ -138,12 +132,7 @@ def repli(c, m):
     c["repli_kem_aller_retour_et_lu_par_le_c"] = kem_ref_ok and kc.decaps(sk, ct) == ss
     sc_ = R.SillageSIG("Sillage-SIG-128")
     c["repli_sig_aller_retour_et_lu_par_le_c"] = sig_ref_ok and sc_.verify(spk, b"m", sg)
-    ok = all(aead_ref[p + "_dec"] for p in ("BRUME-512", "BRUME-512p"))
-    for cls, prof in ((R.Brume512, "BRUME-512"), (R.Brume512P, "BRUME-512p")):
-        ok &= cls(prof, bytes(64)).encrypt(bytes(24), b"message") == aead_ref[prof]
-    c["repli_aead_sequentiel_et_parallele_identiques_au_c"] = ok
-    c["repli_te_identique_au_c"] = te_ref_ok and bt.encrypt_te(bytes(24), b"t" * 70) == te_ref
-    c["repli_hachages_identiques_au_c"] = h_ref == (R.brume512_hash(b"h"), R.brume512_hash_arbre(b"h"))
+    c["brume1024_refuse_sans_c_puis_revient"] = brume_refuse and len(R.brume1024_hash(b"h")) == 64
     est_c = SC.isd_estimate(2048, 1434, 103)
     c["estimateur_isd_sans_noyau_c_identique"] = c_absent and est_ref == est_c
     m["estimateur"] = dict(reference=est_ref, c=est_c)
@@ -165,13 +154,13 @@ def codes_c(c):
     vrai = C._lib
     ok = True
     try:
-        for nom, appel in (("sl_aead_p_decrypt", lambda: C.aead_p_decrypt("BRUME-512p", bytes(64), bytes(24), b"x", bytes(16))),
+        for nom, appel in (("sl_aead_p_decrypt", lambda: C.aead_p_decrypt("BRUME-1024qp", bytes(64), bytes(24), b"x", bytes(32))),
                            ("sl_kem_keygen", lambda: C.kem_keygen("Sillage-128")),
                            ("sl_sig_keygen", lambda: C.sig_keygen("Sillage-SIG-128"))):
             C._lib = _Proxy(C.lib(), nom, -3)
             ok &= leve(OSError, appel)
         C._lib = _Proxy(C.lib(), "sl_aead_p_decrypt", -1)
-        ok &= C.aead_p_decrypt("BRUME-512p", bytes(64), bytes(24), b"x", bytes(16)) is None
+        ok &= C.aead_p_decrypt("BRUME-1024qp", bytes(64), bytes(24), b"x", bytes(32)) is None
     finally:
         C._lib = vrai
     c["code_d_erreur_c_leve_oserror"] = ok
@@ -189,29 +178,18 @@ def codes_c(c):
 
 
 def temoins(c):
-    vrai_dec, vrai_chk = B.Brume512.decrypt, B._te_check
-    try:
-        B.Brume512.decrypt = lambda self, nonce, ct, tag, aad=b"": b""
-        B._te_check = lambda buf, off, par: None
-        with contextlib.redirect_stdout(io.StringIO()) as sortie:
-            res = B.selftest(verbose=True)
-    finally:
-        B.Brume512.decrypt, B._te_check = vrai_dec, vrai_chk
-    c["selftest_detecte_une_implementation_sabotee"] = (not res["aead_rejet_altere"] and not res["aead_rejet_collision_longueur"]
-                                                        and not res["te_echec_bruyant"] and "aead_rejet_altere" in sortie.getvalue())
-    c["selftest_sain"] = all(v for v in B.selftest(verbose=False).values() if isinstance(v, bool))
     from sillage import demo
-    vrai = (demo.Brume512.decrypt, demo.Brume512.decrypt_te)
+    vrai = (demo.Brume1024.decrypt, demo.Brume1024.decrypt_te)
     try:
-        demo.Brume512.decrypt = lambda self, nonce, ct, tag, aad=b"": b""
-        demo.Brume512.decrypt_te = lambda self, *a, **k: (b"", [])
+        demo.Brume1024.decrypt = lambda self, nonce, ct, tag, aad=b"": b""
+        demo.Brume1024.decrypt_te = lambda self, *a, **k: (b"", [])
         with contextlib.redirect_stdout(io.StringIO()) as sortie:
             try:
                 demo.main()
             except Exception:
                 pass
     finally:
-        demo.Brume512.decrypt, demo.Brume512.decrypt_te = vrai
+        demo.Brume1024.decrypt, demo.Brume1024.decrypt_te = vrai
     c["demo_signale_une_implementation_sabotee"] = sortie.getvalue().count("(bug") >= 3
 
 

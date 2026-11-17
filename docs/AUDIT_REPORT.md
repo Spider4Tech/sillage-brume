@@ -709,3 +709,33 @@ parameter or KAT changes.
 **Replication.** v0.5 battery, from a clean tree on a second machine: 796/796 checks, 69 tests (all but `dp_validation`), in
 9 976 s. GPU campaign of cubes and ISD (`rungpu_special`): 8/8 checks, no distinguisher beyond the known reach. Transposed
 Kales–Zaverucha attack on VOLE (`vole_proto --kz`): 3/3 checks at 10 000 and 30 000 trials per budget.
+
+## Changes of 2026-11-17 (v0.6: BRUME-1024q replaces BRUME-512)
+
+At the author's request, BRUME-1024q (`docs/brume1024/`) replaces BRUME-512 in the library and in the battery
+(`docs/MIGRATION_V06.md` § 5). Every symmetric output changes (AEAD, TE, hash, XOF; tag of 32 bytes, digest of
+64 bytes by default, a single AEAD profile); the KEM and the signature do not change. BRUME-512, its Python reference and
+its tests are archived in `tests/historique_v05/`; the § 4 of `PROOFS.md` and the § 2 of `SPEC.md` of v0.5 are kept there.
+
+Found while migrating, and fixed:
+- `sl_effacer` was defined in `brume512.c` but used by `commun.c`, so any program linking `commun.c` without BRUME-512
+  failed to link. It now lives in `commun.c`.
+- The prototype's checks initialised the BRUME-512 reference (`bref_init`) although only its GF(16) helpers were used;
+  several analysis tools linked the BRUME-512 library for the same reason. The library and the tools now depend on
+  BRUME-1024q alone (the table generator keeps the archived reference for GF(16) and the S-box, by design).
+- The battery used to test the prototype's own copy of the code. The checks now include `sillage/c/brume1024.c` itself,
+  and a second test goes through the public API only, compiled with and without AVX2 (portable kernel).
+- The tree-hash check of the C fuzzer assumed 32-byte chaining values (BRUME-512); BRUME-1024q uses 64 bytes.
+
+Also recorded (17 November, cryptanalysis studies of BRUME-1024q, written before the migration): a check of the
+differential-linear tool did not come out as its plan said (real 4-round correlations of 2^−7 where the characteristic
+model says 2^−18, `docs/brume1024/DIFF_LIN.md`); the stopping rule of the algebraic study was badly chosen and its
+6-round row was stopped (`docs/brume1024/ALGEBRIQUE.md`).
+
+Battery v0.6: full battery of 17 November 2026, **615/617 controls, 44 tests** (`resultats/SYNTHESE.md`). The only failing test is
+`temps1024`: dudect flags the **portable** kernel (|t| = 9.7, then 4 to 20 over repeated runs of 2·10⁶ measurements) when
+it is compiled with `-march=native` on the Zen 3 machine of the run; the same code compiled for `x86-64-v3` is clean on
+that machine (|t| ≤ 1.2) and on two Zen 2 machines (|t| ≤ 1.4), ctgrind is clean, and the A/A test and the AVX2 kernel
+are clean at the same scale. No instruction with data-dependent latency appears in the generated code. Cause not
+identified; **the release is held** until it is (author's decision of 17 November 2026). Tests that ran before a header
+guard was added to `brume1024_tables.h` during the run (outputs unchanged) were rerun on the final sources and pass.

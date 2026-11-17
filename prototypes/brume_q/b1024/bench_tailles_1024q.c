@@ -3,7 +3,7 @@
  * hachage par défaut = arbre). Contenu aléatoire, un cœur sauf mention, médiane de 7 séries d'au moins ~0,1 s.
  * Allers-retours vérifiés (déchiffrement + tag) pour chaque taille et chaque AEAD.
  *   cc -O3 -march=native -fopenmp -DSANS_MAIN -I sillage/c -I tests/c -I prototypes/brume_q/b1024 \
- *      prototypes/brume_q/b1024/bench_tailles_1024q.c sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c \
+ *      prototypes/brume_q/b1024/bench_tailles_1024q.c sillage/c/commun.c \
  *      -lm -o tests/c/build/bench_tailles_1024q && tests/c/build/bench_tailles_1024q > resultats/BENCH_1024Q.md
  */
 #include "brume1024.c"
@@ -80,7 +80,7 @@ static double mios(size_t len, double ns) { return len ? len / (ns * 1e-9) / 104
 
 int main(void)
 {
-    if (!bref_init() || !ref_init() || !init_noyaux())
+    if (!ref_init() || !init_noyaux())
         return 2;
     sl_init();
     prepare_iv();

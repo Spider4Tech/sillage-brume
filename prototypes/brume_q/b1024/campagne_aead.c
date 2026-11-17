@@ -19,7 +19,7 @@
  *           altération ; arbre de 2^32 + 3·8 192 + 7 octets : lots bitslicés ≡ éponges ≡ un thread (≈ 13 Go de mémoire).
  * Seuils : |z| > 6 sur une position, ou z du χ² > 6, ou toute non-conformité : échec.
  *   cc -O3 -march=native -fopenmp -DSANS_MAIN -I sillage/c -I tests/c -I prototypes/brume_q/b1024 \
- *      prototypes/brume_q/b1024/campagne_aead.c sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c -lm \
+ *      prototypes/brume_q/b1024/campagne_aead.c sillage/c/commun.c -lm \
  *      -o campagne_aead && OMP_NUM_THREADS=1 ./campagne_aead <mode> <secondes> <graine> <fichier.json> */
 #include <math.h>
 
@@ -426,7 +426,7 @@ int main(int argc, char **argv)
         z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
         X[i] = z ^ (z >> 31);
     }
-    if (!bref_init() || !ref_init() || !init_noyaux())
+    if (!ref_init() || !init_noyaux())
         return 2;
     prepare_iv();
     sl_init();

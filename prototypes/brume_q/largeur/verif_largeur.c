@@ -9,8 +9,8 @@
  *      coordonnées de la S-box inverse de la couche), pour chaque sens.
  * Graphe : D_m' = Z/m ⋊ Z/2 (2m sommets), loi de sillage/brume512.py : (a, f)·(b, g) = (a + (−1)^f b, f ⊕ g) ;
  * générateurs = réflexions s_k = (k, 1), k ∈ K ; voisinage de x : {x·s_k}. M a le support A + I (7 termes par ligne).
- *   cc -O2 -march=native -fopenmp -I sillage/c -I tests/c prototypes/brume_q/largeur/verif_largeur.c sillage/c/commun.c \
- *      sillage/c/brume512.c sillage/c/brume512_avx2.c -lm -o tests/c/build/verif_largeur
+ *   cc -O2 -march=native -fopenmp -I sillage/c -I tests/c -I tests/historique_v05/c_tests -I tests/historique_v05/c prototypes/brume_q/largeur/verif_largeur.c sillage/c/commun.c \
+ *      sillage/c/brume1024.c -lm -o tests/c/build/verif_largeur
  */
 #include <math.h>
 #include <stdio.h>

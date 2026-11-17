@@ -1,7 +1,7 @@
 /* BRUME-1024q sur GPU (CUDA), tours réduits, dans les deux sens. Portage de tests/gpu/brume.cuh (BRUME-512) à 256 nibbles.
  *
  * Un fil = un état, empaqueté comme en C : uint32_t w[32], le nibble j occupe les bits 4(j mod 8) du mot j / 8 (même
- * mémoire que les 128 octets de perm1). Les tables sont celles de b1024_tables.h et de sillage/c/brume512_tables.h
+ * mémoire que les 128 octets de perm1). Les tables sont celles de sillage/c/brume1024_tables.h (par b1024_tables.h)
  * (S-box), relues en constexpr : déroulées, elles se replient à la compilation. Rien n'est recopié à la main.
  *   - S-box : forme algébrique normale, 8 nibbles par mot ;
  *   - M : 7 arêtes par sommet (diagonale B1_CS, six voisins de l'autre moitié, décalages B1_K, coefficients B1_CG) ;
@@ -16,7 +16,7 @@
 #undef B1024_TABLES_H
 namespace b1dev {
 #define static static constexpr __device__
-#include "brume512_tables.h"
+/* v0.6 : BR_SBOX vient de brume1024_tables.h (inclus par b1024_tables.h) */
 #include "b1024_tables.h"
 #undef static
 

@@ -3,7 +3,7 @@
 
 Compilation à la demande (gcc -O3 -march=native -fopenmp, résultat mis en
 cache selon l'empreinte du source dans tests/c/build/), chargement ctypes.
-Les tables viennent de sillage/brume512.py (source unique) ; charger()
+Les tables viennent de tests/historique_v05/brume512.py (BRUME-512, archivée en v0.6 ; source unique) ; charger()
 vérifie la conformité avec l'implémentation Python (permutation directe
 sur 1 à 32 tours, inverse) et refuse de servir un noyau divergent.
 
@@ -20,7 +20,7 @@ import time
 import numpy as np
 
 from tests.commun import RACINE
-from sillage import brume512 as B
+from tests.historique_v05 import brume512 as B   # v0.6 : BRUME-512 archivée ; le noyau garde ses contrôles de conformité
 
 N = B.N
 SRC = os.path.join(RACINE, "tests", "c", "noyau.c")
@@ -113,7 +113,7 @@ def charger():
     ok, _ = conformite()
     if not ok:
         _lib = None
-        raise RuntimeError("noyau C non conforme à sillage/brume512.py")
+        raise RuntimeError("noyau C non conforme à tests/historique_v05/brume512.py")
     return L
 
 

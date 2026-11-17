@@ -24,36 +24,39 @@ jobs:
     - name: Short verifier fuzzing under ASan and UBSan
       run: |
         gcc -O1 -g -march=native -fopenmp -fsanitize=address,undefined -fno-sanitize-recover=all -I sillage/c -I tests/c \
-            -o tests/c/build/vole_asan prototypes/vole/vole_proto.c sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c -lm
+            -o tests/c/build/vole_asan prototypes/vole/vole_proto.c sillage/c/commun.c sillage/c/brume1024.c -lm
         OMP_NUM_THREADS=1 tests/c/build/vole_asan --fuzz 300 1
     - name: Install the Python dependency
       run: python3 -m pip install -r requirements.txt
-    - name: Generated tables are up to date
-      run: make -C sillage/c tables && git diff --exit-code sillage/c/brume512_tables.h sillage/c/brume512_simd.h
-    - name: Quick tests (KATs, TE mode, C and Python byte-for-byte conformance)
+    - name: BRUME-1024q tables are those of the generator
+      run: |
+        gcc -O3 -march=native -fopenmp -I sillage/c -I tests/historique_v05/c_tests -I tests/historique_v05/c \
+            prototypes/brume_q/b1024/gen_b1024.c sillage/c/commun.c sillage/c/brume1024.c -lm -o tests/c/build/gen_b1024
+        tests/c/build/gen_b1024 /tmp/t.h /tmp/l.h
+        diff <(sed -n '/#define B1_N/,/^#endif/p' /tmp/t.h | grep -v '^#endif') \
+             <(sed -n '/#define B1_N/,/S-box (SPEC/p' sillage/c/brume1024_tables.h | grep -v 'S-box (SPEC' | sed '$d')
+        diff <(tail -n +2 /tmp/l.h) <(tail -n +2 sillage/c/brume1024_lot.h)
+    - name: BRUME-1024q (v0.6) checks on the library, with and without AVX2, and TE
+      run: |
+        mkdir -p resultats
+        OMP_NUM_THREADS=2 tests/c/build/brume1024
+        tests/c/build/brume1024_api
+        tests/c/build/brume1024_api_portable
+        if grep -H ': false' resultats/brume1024.json resultats/brume1024_api.json resultats/brume1024_api_portable.json; then exit 1; fi
+    - name: Quick tests (KATs, TE mode, C and Python conformance, second implementation, proof checks)
       run: |
         python3 -m tests.test_fonctionnel
-        python3 -m tests.test_te
         python3 -m tests.test_c_impl
+        python3 -m tests.test_b1024_seconde_implementation
+        python3 -m tests.test_b1024_certificats
+        python3 -m tests.test_bornes_preuves
     - name: Fail if any quick-test check failed
       run: |
         # the tests record their checks in resultats/<name>.json and always exit 0
-        if grep -H ': false' resultats/fonctionnel.json resultats/te.json resultats/c_impl.json; then exit 1; fi
-    - name: BRUME-1024q prototype (v0.6 candidate, not part of the v0.5 battery)
+        if grep -H ': false' resultats/fonctionnel.json resultats/c_impl.json resultats/b1024_seconde_implementation.json \
+             resultats/b1024_certificats.json resultats/bornes_preuves.json; then exit 1; fi
+    - name: Quantum bound of the hash (docs/brume1024/SPONGE_QROM.md), exhaustive on small models, with a failing witness
       run: |
-        B="-O3 -march=native -fopenmp -I sillage/c -I tests/c -I prototypes/brume_q/b1024"
-        L="sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c -lm"
-        # 33 checks against the dense reference (kernels, sponge, tree, AEAD, parallel AEAD, portable kernel, 23 KATs)
-        gcc $B prototypes/brume_q/b1024/brume1024.c $L -o tests/c/build/brume1024
-        OMP_NUM_THREADS=2 tests/c/build/brume1024
-        if grep -H ': false' resultats/brume1024.json; then exit 1; fi
-        # second implementation written from SPEC.md alone: the 23 test vectors
-        gcc -O2 -march=native -I sillage/c -I prototypes/brume_q/b1024 prototypes/brume_q/b1024/spec_ref.c $L -o tests/c/build/spec_ref
-        tests/c/build/spec_ref prototypes/brume_q/b1024/kat_b1024.txt
-        # C4 >= 28 certificate: structure of the reproduction package (completeness CNFs rebuilt, tree re-read)
-        python3 prototypes/brume_q/sat/audit_c4_K28.py
-        # quantum collision and preimage bounds of the sponge (SPONGE_QROM.md): counting lemma, exhaustive on small
-        # models, with a negative witness that must fail; counts and witnessing; classical experiment; arithmetic
         V=prototypes/brume_q/b1024/cm26_verif
         gcc -O2 $V/exhaustif.c -o tests/c/build/cm26_exhaustif
         gcc -O2 -DTEMOIN $V/exhaustif.c -o tests/c/build/cm26_temoin

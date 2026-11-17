@@ -249,16 +249,16 @@ int main(int argc, char **argv)
     }
     int aead_p = !strcmp(op, "aead_p");
     static uint8_t gros[32 * SL_AEADP_FEUILLE], gros_c[32 * SL_AEADP_FEUILLE];
-    static uint8_t ent[PAQ][64], cle[PAQ][64], cls[PAQ], idx[PAQ], idc[PAQ], fixe[64], cle_f[64];
+    static uint8_t ent[PAQ][128], cle[PAQ][64], cls[PAQ], idx[PAQ], idc[PAQ], fixe[128], cle_f[64];   /* état BRUME-1024q : 128 o */
     uint8_t sortie[64], tag[32], nonce[SL_NONCE] = {0}, acc = 0;
-    sl_alea(fixe, 64);
+    sl_alea(fixe, 128);
     sl_alea(cle_f, 64);
     char champ_empreinte[48] = "", champ_adresses[256] = "";
     if (graine_mise_en_place) {                        /* preuve que les valeurs sont les mêmes d'un processus à l'autre */
         uint8_t e[8];
         sl_shake_t h;
         sl_shake_init(&h);
-        sl_shake_absorb(&h, fixe, 64);
+        sl_shake_absorb(&h, fixe, 128);
         sl_shake_absorb(&h, cle_f, 64);
         if (kem) {
             sl_shake_absorb(&h, vs[0][0], lsk);
@@ -278,7 +278,7 @@ int main(int argc, char **argv)
     }
     double *t[2] = {malloc(n * sizeof(double)), malloc(n * sizeof(double))};
     long nc[2] = {0, 0};
-    static uint8_t res_ent[PAQ][64], res_cle[PAQ][64];
+    static uint8_t res_ent[PAQ][128], res_cle[PAQ][64];
     for (long base = 0; base < n; base += PAQ) {
         sl_alea(cls, PAQ); sl_alea(idx, PAQ); sl_alea(idc, PAQ);
         if (prep_sym) { sl_alea(res_ent, sizeof res_ent); sl_alea(res_cle, sizeof res_cle); }
@@ -287,10 +287,10 @@ int main(int argc, char **argv)
             if (prep_sym) {
                 int al_ent = aa_alea || aead_cle || (cls[i] && !aa_fixe);
                 int al_cle = aa_alea || aead_clair || (cls[i] && !aa_fixe);
-                memcpy(ent[i], al_ent ? res_ent[i] : fixe, 64);
+                memcpy(ent[i], al_ent ? res_ent[i] : fixe, 128);
                 memcpy(cle[i], al_cle ? res_cle[i] : cle_f, 64);
-            } else if (cls[i]) { sl_alea(ent[i], 64); sl_alea(cle[i], 64); }
-            else { memcpy(ent[i], fixe, 64); memcpy(cle[i], cle_f, 64); }
+            } else if (cls[i]) { sl_alea(ent[i], 128); sl_alea(cle[i], 64); }
+            else { memcpy(ent[i], fixe, 128); memcpy(cle[i], cle_f, 64); }
             if (sig && !sigsign) {
                 if (cls[i]) {
                     sl_alea(su + i * Lp, Lp);

@@ -17,7 +17,7 @@ log() { echo "$(date '+%F %T') $*" | tee -a $J; }
 log "début, échéance $(date -d @$FIN '+%F %T'), charge $(cat /proc/loadavg)"
 B=prototypes/brume_q/b1024
 F="-O3 -march=native -fopenmp -Wno-unused-function -I sillage/c -I tests/c -I $B"
-L="sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c -lm"
+L="sillage/c/commun.c -lm"
 mkdir -p tests/c/build resultats
 cc $F $B/brume1024.c $L -o tests/c/build/brume1024 &&
 cc $F -DSANS_MAIN $B/temps1024.c $L -o tests/c/build/temps1024 &&

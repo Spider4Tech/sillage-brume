@@ -42,7 +42,7 @@ def degres(R=40, n=NB, m=4, ds=3):
 
 
 # tests/dp_queue.py sur les paramètres de BRUME-1024q : seules les deux lignes d'import changent
-_SRC = os.path.join(_RACINE, "tests", "dp_queue.py")
+_SRC = os.path.join(_RACINE, "tests", "historique_v05", "dp_queue.py")  # v0.6 : moteur de la v0.5, archivé
 _t = open(_SRC).read()
 for a, b in (("from tests.dp_sat import degres\n", ""),
              ("from tests.pistes_monomiales import NB, N, _couches, table, plan, verifier",

@@ -1,17 +1,19 @@
-/* SILLAGE — implémentation C de référence (v0.4.0).
+/* SILLAGE — implémentation C de référence (v0.6.0).
  *
- * Conforme bit à bit à l'implémentation Python du paquet `sillage`
- * (vérifié par tests/test_c_impl.py) : mêmes KAT, mêmes encodages.
- * Prototype de recherche. BRUME-512 (AVX2 ; NEON : constant-time par construction, non mesuré), le KEM et la SIG (signataire) sont
- * constant-time vis-à-vis des secrets, par construction et par mesure
- * (tests/c/temps.c) ; sl_brume_permute_ref et le vérifieur ne le sont pas.
+ * v0.6 : BRUME-1024q remplace BRUME-512 (docs/MIGRATION_V06.md ; spécification docs/brume1024/SPEC.md). Le KEM et la
+ * signature ne changent pas (ils n'utilisent que SHAKE256) et restent conformes bit à bit au Python de référence
+ * (tests/test_c_impl.py). BRUME-1024q n'a pas de référence Python (décision D1) : sa référence est la seconde
+ * implémentation C écrite depuis la spécification seule (prototypes/brume_q/b1024/spec_ref.c, KAT de la SPEC § 4).
+ * Prototype de recherche. Constant-time vis-à-vis des secrets, par construction et par mesure (dudect, ctgrind) : noyaux
+ * BRUME-1024q AVX2 et portable, KEM, SIG (signataire) ; sl_brume_permute_ref, sl_brume_permute_inv_ref et le vérifieur
+ * ne le sont pas.
  *
  * Encodages (octets, petit-boutiste comme le Python) :
  *   KEM  pk = σ_h(32) ‖ s(⌈n/8⌉)          ct = u(⌈n/8⌉) ‖ v(n2/8)
  *        sk = x ‖ y ‖ σ_h(32) ‖ σ_rej(32) ‖ s
  *   SIG  pk = seed_H(32) ‖ y(⌈r/8⌉)       sk = x_A ‖ Q ‖ P
- *   AEAD profil 0 = BRUME-512, 1 = BRUME-512-256 ; clé 64 o, nonce 24 o.
- * Codes de retour : 0 succès, -1 tag invalide, -2 altération TE, -3 entrée.
+ *   AEAD profil 0 = BRUME-1024q (c = 384, seul profil depuis la v0.6) ; clé 64 o, nonce 24 o, tag 32 o.
+ * Codes de retour : 0 succès, -1 tag invalide, -2 altération TE, -3 entrée (profil, longueur > 2^63 − 1 octets).
  */
 #ifndef SILLAGE_H
 #define SILLAGE_H
@@ -24,7 +26,7 @@
 #include <arm_neon.h>
 #endif
 _Static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, "formats et états sérialisés depuis la mémoire : petit-boutiste uniquement");
-#define SL_NONCE 24                /* comme XChaCha20 : tirable au hasard (PROOFS § 4.3) */
+#define SL_NONCE 24                /* 24 octets ; unique par clé (docs/brume1024/SPEC.md § 3.5) */
 #ifdef SL_VALGRIND                 /* tests/test_c_*_valgrind.py : valeur déclarée publique */
 #include <valgrind/memcheck.h>
 #define SL_PUBLIC(p, n) VALGRIND_MAKE_MEM_DEFINED(p, n)
@@ -32,30 +34,35 @@ _Static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, "formats et états sé
 #define SL_PUBLIC(p, n) ((void)0)
 #endif
 
-/* À appeler une fois avant tout usage (construit les tables). */
+/* À appeler une fois avant tout usage (construit les tables), hors de toute région parallèle. */
 void sl_init(void);
 
-/* ---- BRUME-512 ---- */
-void sl_brume_permute(uint8_t etat[64]);      /* état empaqueté (128 nibbles) ;
-                                                 constant-time si AVX2 */
-void sl_brume_permute_ref(uint8_t etat[64]);  /* référence par tables (non constant-time) */
-void sl_brume_permute_lot(uint8_t etats[32][64]);   /* 32 états, constant-time (AVX2) */
+/* ---- BRUME-1024q (docs/brume1024/SPEC.md) ----
+ * État empaqueté de 128 octets (256 nibbles ; nibble 2i = demi-octet bas de l'octet i). Débit : octets 0..79 (r = 640
+ * bits), capacité : 80..127 (c = 384 bits), 32 tours. */
+void sl_brume_permute(uint8_t etat[128]);         /* constant-time (AVX2 ou noyau portable) */
+void sl_brume_permute_ref(uint8_t etat[128]);     /* référence dense (contrôles ; non constant-time) */
+void sl_brume_permute_inv_ref(uint8_t etat[128]); /* P⁻¹, référence dense (contrôles ; non constant-time) */
+void sl_brume_permute_lot(uint8_t etats[32][128]);   /* 32 états, constant-time */
+/* Condensé par défaut H (SPEC § 3.4) : éponge seule jusqu'à 8 Kio, arbre au-delà (feuilles de 8 Kio hachées en parallèle,
+ * CV de 64 octets, racine). Longueur de sortie libre ; 64 octets par défaut (décision D5 : 2^128 quantique en
+ * collision). sl_hash_arbre est la même fonction (nom gardé de la v0.5). */
 void sl_hash(const uint8_t *m, size_t len, uint8_t *out, size_t outlen);
-/* Hachage arborescent (docs/PROOFS.md § 4.4) : feuilles de 8 Kio hachées en
- * parallèle (lots de 32 états, tous les cœurs), racine sur les CV. Sortie
- * différente de sl_hash (autre fonction, domaines séparés). */
 void sl_hash_arbre(const uint8_t *m, size_t len, uint8_t *out, size_t outlen);
-void br_eponge(const uint8_t *m, size_t len, int dom, uint8_t *out, size_t outlen);
+/* XOF (SPEC § 3.3) : éponge à domaine 0, sortie de longueur libre. Autre fonction que sl_hash. */
+void sl_xof(const uint8_t *m, size_t len, uint8_t *out, size_t outlen);
+void br_eponge(const uint8_t *m, size_t len, int dom, uint8_t *out, size_t outlen);   /* éponge à domaine (0..15) */
+/* AEAD (SPEC § 3.5) : duplex à clé dans tout l'état, orientation SpongeWrap ; nonce unique par clé ; rien n'est rendu
+ * avant la vérification du tag (clair effacé en cas d'échec). */
 int sl_aead_encrypt(int profil, const uint8_t cle[64], const uint8_t nonce[SL_NONCE],
                     const uint8_t *aad, size_t aadlen, const uint8_t *pt, size_t len,
                     uint8_t *ct, uint8_t *tag);
 int sl_aead_decrypt(int profil, const uint8_t cle[64], const uint8_t nonce[SL_NONCE],
                     const uint8_t *aad, size_t aadlen, const uint8_t *ct, size_t len,
                     const uint8_t *tag, uint8_t *pt);
-size_t sl_aead_tag_len(int profil);
-/* Contexte de clé (état après absorption de la clé, précalculé) : évite 2
- * permutations par message (4 en BRUME-512-256). Matériel équivalent à la
- * clé : effacer avec sl_effacer(&c, sizeof c). Mêmes sorties. */
+size_t sl_aead_tag_len(int profil);                 /* 32 (profil 0), 0 sinon */
+/* Contexte de clé : la clé est dans tout l'état initial, il n'y a rien à précalculer ; le contexte garde la clé (API de
+ * la v0.5 conservée). Matériel secret : effacer avec sl_effacer(&c, sizeof c). Mêmes sorties. */
 typedef struct { int profil; uint8_t etat[64]; } sl_aead_cle_t;
 int sl_aead_cle(sl_aead_cle_t *c, int profil, const uint8_t cle[64]);
 int sl_aead_encrypt_ctx(const sl_aead_cle_t *c, const uint8_t nonce[SL_NONCE], const uint8_t *aad,
@@ -63,10 +70,9 @@ int sl_aead_encrypt_ctx(const sl_aead_cle_t *c, const uint8_t nonce[SL_NONCE], c
 int sl_aead_decrypt_ctx(const sl_aead_cle_t *c, const uint8_t nonce[SL_NONCE], const uint8_t *aad,
                         size_t aadlen, const uint8_t *ct, size_t len, const uint8_t *tag, uint8_t *pt);
 void sl_effacer(void *p, size_t n);
-/* AEAD parallèle (docs/PROOFS.md § 4.5) : profil 0 = BRUME-512p, 1 = BRUME-512-256p. Le message est coupé en
- * feuilles de SL_AEADP_FEUILLE octets, chacune suivie par son duplex à clé, sur tous les cœurs et par lots de
- * 32 états. Autre fonction que sl_aead_encrypt : autres chiffrés, autres tags. ct peut valoir pt. */
-#define SL_AEADP_LOG_FEUILLE 12
+/* AEAD parallèle (SPEC § 3.5 bis, mode 6) : feuilles de SL_AEADP_FEUILLE octets, chacune après deux appels de fourche,
+ * CV de 64 octets, racine ; feuilles calculées sur tous les cœurs. Autre fonction que sl_aead_encrypt. ct peut valoir pt. */
+#define SL_AEADP_LOG_FEUILLE 13
 #define SL_AEADP_FEUILLE (1u << SL_AEADP_LOG_FEUILLE)
 int sl_aead_p_encrypt(int profil, const uint8_t cle[64], const uint8_t nonce[SL_NONCE],
                       const uint8_t *aad, size_t aadlen, const uint8_t *pt, size_t len,
@@ -74,6 +80,8 @@ int sl_aead_p_encrypt(int profil, const uint8_t cle[64], const uint8_t nonce[SL_
 int sl_aead_p_decrypt(int profil, const uint8_t cle[64], const uint8_t nonce[SL_NONCE],
                       const uint8_t *aad, size_t aadlen, const uint8_t *ct, size_t len,
                       const uint8_t *tag, uint8_t *pt);
+/* Mode TE (SPEC § 3.7, docs/SPEC.md § 2.7) : 7 octets de parité par bloc de 64 octets du chiffré, correction d'un octet
+ * par bloc avant la vérification du tag. */
 size_t sl_te_par_len(size_t len);             /* 7 octets par bloc de 64 */
 int sl_te_encrypt(int profil, const uint8_t cle[64], const uint8_t nonce[SL_NONCE],
                   const uint8_t *aad, size_t aadlen, const uint8_t *pt, size_t len,
@@ -85,10 +93,9 @@ int sl_te_decrypt(int profil, const uint8_t cle[64], const uint8_t nonce[SL_NONC
                   const uint8_t *par, size_t parlen, const uint8_t *tag,
                   const uint8_t meta[8], uint8_t *pt, size_t *corrections, size_t *ncorr);
 
-/* ---- BRUME-512 par lots : n messages indépendants, traités 32 par 32
- * (AVX2, constant-time) et répartis sur les cœurs (OpenMP). Mêmes sorties
- * que les fonctions unitaires. aads/aadlens peuvent être NULL. tags : n ×
- * longueur de tag ; codes[i] : 0 ou -1 (tag invalide, clair mis à zéro). */
+/* ---- lots : n messages indépendants, répartis sur les cœurs (OpenMP) ; mêmes sorties que les fonctions unitaires.
+ * Chiffrement : au moins 32 messages de même longueur et mêmes données associées passent par les noyaux à 32 et 256
+ * états. aads/aadlens peuvent être NULL. tags : 32·n octets ; codes[i] : 0 ou -1 (tag invalide, clair effacé). */
 int sl_aead_encrypt_multi(int profil, size_t n, const uint8_t *cles, const uint8_t *nonces,
                           const uint8_t *const *aads, const size_t *aadlens, const uint8_t *const *pts,
                           const size_t *lens, uint8_t *const *cts, uint8_t *tags);
@@ -96,7 +103,7 @@ int sl_aead_decrypt_multi(int profil, size_t n, const uint8_t *cles, const uint8
                           const uint8_t *const *aads, const size_t *aadlens, const uint8_t *const *cts,
                           const size_t *lens, const uint8_t *tags, uint8_t *const *pts, int *codes);
 void sl_hash_multi(size_t n, const uint8_t *const *msgs, const size_t *lens, uint8_t *outs, size_t outlen);
-/* même clé pour les n messages (cas d'un serveur) : contexte précalculé */
+/* même clé pour les n messages (cas d'un serveur) */
 int sl_aead_encrypt_multi_ctx(const sl_aead_cle_t *c, size_t n, const uint8_t *nonces,
                               const uint8_t *const *aads, const size_t *aadlens, const uint8_t *const *pts,
                               const size_t *lens, uint8_t *const *cts, uint8_t *tags);
@@ -191,15 +198,4 @@ static inline void sl_clmul64(uint64_t a, uint64_t b, uint64_t *lo, uint64_t *hi
     *lo = l; *hi = h;
 #endif
 }
-void br_init_avx2(void);
-const uint8_t *br_etat_iv(int profil);
-void br_permuter_lot(uint8_t (*e)[64]);
-void br_absorber(uint64_t w[8], int rb, const uint8_t *d1, size_t l1, const uint8_t *d2, size_t l2, int dom);
-#ifdef __AVX2__
-void br_permuter_avx2(uint64_t w[8]);
-void br_tours_avx2(uint64_t w[8], int R);     /* les R premiers tours (cryptanalyse) */
-#elif defined(__ARM_NEON)
-void br_permuter_neon(uint64_t w[8]);
-#endif
-
 #endif

@@ -11,7 +11,7 @@ _ICI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _ICI)
 import b1024_module  # noqa: E402
 
-_SRC = os.path.normpath(os.path.join(_ICI, "..", "..", "..", "..", "tests", "pistes_monomiales.py"))
+_SRC = os.path.normpath(os.path.join(_ICI, "..", "..", "..", "..", "tests", "historique_v05", "pistes_monomiales.py"))  # v0.6 : moteur de la v0.5, archivé
 _LIGNE = "from sillage import brume512 as B"
 _texte = open(_SRC).read()
 assert _texte.count(_LIGNE) == 1

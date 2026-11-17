@@ -19,8 +19,9 @@
  *   c3_cnf modele diff|lin R K fichier  relit un modèle (lignes « v » du solveur), le contrôle contre
  *                                       la relaxation, sans passer par la CNF, et imprime le motif
  * Compilation (racine) :
- *   cc -O3 -march=native -fopenmp -I sillage/c -I tests/c prototypes/brume_q/sat/c3_cnf.c \
- *      sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c -o tests/c/build/c3_cnf
+ *   cc -O3 -march=native -fopenmp -I sillage/c -I tests/c -I tests/historique_v05/c_tests -I tests/historique_v05/c \
+ *      -I prototypes/brume_q/b1024 prototypes/brume_q/sat/c3_cnf.c sillage/c/commun.c sillage/c/brume1024.c \
+ *      -lm -o tests/c/build/c3_cnf      (v0.6 : la référence de BRUME-512, archivée, sert au mode 512)
  */
 #include <stdio.h>
 #include <stdlib.h>

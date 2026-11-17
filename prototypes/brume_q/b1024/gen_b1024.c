@@ -1,6 +1,6 @@
 /* BRUME-1024 (prototype, hors suite) : sélection déterministe des paramètres figés et contrôles, en reprenant la règle de
  * BRUME-512 (sillage/select_params.py) transposée à 256 nibbles, plus les critères fixés d'avance dans
- * prototypes/brume_q/WIDTH_ANALYSIS.md § 6 (critère 1).
+ * docs/brume1024/WIDTH_ANALYSIS.md § 6 (critère 1).
  *
  * 1. S-box : celle de BRUME-512 v0.5 (AD412650BFEC7893), inchangée.
  * 2. Graphe : groupe D₂₅₆ = Z/128 ⋊ Z/2 (loi (a, f)·(b, g) = (a + (−1)^f b, f ⊕ g), sommet v = a + 128·f), 6 réflexions
@@ -13,9 +13,11 @@
  * 4. Constantes : RC = SHAKE256("BRUME-1024-v1-RC"), octet (256·r + j) mod 16.
  * Contrôles : B différentiel et linéaire exacts (poids ≤ 3 des deux côtés, M, M⁻¹, Mᵀ, (Mᵀ)⁻¹), aucune translation
  * invariante, graphe pondéré asymétrique (Weisfeiler–Lehman), ordre de M > 256, densité de M⁻¹, constantes distinctes.
- *   cc -O3 -march=native -fopenmp -I sillage/c -I tests/c prototypes/brume_q/b1024/gen_b1024.c sillage/c/commun.c \
- *      sillage/c/brume512.c sillage/c/brume512_avx2.c -lm -o tests/c/build/gen_b1024
- *   tests/c/build/gen_b1024 prototypes/brume_q/b1024/b1024_tables.h prototypes/brume_q/b1024/b1024_lot.h
+ *   v0.6 : le générateur garde la référence de BRUME-512 pour GF(16) et la S-box (archivée) ; il écrit les en-têtes de la
+ *   bibliothèque. Ne régénérer que pour un changement voulu de la fonction (les KAT changeraient).
+ *   cc -O3 -march=native -fopenmp -I sillage/c -I tests/historique_v05/c_tests -I tests/historique_v05/c \
+ *      prototypes/brume_q/b1024/gen_b1024.c sillage/c/commun.c -lm -o tests/c/build/gen_b1024
+ *   tests/c/build/gen_b1024 /tmp/brume1024_tables.h /tmp/brume1024_lot.h   (à comparer à sillage/c/brume1024_*.h)
  */
 #include <math.h>
 #include <stdio.h>

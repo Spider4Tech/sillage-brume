@@ -8,13 +8,13 @@ Since 13 November 2026, at the author's request, work focuses on **BRUME-1024q**
 - capacity c = 384;
 - rate 640 bits.
 
-Its README is `b1024/README.md`, and what remains to do is in `b1024/ROADMAP.md`.
+Its documentation (specification, proofs, studies) is in `docs/brume1024/` since v0.6: README `docs/brume1024/README.md`, what remains to do in `docs/brume1024/ROADMAP.md`. The tools stay in `b1024/`.
 
 **BRUME-512q is abandoned.** It was the suite's permutation with c = 384 and a rate of 128 bits. It was slower (37 MB/s on
 the sponge against 106) and had a lower proved quantum bound (min(r, c) = 128 against 384).
 - Its prototype (`brume_q.c`, its README and `resultats/brume_q.*`) was removed from the repository on 13 November 2026.
 - It is kept in `~/dev/orion_archive_brume512q_20261113.tar.gz`, outside the repository.
-- Its generic quantum analysis, valid for any c = 384 sponge, was moved to `b1024/README.md` § 5.
+- Its generic quantum analysis, valid for any c = 384 sponge, was moved to `docs/brume1024/README.md` § 5.
 
 | Path | Role |
 |---|---|

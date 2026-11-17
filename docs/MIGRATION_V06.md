@@ -1,10 +1,15 @@
 # Migration v0.6: BRUME-1024q replaces BRUME-512
 
 Written on 13 November 2026, after the author's decision: **in v0.6, BRUME-1024q replaces the classical BRUME-512** in the
-suite. This document lists what the change touches, the decisions it needs, and the order of work. **Nothing in `sillage/`
-is modified before the author has validated it.**
+suite. This document lists what the change touches, the decisions it needs, and the order of work.
 
-The reference of BRUME-1024q is `prototypes/brume_q/b1024/SPEC.md` (draft v0.6-2, 16 November). The state of the prototype is in its
+> **v0.6.0 prepared on 17 November 2026, release held** (one open timing finding, § 5) at the author's request ("officiel sortie version v0.6"), with three
+> choices made that day: the BRUME-512 tests are archived outside the battery (`tests/historique_v05/`); the
+> specification, proofs and studies of BRUME-1024q are moved to `docs/brume1024/`, the tools staying in
+> `prototypes/brume_q/b1024/`; the work is done on a branch, merged and tagged once the full battery passes. What was
+> done is in § 5 below.
+
+The reference of BRUME-1024q is `docs/brume1024/SPEC.md` (draft v0.6-2, 16 November). The state of the prototype is in its
 README, `ROADMAP.md`, `AEAD_SECURITY.md` and `DOMAINS.md`.
 
 ## 1. What the change touches, and what it does not
@@ -31,7 +36,7 @@ README, `ROADMAP.md`, `AEAD_SECURITY.md` and `DOMAINS.md`.
 **Decided by the author on 14 November 2026:** D1 (a), D2 (a), D3 (a), D5 (64 bytes), D6 (portable constant-time
 kernel, then NEON), and **D4 (b): port the parallel AEAD and the TE mode to BRUME-1024q**, since BRUME-512 leaves the
 suite. Each port gets its own design and proof, written before the code (no security traded for a negligible gain).
-**Done on 14 November:** `prototypes/brume_q/b1024/V06_MODES.md` gives both. The TE mode reduces exactly to the AEAD
+**Done on 14 November:** `docs/brume1024/V06_MODES.md` gives both. The TE mode reduces exactly to the AEAD
 (Proposition TE). The parallel AEAD is proposed with its parameters (mode 6, B = 8 192, CV of 64 bytes, domains 1, 5, 3,
 2, 4); its encoding lemma is checked mechanically, and Theorem P (classical) and its Q1 corollary are proved. The
 parameters await the author; no code is written yet.
@@ -75,3 +80,20 @@ D7 stays the gate for v0.6. The table below keeps the options as they were prese
   - Constant time measured on two machines.
   - No credentials or machine details in the repository.
 - **The status: research, not for production**, until a human review.
+
+## 5. What was done for v0.6.0 (17 November 2026)
+
+- **Library** (`sillage/c/`): `brume1024.c` (the prototype's code, with the public API of `sillage.h` kept per D3), the
+  generated headers `brume1024_*.h`, the portable constant-time kernel when AVX2 is absent (D6; no NEON kernel yet), the
+  TE layer of v0.5 over the new AEAD (D4), the parallel AEAD (D4), batches. `brume512*` removed from the library.
+- **Python** (`sillage/`): bindings and C-only classes `Brume1024`, `Brume1024P`, `brume1024_hash`, `brume1024_xof`
+  (D1: no Python reference); `brume512.py` and `select_params.py` archived.
+- **Battery**: BRUME-512 tests archived; mixed tests ported (functional, C conformance, API, error paths, robustness,
+  fuzzing, timing, Valgrind, proof bounds); new tests: `brume1024`, `brume1024_api`, `brume1024_api_portable`,
+  `temps1024`, `test_c_brume1024_valgrind`, `test_b1024_*` (second implementation, proof checks, certificates,
+  structure, statistics, study tools).
+- **Documents**: `docs/SPEC.md` § 2 and `docs/PROOFS.md` § 4 rewritten for BRUME-1024q (the v0.5 texts are in
+  `tests/historique_v05/`); `docs/brume1024/` created; README, CI, citation updated.
+- **Gate D7**: SPEC written and checked by a second implementation — yes; AE step of the AEAD proof — yes; PROOFS § 4
+  rewritten — yes; battery ported and complete — 615/617 on 17 November, the open point being the dudect signal of the portable kernel built with `-march=native` on Zen 3 (`AUDIT_REPORT.md`), which holds the release; human review — still open, as for v0.5.
+

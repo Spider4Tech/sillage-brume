@@ -6,7 +6,7 @@
  *   bs_sbox(x0..x3, o) : la S-box seule (couche initiale).
  * Diffusion : les XOR communs aux 4 plans de sortie d'un sommet sont partagés (Paar glouton) ; « sans_paar » les écrit en chaînes.
  *   cc -O2 -march=native -fopenmp -DSANS_MAIN -I sillage/c -I tests/c -I prototypes/brume_q/b1024 \
- *      prototypes/brume_q/b1024/gen_bitslice.c sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c -lm \
+ *      prototypes/brume_q/b1024/gen_bitslice.c sillage/c/commun.c -lm \
  *      -o tests/c/build/gen_bitslice && tests/c/build/gen_bitslice > prototypes/brume_q/b1024/b1024_bs.h */
 #include "brume1024.c"
 
@@ -56,7 +56,7 @@ static int circuit_conforme(int ks)
 int main(int argc, char **argv)
 {
     int paar = !(argc > 1 && !strcmp(argv[1], "sans_paar"));   /* « sans_paar » : chaînes de XOR directes */
-    if (!bref_init() || !ref_init())
+    if (!ref_init())
         return 2;
     /* forme algébrique normale de la S-box : ANF[i][m] = coefficient du monôme m dans le bit de sortie i */
     int anf[4][16];

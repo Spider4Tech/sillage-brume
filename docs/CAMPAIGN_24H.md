@@ -67,6 +67,11 @@ At the end, or at each stop, the program writes `resultats/campagne_<date>.tar.g
 
 It contains the results, the logs and a machine sheet (processor, memory, software versions). The machine name, your user name and your home-folder paths are removed from the files, and the owner is cleared from the archive. The program refuses to create the archive if one of these paths remains. You can inspect it before sending it: `tar tvzf resultats/campagne_*.tar.gz`.
 
+> **v0.6 (17 November 2026).** Sections 6 and 7 describe BRUME-512 campaigns (`runspecial`, `rungpu*`); their scripts
+> and GPU programs are archived in `tests/historique_v05/scripts/` and `tests/historique_v05/gpu/`. The long BRUME-1024q
+> campaigns are run with the tools of `prototypes/brume_q/b1024/` (`campagne_locale.sh`, `campagne_aead.c`, the GPU
+> boomerang in `gpu/`) and are documented in `docs/brume1024/`.
+
 ## 6. Targeted dudect: `./scripts/runspecial`
 
 `aead` and `kem_decaps` exceeded |t| = 4.5 at the first measurement of the 2026-10-31 campaign, then passed at the second one, which had dropped its fixed values. `./scripts/runspecial` looks for the origin: address sweep, key and plaintext separated, identical preparation of both classes, A/A without ASLR. Allow ≈ 5 h 45, on an idle machine, with the campaign's compiler (`--bloc aead`: ≈ 2 h 10). Options: `./scripts/runspecial --help`. Result: `resultats/special/<date>/BILAN.md`.

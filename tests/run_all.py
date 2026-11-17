@@ -24,24 +24,13 @@ from tests.commun import RACINE, RESULTATS
 # (module, fichier de résultats, thème) — ordre = ordre de la synthèse
 TESTS = [
     ("test_fonctionnel", "fonctionnel", "Fonctionnel"),
-    ("test_aead", "aead", "Modes BRUME"),
-    ("test_te", "te", "Modes BRUME"),
-    ("test_hachage", "hachage", "Modes BRUME"),
-    ("test_mode_aead", "mode_aead", "Modes BRUME"),
-    ("test_aead_modele", "aead_modele", "Modes BRUME"),
-    ("test_hachage_arbre", "hachage_arbre", "Modes BRUME"),
-    ("test_indiff_arbre", "indiff_arbre", "Modes BRUME"),
-    ("test_aead_parallele", "aead_parallele", "Modes BRUME"),
-    ("test_branch_exact", "branch_exact", "Permutation BRUME"),
-    ("test_banc_cryptanalyse", "banc_cryptanalyse", "Permutation BRUME"),
-    ("test_diff_lin_empirique", "diff_lin_empirique", "Permutation BRUME"),
-    ("test_cycles", "cycles", "Permutation BRUME"),
-    ("test_beam_trails", "beam_trails", "Permutation BRUME"),
-    ("test_integral_degre", "integral_degre", "Permutation BRUME"),
-    ("test_symetries_invariants", "symetries_invariants", "Permutation BRUME"),
-    ("test_hull", "hull", "Permutation BRUME"),
-    ("test_division_property", "division_property", "Permutation BRUME"),
-    ("test_diffusion_stats", "diffusion_stats", "Permutation BRUME"),
+    ("c:brume1024_api", "brume1024_api", "BRUME-1024q : modes"),
+    ("c:brume1024_api_portable", "brume1024_api_portable", "BRUME-1024q : modes"),
+    ("c:brume1024", "brume1024", "BRUME-1024q : modes"),
+    ("test_b1024_seconde_implementation", "b1024_seconde_implementation", "BRUME-1024q : modes"),
+    ("test_b1024_preuves", "b1024_preuves", "BRUME-1024q : modes"),
+    ("test_b1024_certificats", "b1024_certificats", "BRUME-1024q : permutation"),
+    ("test_b1024_structure", "b1024_structure", "BRUME-1024q : permutation"),
     ("test_kem", "kem", "Sillage-KEM"),
     ("test_kem_lemme3", "kem_lemme3", "Sillage-KEM"),
     ("test_sig", "sig", "Sillage-SIG"),
@@ -51,7 +40,6 @@ TESTS = [
     ("test_vole_kz", "vole_kz", "Sillage-SIG v0.5 (VOLE)"),
     ("test_isd_parametres", "isd_parametres", "Paramètres"),
     ("test_bornes_preuves", "bornes_preuves", "Paramètres"),
-    ("test_select_params", "select_params", "Paramètres"),
     ("test_robustesse", "robustesse", "Robustesse"),
     ("test_erreurs_api", "erreurs_api", "Robustesse"),
     ("test_c_impl", "c_impl", "Implémentation C"),
@@ -59,47 +47,33 @@ TESTS = [
     ("test_c_sig_valgrind", "c_sig_valgrind", "Implémentation C"),
     ("test_c_kem_valgrind", "c_kem_valgrind", "Implémentation C"),
     ("test_c_vole_valgrind", "c_vole_valgrind", "Implémentation C"),
+    ("test_c_brume1024_valgrind", "c_brume1024_valgrind", "Implémentation C"),
     ("test_api_c", "api_c", "Implémentation C"),
-    ("test_c_simd", "c_simd", "Implémentation C"),
     ("test_c_limites", "c_limites", "Implémentation C"),
-    ("test_c_integral", "c_integral", "Intensif (C)"),
-    ("test_c_diff_lin", "c_diff_lin", "Intensif (C)"),
-    ("test_c_sac", "c_sac", "Intensif (C)"),
-    ("test_c_statistiques", "c_statistiques", "Intensif (C)"),
+    ("c:revue_c", "revue_c", "Implémentation C"),
+    ("test_b1024_statistiques", "b1024_statistiques", "Intensif (C)"),
+    ("test_b1024_etudes", "b1024_etudes", "Intensif (C)"),
+    ("c:temps1024", "temps1024", "Intensif (C)"),
     ("test_c_kem_bruit", "c_kem_bruit", "Intensif (C)"),
-    ("test_c_cube_init", "c_cube_init", "Intensif (C)"),
-    ("test_c_degre", "c_degre", "Intensif (C)"),
     ("test_c_temps", "c_temps", "Intensif (C)"),
     ("test_c_vole_temps", "c_vole_temps", "Intensif (C)"),
-    ("test_dp_modele", "dp_modele", "Intensif (C)"),
-    ("test_dp_tous_cubes", "dp_tous_cubes", "Intensif (C)"),
-    ("test_dp_exact", "dp_exact", "Intensif (C)"),
-    ("test_dp_validation", "dp_validation", "Intensif (C)"),
-    ("c:revue_c", "revue_c", "Implémentation C"),
-    ("c:structure_miss", "structure_miss", "Intensif (C)"),
     ("c:isd_reel", "isd_reel", "Intensif (C)"),
     ("c:isd_comparaison", "isd_comparaison", "Intensif (C)"),
-    ("c:diffusion_support", "diffusion_support", "Intensif (C)"),
     ("c:kem_distributions", "kem_distributions", "Intensif (C)"),
     ("c:h1p_fourier", "h1p_fourier", "Intensif (C)"),
-    ("c:invariants", "invariants", "Intensif (C)"),
     ("c:kem_rejet", "kem_rejet", "Intensif (C)"),
     ("test_kem_theta", "kem_theta", "Intensif (C)"),
-    ("c:brume_gd2", "brume_gd2", "Intensif (C)"),
     ("c:sig_flux", "sig_flux", "Intensif (C)"),
     ("c:sig_kz", "sig_kz", "Intensif (C)"),
-    ("c:brume_attaques", "brume_attaques", "Intensif (C)"),
-    ("c:mini_brume", "mini_brume", "Intensif (C)"),
     ("c:vole_proto", "vole_proto", "Intensif (C)"),
     ("c:compression_sig", "compression_sig", "Intensif (C)"),
-    ("test_brume_algebre", "brume_algebre", "Intensif (C)"),
 ]
 INTENSIF = "Intensif (C)"
 
 
 INTENSITE = float(os.environ.get("SILLAGE_INTENSITE", "1"))
 # Les tests du noyau C (tests/noyau_c.py) suffixent leur fichier de résultats quand SILLAGE_INTENSITE ≠ 1.
-AVEC_SUFFIXE = {"c_integral", "c_diff_lin", "c_sac", "c_statistiques", "c_kem_bruit", "c_cube_init", "c_degre"}
+AVEC_SUFFIXE = {"c_kem_bruit"}
 
 
 def fichier_resultat(nom):
@@ -170,7 +144,7 @@ def main():
         lignes.append(f"| `{nom}` | {len(ctrl) - len(ko)}/{len(ctrl)} | {dt} s | "
                       f"{'OK' if not ko else 'ÉCHEC : ' + ', '.join(ko)} |")
     total = sum(len(s["controles"]) for s in synth.values())
-    tete = (f"# Synthèse de la batterie SILLAGE v0.5\n\n"
+    tete = (f"# Synthèse de la batterie SILLAGE v0.6\n\n"
             f"{total - len(echecs)}/{total} contrôles réussis — "
             f"{len(choix)} tests — {round(time.time() - t0)} s "
             f"({time.strftime('%Y-%m-%d %H:%M')}).\n\n"

@@ -4,8 +4,10 @@ The documents are in English. Until 2026-11-03 each one also had a French versio
 
 | Document | Content | Status |
 |---|---|---|
-| [`SPEC.md`](SPEC.md) | Normative specification: encodings, tables, algorithms and known answers for BRUME-512 and its modes, Sillage-KEM and Sillage-SIG | Draft for review, written from the reference implementation |
-| [`PROOFS.md`](PROOFS.md) | Assumptions, theorems and proofs for the KEM, the signature, BRUME-512, the AEAD and hash modes; parameter derivations; quantum analysis; what remains outside the proofs | Maintained |
+| [`SPEC.md`](SPEC.md) | Normative specification: encodings, algorithms and known answers for BRUME-1024q and its modes (by reference to `brume1024/SPEC.md`), Sillage-KEM and Sillage-SIG | Draft for review, written from the reference implementation |
+| [`PROOFS.md`](PROOFS.md) | Assumptions, theorems and proofs for the KEM, the signature, BRUME-1024q, the AEAD and hash modes; parameter derivations; quantum analysis; what remains outside the proofs | Maintained |
+| [`MIGRATION_V06.md`](MIGRATION_V06.md) | The v0.6 change (BRUME-1024q replaces BRUME-512): decisions D1–D7 and what was done | Done (17 November 2026) |
+| [`brume1024/`](brume1024/) | BRUME-1024q: normative specification (`SPEC.md`) and test vectors, README (design, certified bounds, measurements), AEAD proof (`AEAD_SECURITY.md`), quantum hash bound (`SPONGE_QROM.md`) and its verification (`CM_VERIFICATION.md`), v0.6 modes (`V06_MODES.md`), domains, width analysis, cryptanalysis studies (`ETUDE_GROUPE_STRUCTURE.md`, `ALGEBRIQUE.md`, `REBOND.md`, `DIFF_LIN.md`), attack model for 32 rounds (`NIVEAU3.md`), roadmap | Ours, not reviewed |
 | [`AUDIT_REPORT.md`](AUDIT_REPORT.md) | Development history: every flaw found (by the test suite, by external reviews or by re-reading), how it was found and how it was fixed; dated errata | Maintained |
 | [`LEADS.md`](LEADS.md) | Measured optimisations and research leads that were **not** adopted, and the security conditions under which they could be | Maintained |
 | [`DESIGN_NOTE.md`](DESIGN_NOTE.md) | The original design note: the “cryptography by decoding” idea behind the suite | Historical; the constructions have since departed from it |
@@ -17,7 +19,7 @@ External review reports kept in their original French, with no English version: 
 
 ## Where results live
 
-`resultats/` keeps only summaries and certificates in the repository: [`SYNTHESE.md`](../resultats/SYNTHESE.md) (latest full test run), [`EMPREINTES.md`](../resultats/EMPREINTES.md) (SHA-256 fingerprints of sources, KATs and results), the benchmarks, and the division-property trail certificates (`pistes_*.json`). These files, the code comments and the test names are in French. Per-test JSON files and campaign logs are produced locally.
+`resultats/` keeps only summaries and certificates in the repository: [`SYNTHESE.md`](../resultats/SYNTHESE.md) (latest full test run), [`EMPREINTES.md`](../resultats/EMPREINTES.md) (SHA-256 fingerprints of sources, KATs and results), the C benchmark, and the division-property trail certificates of BRUME-512 (`pistes_*.json`, v0.5). The certificates of BRUME-1024q (C4 ≥ 28) are in `prototypes/brume_q/sat/c4_K28/`. These files, the code comments and the test names are in French. Per-test JSON files and campaign logs are produced locally.
 
 ## A short French glossary
 

@@ -1,7 +1,7 @@
 # Reproduction package of C4 ≥ 28 (BRUME-1024q)
 
 Everything needed to check, or to redo, the certificate that every characteristic over 4 rounds of BRUME-1024q has at
-least 28 active S-boxes (`../../b1024/README.md` § 3), without the machines it ran on. The LRAT proofs themselves are
+least 28 active S-boxes (`docs/brume1024/README.md` § 3), without the machines it ran on. The LRAT proofs themselves are
 not here: they weighed several GB each and were deleted once both checkers had accepted them. They are reproducible:
 same CNF, same solver, same cubes.
 

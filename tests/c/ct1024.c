@@ -6,9 +6,9 @@
  *             comparées au même calcul sans marquage (« secret retrouvé ») ;
  *   memoire : le même calcul sans marquage (erreurs mémoire et fuites) ;
  *   temoin  : lecture d'une table à un indice secret : doit être détectée.
- *   gcc -O3 -g -mavx2 -fopenmp -DSANS_MAIN -DSL_VALGRIND -I sillage/c -I tests/c -I prototypes/brume_q/b1024 \
- *       prototypes/brume_q/b1024/ct1024.c sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c -lm -o ct1024
- *   OMP_NUM_THREADS=1 valgrind --error-exitcode=0 ./ct1024 secret */
+ *   construit et lancé par tests/test_c_brume1024_valgrind.py (gcc -O3 -g -mavx2 -DSANS_MAIN -DSL_VALGRIND ; il inclut
+ *   tests/c/brume1024.c, donc la bibliothèque sillage/c/brume1024.c) :
+ *   OMP_NUM_THREADS=1 valgrind --error-exitcode=0 tests/c/build/ct1024 secret */
 #include <valgrind/memcheck.h>
 
 #include "brume1024.c"
@@ -98,7 +98,7 @@ static void calcul(uint8_t out[64])
 int main(int argc, char **argv)
 {
     const char *mode = argc > 1 ? argv[1] : "secret";
-    if (!bref_init() || !ref_init() || !init_noyaux())
+    if (!ref_init() || !init_noyaux())
         return 2;
     prepare_iv();
     if (!strcmp(mode, "temoin")) {

@@ -15,7 +15,8 @@ import subprocess
 
 ICI = os.path.join(os.path.dirname(os.path.abspath(__file__)), "c")
 BUILD = os.path.join(ICI, "build")
-SOURCES = ["commun.c", "brume512.c", "brume512_avx2.c", "kem.c", "sig.c", "vole.c", "isd.c"]
+SOURCES = ["commun.c", "brume1024.c", "kem.c", "sig.c", "vole.c", "isd.c"]
+ENTETES = ["sillage.h", "brume1024_tables.h", "brume1024_portable.h", "brume1024_bs.h", "brume1024_lot.h"]
 OPTIONS = os.environ.get("SILLAGE_CFLAGS", "-O3").split()
 _lib = None
 
@@ -25,7 +26,7 @@ _sz = ctypes.c_size_t
 
 def _empreinte():
     h = hashlib.sha256()
-    for f in SOURCES + ["sillage.h", "brume512_tables.h", "brume512_simd.h"]:
+    for f in SOURCES + ENTETES:
         h.update(open(os.path.join(ICI, f), "rb").read())
     with open("/proc/cpuinfo", "rb") as f:          # -march=native : .so propre à ce CPU
         h.update(next((l for l in f if l.startswith(b"flags")), b""))
@@ -70,28 +71,37 @@ def _ok(rc):
         raise OSError(f"SILLAGE C : code {rc} (aléa système indisponible ?)")
 
 
-# ------------------------------------------------------------- BRUME-512
-PROFILS = {"BRUME-512": 0, "BRUME-512-256": 1}
+# ------------------------------------------------------------- BRUME-1024q (v0.6, docs/brume1024/SPEC.md)
+PROFILS = {"BRUME-1024q": 0}
+TAILLE_ETAT = 128
 
 
-def permute(etat64: bytes) -> bytes:
-    b = _buf(64); b.raw = etat64
+def permute(etat: bytes) -> bytes:
+    """P sur un état empaqueté de 128 octets (constant-time)."""
+    b = _buf(TAILLE_ETAT); b.raw = etat
     lib().sl_brume_permute(b)
-    return b.raw[:64]
+    return b.raw[:TAILLE_ETAT]
 
 
-def permute_ref(etat64: bytes) -> bytes:
-    """Permutation de référence (tables, non constant-time)."""
-    b = _buf(64); b.raw = etat64
+def permute_ref(etat: bytes) -> bytes:
+    """Permutation de référence (dense, non constant-time)."""
+    b = _buf(TAILLE_ETAT); b.raw = etat
     lib().sl_brume_permute_ref(b)
-    return b.raw[:64]
+    return b.raw[:TAILLE_ETAT]
+
+
+def permute_inv_ref(etat: bytes) -> bytes:
+    """P⁻¹, référence dense (non constant-time)."""
+    b = _buf(TAILLE_ETAT); b.raw = etat
+    lib().sl_brume_permute_inv_ref(b)
+    return b.raw[:TAILLE_ETAT]
 
 
 def permute_lot(etats):
-    """32 états empaquetés (64 o chacun) → 32 états (noyau vertical AVX2)."""
-    b = _buf(32 * 64); b.raw = b"".join(etats)
+    """32 états empaquetés (128 o chacun) → 32 états."""
+    b = _buf(32 * TAILLE_ETAT); b.raw = b"".join(etats)
     lib().sl_brume_permute_lot(b)
-    return [b.raw[64 * i:64 * i + 64] for i in range(32)]
+    return [b.raw[TAILLE_ETAT * i:TAILLE_ETAT * (i + 1)] for i in range(32)]
 
 
 def _tableau(blocs):
@@ -126,7 +136,7 @@ def aead_decrypt_multi(profil, cles, nonces, cts, tags, aads=None):
 
 
 class CleAEAD(ctypes.Structure):
-    """Contexte de clé (état après absorption de la clé) — sl_aead_cle_t."""
+    """Contexte de clé (garde la clé : le duplex est à clé dans tout l'état) — sl_aead_cle_t."""
     _fields_ = [("profil", ctypes.c_int), ("etat", ctypes.c_uint8 * 64)]
 
 
@@ -167,20 +177,28 @@ def aead_decrypt_multi_ctx(c, nonces, cts, tags, aads=None):
     return [sorties[i].raw[:len(cts[i])] if codes[i] == 0 else None for i in range(n)]
 
 
-def hash_multi(msgs, out_len=32):
+def hash_multi(msgs, out_len=64):
     m_arr, m_len = _tableau(msgs)
     out = _buf(out_len * len(msgs))
     lib().sl_hash_multi(_sz(len(msgs)), m_arr, m_len, out, _sz(out_len))
     return [out.raw[out_len * i:out_len * i + out_len] for i in range(len(msgs))]
 
 
-def hash(msg: bytes, out_len: int = 32) -> bytes:
+def hash(msg: bytes, out_len: int = 64) -> bytes:
+    """Condensé par défaut H (SPEC § 3.4), 64 octets par défaut (décision D5)."""
     out = _buf(out_len)
     lib().sl_hash(msg, _sz(len(msg)), out, _sz(out_len))
     return out.raw[:out_len]
 
 
-def hash_arbre(msg: bytes, out_len: int = 32) -> bytes:
+def xof(msg: bytes, out_len: int) -> bytes:
+    """XOF (SPEC § 3.3), sortie de longueur libre."""
+    out = _buf(out_len)
+    lib().sl_xof(msg, _sz(len(msg)), out, _sz(out_len))
+    return out.raw[:out_len]
+
+
+def hash_arbre(msg: bytes, out_len: int = 64) -> bytes:
     out = _buf(out_len)
     lib().sl_hash_arbre(msg, _sz(len(msg)), out, _sz(out_len))
     return out.raw[:out_len]
@@ -200,7 +218,7 @@ def aead_decrypt(profil, cle, nonce, ct, tag, aad=b""):
     return pt.raw[:len(ct)] if rc == 0 else None
 
 
-PROFILS_P = {"BRUME-512p": 0, "BRUME-512-256p": 1}
+PROFILS_P = {"BRUME-1024qp": 0}
 
 
 def aead_p_encrypt(profil, cle, nonce, pt, aad=b""):

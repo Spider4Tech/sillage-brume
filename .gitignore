@@ -18,7 +18,7 @@ resultats/*
 !resultats/SYNTHESE.md
 !resultats/EMPREINTES.md
 !resultats/BENCH_C.md
-!resultats/BENCH_TAILLES.md
+
 !resultats/pistes_division.json
 !resultats/pistes_exactes.json
 

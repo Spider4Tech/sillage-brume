@@ -6,7 +6,7 @@
  *   B1_DIFF64_FUS(y0, y1, z0, z1, ...) et B1_DIFF64_ID(...) : les mêmes sur 64 états (deux registres par nibble, une seule
  *                                       lecture de la table du coefficient pour les deux).
  *   cc -O2 -fopenmp -DSANS_MAIN -I sillage/c -I tests/c -I prototypes/brume_q/b1024 prototypes/brume_q/b1024/gen_lot_variantes.c \
- *      sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c -lm -o tests/c/build/gen_lot_variantes \
+ *      sillage/c/commun.c -lm -o tests/c/build/gen_lot_variantes \
  *      && tests/c/build/gen_lot_variantes > prototypes/brume_q/b1024/b1024_lot_var.h */
 #include "brume1024.c"
 
@@ -62,7 +62,7 @@ static void macro(const char *nom, int n, int fus)
 
 int main(void)
 {
-    if (!bref_init() || !ref_init())
+    if (!ref_init())
         return 2;
     printf("/* Généré par prototypes/brume_q/b1024/gen_lot_variantes.c — ne pas éditer. Variantes du noyau à 32 états "
            "(ROADMAP.md, priorité 2). */\n\n");

@@ -1,5 +1,7 @@
 # BRUME-1024q — roadmap
 
+> **v0.6 (17 November 2026).** This document now lives in `docs/brume1024/`. BRUME-1024q is the permutation of the suite: its code is `sillage/c/brume1024.c` and its checks are in the battery (`tests/c/brume1024.c`, `tests/c/brume1024_api.c`, `tests/test_b1024_*.py`). File names cited below without a path are documents of this folder (`*.md`) or tools of `prototypes/brume_q/b1024/` (programs, scripts, `dp1024/`, `gpu/`, `cm26_verif/`, …); `brume1024.c` meant the prototype, whose code is now the library.
+
 Written on 12 November 2026, **rewritten on 13 November 2026**. Work concerns **this prototype only** (`b1024/`):
 BRUME-512q is abandoned, and the suite (`sillage/`) is not modified.
 
@@ -14,6 +16,8 @@ Status legend:
 - **author**: the decision is the author's.
 
 **v0.6 (decision of the author, 13 November 2026): BRUME-1024q replaces BRUME-512 in the suite** (`docs/MIGRATION_V06.md`).
+**v0.6.0 released on 17 November 2026**: the library, the battery and the documents are migrated (`docs/MIGRATION_V06.md`
+§ 5). Rows below that say "prototype" describe the state before the release.
 
 **Order.**
 1. The AEAD, now corrected (SpongeWrap orientation): verify it widely, then write its proof.

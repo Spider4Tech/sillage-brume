@@ -57,27 +57,27 @@ int main(int argc, char **argv)
     static const size_t TAILLES[] = {0, 16, 64, 256, 1024, 4096, 16384, 65536, 262144,
                                      1048576, 4194304, 16777216};
     sl_init();
-    uint8_t cle[64], nonce[SL_NONCE], tag[32], tag2[32], meta[8], ss[64], ss2[64];
+    uint8_t cle[64], nonce[SL_NONCE], tag[32], meta[8], ss[64], ss2[64];
     sl_alea(cle, 64);
     sl_alea(nonce, SL_NONCE);
     double t;
     printf("{\n");
 
     /* permutation seule */
-    uint8_t etat[64] = {0};
+    uint8_t etat[128] = {0};
     MESURE(t, sl_brume_permute(etat));
     printf(" \"permutation_us\": %.4f,\n", 1e6 * t);
     MESURE(t, sl_brume_permute_ref(etat));
     printf(" \"permutation_ref_us\": %.4f,\n", 1e6 * t);
     {
-        static uint8_t lot[32][64];
+        static uint8_t lot[32][128];
         MESURE(t, sl_brume_permute_lot(lot));
         printf(" \"permutation_lot_us_par_etat\": %.4f,\n", 1e6 * t / 32);
     }
 
     /* petits messages : clé passée à chaque appel ou contexte de clé */
     {
-        uint8_t m64[64] = {0}, c64[64], t64[16];
+        uint8_t m64[64] = {0}, c64[64], t64[32];
         sl_aead_cle_t ctx;
         double ta, tb;
         MESURE(ta, sl_aead_encrypt(0, cle, nonce, NULL, 0, m64, 64, c64, t64));
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
     for (int ti = 0; ti < 4; ti++) {
         size_t S = TM[ti], n = ((size_t)32 << 20) / S;
         uint8_t *dat = malloc(n * S), *chf = malloc(n * S), *cl = malloc(64 * n), *no = malloc(SL_NONCE * n),
-                *tg = malloc(32 * n), *hs = malloc(32 * n);
+                *tg = malloc(32 * n), *hs = malloc(64 * n);
         const uint8_t **pp = malloc(n * sizeof *pp);
         uint8_t **cp = malloc(n * sizeof *cp);
         size_t *ln = malloc(n * sizeof *ln);
@@ -104,20 +104,20 @@ int main(int argc, char **argv)
         MESURE(t1, sl_aead_encrypt_multi(0, n, cl, no, NULL, NULL, pp, ln, cp, tg));
         omp_set_num_threads(nth);
         MESURE(tn, sl_aead_encrypt_multi(0, n, cl, no, NULL, NULL, pp, ln, cp, tg));
-        MESURE(th, sl_hash_multi(n, pp, ln, hs, 32));
+        MESURE(th, sl_hash_multi(n, pp, ln, hs, 64));
         int ok = 1;                       /* contrôle : un message au hasard */
-        uint8_t *c1 = malloc(S), t2[16];
+        uint8_t *c1 = malloc(S), t2[32];
         size_t j = n / 3;
         sl_aead_encrypt(0, cl + 64 * j, no + SL_NONCE * j, NULL, 0, pp[j], S, c1, t2);
-        ok = !memcmp(c1, cp[j], S) && !memcmp(t2, tg + 16 * j, 16);
+        ok = !memcmp(c1, cp[j], S) && !memcmp(t2, tg + 32 * j, 32);
         sl_aead_encrypt_multi(0, n, cl, no, NULL, NULL, pp, ln, cp, tg);
-        ok &= !memcmp(c1, cp[j], S) && !memcmp(t2, tg + 16 * j, 16);
+        ok &= !memcmp(c1, cp[j], S) && !memcmp(t2, tg + 32 * j, 32);
         double tcc;                       /* même clé pour tous : contexte précalculé */
         sl_aead_cle_t ctx;
         sl_aead_cle(&ctx, 0, cl);
         MESURE(tcc, sl_aead_encrypt_multi_ctx(&ctx, n, no, NULL, NULL, pp, ln, cp, tg));
         sl_aead_encrypt(0, cl, no + SL_NONCE * j, NULL, 0, pp[j], S, c1, t2);     /* contrôle, clé commune */
-        ok &= !memcmp(c1, cp[j], S) && !memcmp(t2, tg + 16 * j, 16);
+        ok &= !memcmp(c1, cp[j], S) && !memcmp(t2, tg + 32 * j, 32);
         printf("%s\n  {\"taille\": %zu, \"messages\": %zu, \"mo_s_1_coeur\": %.1f, \"mo_s_tous\": %.1f, "
                "\"hachage_mo_s_tous\": %.1f, \"mo_s_tous_cle_commune\": %.1f, \"threads\": %d, \"ok\": %s}",
                ti ? "," : "", S, n, n * S / t1 / 1e6, n * S / tn / 1e6, n * S / th / 1e6, n * S / tcc / 1e6,
@@ -148,21 +148,21 @@ int main(int argc, char **argv)
     printf("\n ],\n");
 
     /* hachage arborescent d'un seul gros message (feuilles en parallèle) */
-    printf(" \"arbre\": [");
+    printf(" \"hachage\": [");
     size_t TA[2] = {1 << 20, 16 << 20};
     for (int ti = 0; ti < 2; ti++) {
         size_t S = TA[ti];
-        uint8_t *x = malloc(S), h1[32], h2[32];
+        uint8_t *x = malloc(S), h1[64], h2[64];
         sl_alea(x, S);
         double ts, t1, tn;
-        MESURE(ts, sl_hash(x, S, h1, 32));
+        MESURE(ts, sl_xof(x, S, h1, 64));
         omp_set_num_threads(1);
-        MESURE(t1, sl_hash_arbre(x, S, h1, 32));
+        MESURE(t1, sl_hash(x, S, h1, 64));
         omp_set_num_threads(nth);
-        MESURE(tn, sl_hash_arbre(x, S, h2, 32));
-        printf("%s\n  {\"taille\": %zu, \"sequentiel_mo_s\": %.1f, \"arbre_mo_s_1_coeur\": %.1f, "
-               "\"arbre_mo_s_tous\": %.1f, \"threads\": %d, \"ok\": %s}",
-               ti ? "," : "", S, S / ts / 1e6, S / t1 / 1e6, S / tn / 1e6, nth, memcmp(h1, h2, 32) ? "false" : "true");
+        MESURE(tn, sl_hash(x, S, h2, 64));
+        printf("%s\n  {\"taille\": %zu, \"xof_mo_s\": %.1f, \"hachage_mo_s_1_coeur\": %.1f, "
+               "\"hachage_mo_s_tous\": %.1f, \"threads\": %d, \"ok\": %s}",
+               ti ? "," : "", S, S / ts / 1e6, S / t1 / 1e6, S / tn / 1e6, nth, memcmp(h1, h2, 64) ? "false" : "true");
         fflush(stdout);
         free(x);
     }
@@ -230,7 +230,7 @@ int main(int argc, char **argv)
             size_t corr[64], nc = 0;     /* un seul octet abîmé → une correction */
             contenu(nat, m, n);
             int ok = 1;
-            double th, ta, tad, t256, tte, tted = 0, th2, tkd;
+            double th, ta, tad, tte, tted = 0, th2, tkd;
             /* hybride : encapsulation + dérivation de clé + AEAD (comme bench_tailles.py) */
             uint8_t k64[64];
             const uint8_t *parts[1] = {ss};
@@ -242,8 +242,6 @@ int main(int argc, char **argv)
             ok &= !memcmp(ss, ss2, 32);
             MESURE(tad, ok &= sl_aead_decrypt(0, k64, nonce, (const uint8_t *)"hdr", 3, c, n, tag, p) == 0);
             ok &= !memcmp(m, p, n);
-            MESURE(t256, sl_aead_encrypt(1, cle, nonce, NULL, 0, m, n, c, tag2));
-            ok &= sl_aead_decrypt(1, cle, nonce, NULL, 0, c, n, tag2, p) == 0 && !memcmp(m, p, n);
             MESURE(tte, sl_te_encrypt(0, cle, nonce, NULL, 0, m, n, c, par, tag, meta));
             if (n) {                     /* un octet abîmé au milieu, corrigé */
                 int okc = 1;
@@ -255,13 +253,13 @@ int main(int argc, char **argv)
                 });
                 ok &= okc && !memcmp(m, p, n);
             }
-            MESURE(th2, sl_hash(m, n, k64, 32));
+            MESURE(th2, sl_hash(m, n, k64, 64));
             printf("%s\n  {\"nature\": \"%s\", \"taille\": %zu, \"ok\": %s, \"kem_encaps_ms\": %.4f, "
                    "\"kem_decaps_ms\": %.4f, \"aead_chiffrement_ms\": %.5f, \"aead_dechiffrement_ms\": %.5f, "
-                   "\"aead256_ms\": %.5f, \"te_chiffrement_ms\": %.5f, \"te_correction_ms\": %.5f, "
+                   "\"te_chiffrement_ms\": %.5f, \"te_correction_ms\": %.5f, "
                    "\"hachage_ms\": %.5f, \"hybride_total_ms\": %.5f}",
                    prem ? "" : ",", NATURE[nat], n, ok ? "true" : "false", 1e3 * th, 1e3 * tkd, 1e3 * ta,
-                   1e3 * tad, 1e3 * t256, 1e3 * tte, 1e3 * tted, 1e3 * th2, 1e3 * (th + ta));
+                   1e3 * tad, 1e3 * tte, 1e3 * tted, 1e3 * th2, 1e3 * (th + ta));
             fflush(stdout);
             prem = 0;
             free(m); free(c); free(p); free(c2); free(par);

@@ -2,7 +2,7 @@
  * (BRUME-512, c = 256, et BRUME-512-256, c = 384, via l'API publique de sillage/c). Mêmes messages, même machine, même
  * compilation ; médiane de 9 séries ; chaque série dure au moins ~50 ms.
  *   cc -O3 -march=native -fopenmp -DSANS_MAIN -I sillage/c -I tests/c -I prototypes/brume_q/b1024 \
- *      prototypes/brume_q/b1024/bench_comparatif.c sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c \
+ *      prototypes/brume_q/b1024/bench_comparatif.c sillage/c/commun.c \
  *      -lm -o tests/c/build/bench_comparatif && tests/c/build/bench_comparatif   → resultats/bench_comparatif_1024q.json
  */
 #include "brume1024.c"
@@ -49,7 +49,7 @@ static void ligne(const char *op, size_t taille, double suite, double suite_c384
 
 int main(void)
 {
-    if (!bref_init() || !ref_init() || !init_noyaux())
+    if (!ref_init() || !init_noyaux())
         return 2;
     prepare_iv();
     sl_init();

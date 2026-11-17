@@ -6,7 +6,7 @@
  *
  *   rebond_verif r v log2_paires w q1 q2 … qn       (la liste vient de « rebond1024.py groupes r v »)
  *   cc -O3 -march=native -fopenmp -DSANS_MAIN -I sillage/c -I tests/c -I prototypes/brume_q/b1024 \
- *      prototypes/brume_q/b1024/rebond_verif.c sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c -lm
+ *      prototypes/brume_q/b1024/rebond_verif.c sillage/c/commun.c -lm
  * Sortie : une ligne JSON. */
 #include <math.h>
 #include <omp.h>
@@ -25,7 +25,7 @@ int main(int argc, char **argv)
     for (int i = 0; i < nq; i++) q[i] = atoi(argv[5 + i]);
     if (r < 1 || r > 8 || v < 0 || v >= 160 || lp < 8 || lp > 40 || w < 160 || w >= N1 || nq < 1 || nq > N1) return 2;
     int g = nq < GMAX ? nq : GMAX;
-    if (!bref_init() || !ref_init() || !init_noyaux()) { fprintf(stderr, "init\n"); return 2; }
+    if (!ref_init() || !init_noyaux()) { fprintf(stderr, "init\n"); return 2; }
     {   /* contrôle : perm1 à r tours = r applications de ref_tour */
         uint8_t a[128], x[N1];
         uint64_t s = 0xC0FFEEULL;

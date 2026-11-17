@@ -446,7 +446,7 @@ int main(int argc, char **argv)
 {
     size_t T = (size_t)(argc > 1 ? atoi(argv[1]) : 256) << 20;
     const char *sortie = argc > 2 ? argv[2] : "stats1024.json";
-    if (!bref_init() || !ref_init() || !init_noyaux())
+    if (!ref_init() || !init_noyaux())
         return 2;
     prepare_iv();
     init_mib();

@@ -7,13 +7,11 @@ ARCHS ?= 75 89 90
 L      = ../../sillage/c
 GENC   = $(foreach a,$(ARCHS),-gencode arch=compute_$(a),code=sm_$(a)) -gencode arch=compute_$(lastword $(ARCHS)),code=compute_$(lastword $(ARCHS))
 NVFL   = -O3 $(GENC) -I$(L) -I../c -Xcompiler -O3,-march=native,-fopenmp
-LIB    = $(L)/commun.c $(L)/brume512.c $(L)/brume512_avx2.c
+LIB    = $(L)/commun.c $(L)/brume1024.c
 
-all: build/brume_gpu build/campagne_dl build/frontiere_gpu build/boomerang_gpu
-
-build/%: %.cu brume.cuh $(LIB) Makefile
-	@mkdir -p build
-	$(NVCC) $(NVFL) -o $@ $< $(LIB) -lgomp -lm
+# v0.6 : les outils GPU de BRUME-512 (brume_gpu, campagne_dl, frontiere_gpu, boomerang_gpu) sont archivés dans
+# tests/historique_v05/gpu/ ; ceux de BRUME-1024q sont dans prototypes/brume_q/b1024/gpu/.
+all: build/sig_kz_gpu
 
 # sig_kz_gpu : hôte C (code SIG réel, tests/c/sig_kz_commun.h) + noyaux CUDA ; lanceur : ./runtestg-gpu.sh
 CC    ?= cc

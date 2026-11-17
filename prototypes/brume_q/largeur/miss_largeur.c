@@ -3,8 +3,8 @@
  * (prototypes/brume_q/b1024), afin de comparer les portées à méthode identique (WIDTH_ANALYSIS.md, critère 3).
  * Propagation tronquée sûre (0 / non nul / inconnu), motifs d'entrée et de sortie de poids 1 et 2, contrôle de
  * solidité sur des différences réelles (1 à 4 tours, deux sens).
- *   cc -O3 -march=native -fopenmp [-DB1024] -I sillage/c -I tests/c -I prototypes/brume_q/b1024 \
- *      prototypes/brume_q/largeur/miss_largeur.c sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c -lm
+ *   cc -O3 -march=native -fopenmp [-DB1024] -I sillage/c -I tests/c -I tests/historique_v05/c_tests -I tests/historique_v05/c -I prototypes/brume_q/b1024 \
+ *      prototypes/brume_q/largeur/miss_largeur.c sillage/c/commun.c sillage/c/brume1024.c -lm
  */
 #include <omp.h>
 

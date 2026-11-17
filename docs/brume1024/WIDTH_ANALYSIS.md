@@ -1,5 +1,7 @@
 # BRUME-512q: is a 768- or 1024-bit permutation worth it?
 
+> **v0.6 (17 November 2026).** This document now lives in `docs/brume1024/`. BRUME-1024q is the permutation of the suite: its code is `sillage/c/brume1024.c` and its checks are in the battery (`tests/c/brume1024.c`, `tests/c/brume1024_api.c`, `tests/test_b1024_*.py`). File names cited below without a path are documents of this folder (`*.md`) or tools of `prototypes/brume_q/b1024/` (programs, scripts, `dp1024/`, `gpu/`, `cm26_verif/`, …); `brume1024.c` meant the prototype, whose code is now the library.
+
 > **Record of a decision, closed.** The answer was 1 024 bits: BRUME-1024q (`b1024/`). Since 13 November 2026 work focuses on
 > BRUME-1024q only, and **BRUME-512q is abandoned**; its prototype was removed from the repository (`README.md`). The
 > references below to `brume_q.c`, to the README of BRUME-512q and to `resultats/brume_q.*` are to that archived version.
@@ -109,7 +111,7 @@ Consequences:
     of the real M, checked against the generated tables.
   - 768: K = {0, 76, 13, 10, 15, 34}.
   - 1024: K = {0, 83, 56, 51, 17, 42}. **First selection, superseded**: BRUME-1024q uses K = {0, 105, 71, 76, 72, 31},
-    found by the full parameter search with the overlap and GF(2) constraints (§ 6 bis, `b1024/README.md`).
+    found by the full parameter search with the overlap and GF(2) constraints (§ 6 bis, `README.md` of this folder).
 - **Selection.** Best of 400 000 random draws: the fewest rounds to full diffusion, then the largest ball just before, then
   the smallest λ\*. Taking 0 ∈ K loses no generality, because the bipartite graph of K + t is isomorphic to that of K.
 - **For 768 and 1024, only the support is defined.** The GF(16) coefficients of M have not been chosen, so there is no M yet to

@@ -10,7 +10,7 @@ R = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".
 sys.path.insert(0, R + "/prototypes/brume_q/b1024/dp1024"); sys.path.insert(0, R)
 import numpy as np
 import b1024_module as B
-from sillage import brume512 as B512
+import gf16 as B512  # v0.6 : corps GF(16), sans BRUME-512
 G = B512.GMUL; M = B.matrice(); S = B.SBOX; N = 256
 DDT = np.zeros((16, 16), int)
 for x in range(16):

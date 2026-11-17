@@ -9,7 +9,7 @@
  *     nb_entrees nibbles v répartis sur l'état × les 15 valeurs de δ ; temoin = 1 : biais planté (le bit 0 du nibble de
  *     sortie 7 reçoit le bit 0 de la différence d'entrée), qui doit être détecté.
  *   cc -O3 -march=native -fopenmp -DSANS_MAIN -I sillage/c -I tests/c -I prototypes/brume_q/b1024 \
- *      prototypes/brume_q/b1024/dl_verif.c sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c -lm
+ *      prototypes/brume_q/b1024/dl_verif.c sillage/c/commun.c -lm
  * Sortie : une ligne JSON (cases significatives détaillées, au plus 64). */
 #include <math.h>
 #include <omp.h>
@@ -36,7 +36,7 @@ int main(int argc, char **argv)
     int temoin = argc > 5 ? atoi(argv[5]) : 0;
     int seule = argc > 6 ? atoi(argv[6]) : -1;   /* une seule des nb_entrees (campagne découpée ; seuil global inchangé) */
     if (r < 1 || r > 16 || lp < 8 || lp > 40 || nent < 1 || nent > N1) return 2;
-    if (!bref_init() || !ref_init() || !init_noyaux()) { fprintf(stderr, "init\n"); return 2; }
+    if (!ref_init() || !init_noyaux()) { fprintf(stderr, "init\n"); return 2; }
     {
         uint8_t a[128], x[N1];
         uint64_t s = graine ^ 99;

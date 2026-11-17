@@ -84,7 +84,7 @@ int main(int argc, char **argv)
     int nib = !strcmp(argv[4], "nibbles"), boule = !strcmp(argv[4], "boule");
     uint64_t g0 = argc > 6 ? strtoull(argv[6], NULL, 10) : 0xC0BE;
     if (d < 8 || d > 44 || r < 1 || r > 32 || (nib && d % 4) || (!nib && !boule && strcmp(argv[4], "bits"))) return 2;
-    if (!bref_init() || !ref_init() || !init_noyaux()) return 2;
+    if (!ref_init() || !init_noyaux()) return 2;
     prepare_iv();
     {   /* auto-contrôle : noyau bitslicé à r tours ≡ perm1 à r tours (la batterie ne le contrôle qu'à 32 tours) */
         uint8_t (*e)[128] = aligned_alloc(64, 256 * 128), (*f)[128] = aligned_alloc(64, 256 * 128);

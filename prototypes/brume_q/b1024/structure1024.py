@@ -32,8 +32,8 @@ _RACINE = os.path.normpath(os.path.join(_ICI, "..", "..", ".."))
 sys.path.insert(0, os.path.join(_ICI, "dp1024"))
 sys.path.insert(0, _RACINE)
 import b1024_module as B  # noqa: E402
-from sillage import brume512 as B512  # noqa: E402
-import tests.test_brume_algebre as TA  # noqa: E402   (fonctions génériques sur GF(16) et sur GF(2)[X])
+import gf16 as B512  # noqa: E402  (v0.6 : corps GF(16), sans BRUME-512)
+TA = B512  # v0.6 : les fonctions génériques sur GF(16) et GF(2)[X] de tests/test_brume_algebre.py sont dans gf16.py
 
 N, NB = B.N, 4 * B.N
 GM = B512.GMUL

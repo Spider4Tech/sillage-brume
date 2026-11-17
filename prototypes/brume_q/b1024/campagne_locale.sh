@@ -27,7 +27,7 @@ if [ ! -d $D/src ]; then
 fi
 S=$D/src; B=$S/prototypes/brume_q/b1024
 INC="-I $S/sillage/c -I $S/tests/c -I $B"
-LIB="$S/sillage/c/commun.c $S/sillage/c/brume512.c $S/sillage/c/brume512_avx2.c -lm"
+LIB="$S/sillage/c/commun.c -lm"
 TGH() { distrobox enter tgh -- bash -lc "$*"; }
 
 # exécute la batterie dans un dossier propre ; $1 nom, $2 binaire ; rend 0 si 17 contrôles réussis

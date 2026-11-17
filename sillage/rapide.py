@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 """API publique de SILLAGE, servie par l'implémentation C : mêmes objets et mêmes
-sorties que les classes de référence Python (sillage_kem, sillage_sig, brume512), de
-2 à 1000 fois plus rapide, et constant-time là où le Python ne peut pas l'être (entiers à
-longueur variable, branchements). Les classes de référence restent importables depuis
-leurs modules : elles servent de contre-épreuve (tests/test_c_impl.py, tests/test_api_c.py).
-Sans compilateur C, repli sur la référence, avec un avertissement ; SILLAGE_C_OBLIGATOIRE=1 le refuse (exception)."""
+sorties que les classes de référence Python (sillage_kem, sillage_sig), de 2 à 1000 fois
+plus rapide, et constant-time là où le Python ne peut pas l'être (entiers à longueur
+variable, branchements). Les classes de référence restent importables depuis leurs
+modules : elles servent de contre-épreuve (tests/test_c_impl.py, tests/test_api_c.py).
+Sans compilateur C, repli sur la référence, avec un avertissement ; SILLAGE_C_OBLIGATOIRE=1 le refuse (exception).
+BRUME-1024q (v0.6) et la signature VOLE n'existent qu'en C (décision D1 : pas de référence Python ; la contre-épreuve de
+BRUME-1024q est la seconde implémentation C écrite depuis la spécification, prototypes/brume_q/b1024/spec_ref.c)."""
 import hmac
 import os
 import subprocess
 import warnings
 
 from . import sillage_c as C
-from .brume512 import (Brume512 as _Brume512, Brume512P as _Brume512P, Brume512TagError, Brume512TamperError,
-                       N_ROUNDS, brume512_hash as _hash_ref, brume512_hash_arbre as _hash_arbre_ref)
 from .sillage_kem import SillageKEM as _KEM
 from .sillage_sig import SillageSIG as _SIG
 
@@ -123,77 +123,113 @@ class SillageVOLE:
         return C.vole_verify(self.profil, bytes(pk), bytes(msg), bytes(sig))
 
 
-class Brume512(_Brume512):
+class Brume1024TagError(Exception):
+    """Tag invalide : chiffré, nonce, données associées ou tag altéré (rien n'est rendu)."""
+
+
+class Brume1024TamperError(Exception):
+    """Mode TE : altération non corrigeable (plus d'un octet dans un bloc de 64, ou parités incohérentes)."""
+
+
+BRUME1024_PROFILES = {"BRUME-1024q": dict(key_len=64, nonce_len=24, tag_len=32, capacite=384, debit=640, tours=32)}
+BRUME1024P_PROFILES = {"BRUME-1024qp": dict(key_len=64, nonce_len=24, tag_len=32, feuille=8192)}
+
+
+def _exige_c(quoi):
+    if not disponible():
+        raise RuntimeError(f"{quoi} n'existe qu'en C (v0.6, décision D1) : bibliothèque indisponible")
+
+
+class Brume1024:
+    """AEAD BRUME-1024q (docs/brume1024/SPEC.md § 3.5) : duplex à clé dans tout l'état, c = 384, clé de 64 octets, nonce
+    de 24 octets unique par clé, tag de 32 octets ; et le mode TE (§ 3.7 : correction d'un octet par bloc de 64)."""
+
+    def __init__(self, profile: str = "BRUME-1024q", key: bytes = None):
+        if profile not in BRUME1024_PROFILES:
+            raise ValueError(f"profil inconnu : {profile} (attendu : {', '.join(BRUME1024_PROFILES)})")
+        _exige_c("BRUME-1024q")
+        self.name, self.p = profile, BRUME1024_PROFILES[profile]
+        if key is None:
+            key = os.urandom(self.p["key_len"])
+        if len(key) != self.p["key_len"]:
+            raise ValueError(f"clé de {self.p['key_len']} octets requise")
+        self.key = bytes(key)
+
     def _nonce(self, nonce):
         if len(nonce) != self.p["nonce_len"]:
             raise ValueError(f"nonce de {self.p['nonce_len']} octets requis")
 
     def encrypt(self, nonce: bytes, plaintext: bytes, aad: bytes = b""):
-        if not disponible():
-            return super().encrypt(nonce, plaintext, aad)
         self._nonce(nonce)
-        return C.aead_encrypt(self.name, self.key, nonce, plaintext, aad)
+        return C.aead_encrypt(self.name, self.key, bytes(nonce), bytes(plaintext), bytes(aad))
 
     def decrypt(self, nonce: bytes, ct: bytes, tag: bytes, aad: bytes = b""):
-        if not disponible():
-            return super().decrypt(nonce, ct, tag, aad)
         self._nonce(nonce)
         pt = None
         if len(tag) == self.p["tag_len"]:                  # le C lit tag_len octets
-            pt = C.aead_decrypt(self.name, self.key, nonce, ct, tag, aad)
+            pt = C.aead_decrypt(self.name, self.key, bytes(nonce), bytes(ct), bytes(tag), bytes(aad))
         if pt is None:
-            raise Brume512TagError("tag invalide — chiffré, nonce ou AAD altéré")
+            raise Brume1024TagError("tag invalide — chiffré, nonce ou AAD altéré")
         return pt
 
     def encrypt_te(self, nonce: bytes, plaintext: bytes, aad: bytes = b""):
-        if not disponible():
-            return super().encrypt_te(nonce, plaintext, aad)
         self._nonce(nonce)
-        return C.te_encrypt(self.name, self.key, nonce, plaintext, aad)
+        return C.te_encrypt(self.name, self.key, bytes(nonce), bytes(plaintext), bytes(aad))
 
     def decrypt_te(self, nonce: bytes, ct: bytes, parities: bytes, tag: bytes, meta: bytes, aad: bytes = b""):
-        if not disponible():
-            return super().decrypt_te(nonce, ct, parities, tag, meta, aad)
         self._nonce(nonce)
         if (len(parities) != 7 * (-(-len(ct) // 64)) or len(meta) != 8
                 or int.from_bytes(meta, "big") != len(ct)):
-            raise Brume512TamperError("parités/métadonnées incohérentes")
+            raise Brume1024TamperError("parités/métadonnées incohérentes")
         if len(tag) != self.p["tag_len"]:
-            raise Brume512TagError("tag invalide — chiffré, nonce ou AAD altéré")
-        rc, pt, corrections = C.te_decrypt(self.name, self.key, nonce, ct, parities, tag, meta, aad)
+            raise Brume1024TagError("tag invalide — chiffré, nonce ou AAD altéré")
+        rc, pt, corrections = C.te_decrypt(self.name, self.key, bytes(nonce), bytes(ct), bytes(parities), bytes(tag),
+                                           bytes(meta), bytes(aad))
         if rc == -2:
-            raise Brume512TamperError("altération multiple détectée")
+            raise Brume1024TamperError("altération multiple détectée")
         if rc != 0:
-            raise Brume512TagError("tag invalide — chiffré, nonce ou AAD altéré")
+            raise Brume1024TagError("tag invalide — chiffré, nonce ou AAD altéré")
         return pt, corrections
 
 
-class Brume512P(_Brume512P):
+class Brume1024P:
+    """AEAD parallèle BRUME-1024qp (SPEC § 3.5 bis, mode 6) : feuilles de 8 Kio sur tous les cœurs. Autre fonction que
+    Brume1024 (autres chiffrés, autres tags)."""
+
+    def __init__(self, profile: str = "BRUME-1024qp", key: bytes = None):
+        if profile not in BRUME1024P_PROFILES:
+            raise ValueError(f"profil inconnu : {profile} (attendu : {', '.join(BRUME1024P_PROFILES)})")
+        _exige_c("BRUME-1024qp")
+        self.name, self.p = profile, BRUME1024P_PROFILES[profile]
+        if key is None:
+            key = os.urandom(self.p["key_len"])
+        if len(key) != self.p["key_len"]:
+            raise ValueError(f"clé de {self.p['key_len']} octets requise")
+        self.key = bytes(key)
+
     def encrypt(self, nonce: bytes, plaintext: bytes, aad: bytes = b""):
-        if not disponible():
-            return super().encrypt(nonce, plaintext, aad)
         if len(nonce) != self.p["nonce_len"]:
             raise ValueError(f"nonce de {self.p['nonce_len']} octets requis")
-        return C.aead_p_encrypt(self.name, self.key, nonce, plaintext, aad)
+        return C.aead_p_encrypt(self.name, self.key, bytes(nonce), bytes(plaintext), bytes(aad))
 
     def decrypt(self, nonce: bytes, ct: bytes, tag: bytes, aad: bytes = b""):
-        if not disponible():
-            return super().decrypt(nonce, ct, tag, aad)
         if len(nonce) != self.p["nonce_len"]:
             raise ValueError(f"nonce de {self.p['nonce_len']} octets requis")
         pt = None
-        if len(tag) == self.p["tag_len"]:                  # le C lit tag_len octets
-            pt = C.aead_p_decrypt(self.name, self.key, nonce, ct, tag, aad)
+        if len(tag) == self.p["tag_len"]:
+            pt = C.aead_p_decrypt(self.name, self.key, bytes(nonce), bytes(ct), bytes(tag), bytes(aad))
         if pt is None:
-            raise Brume512TagError("tag invalide — chiffré, nonce ou AAD altéré")
+            raise Brume1024TagError("tag invalide — chiffré, nonce ou AAD altéré")
         return pt
 
 
-def brume512_hash(msg: bytes, out_len: int = 32, rounds: int = N_ROUNDS) -> bytes:
-    if rounds != N_ROUNDS or not disponible():
-        return _hash_ref(msg, out_len, rounds)
+def brume1024_hash(msg: bytes, out_len: int = 64) -> bytes:
+    """Condensé par défaut H (SPEC § 3.4) : 64 octets par défaut."""
+    _exige_c("BRUME-1024q")
     return C.hash(bytes(msg), out_len)
 
 
-def brume512_hash_arbre(msg: bytes, out_len: int = 32) -> bytes:
-    return C.hash_arbre(bytes(msg), out_len) if disponible() else _hash_arbre_ref(msg, out_len)
+def brume1024_xof(msg: bytes, out_len: int) -> bytes:
+    """XOF (SPEC § 3.3)."""
+    _exige_c("BRUME-1024q")
+    return C.xof(bytes(msg), out_len)

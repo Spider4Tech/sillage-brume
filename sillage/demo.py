@@ -17,8 +17,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sillage.sillage_kem import SillageKEM
-from sillage.brume512 import (Brume512, Brume512TamperError,
-                              Brume512TagError)
+from sillage.rapide import Brume1024, Brume1024TagError, Brume1024TamperError
 from sillage.sillage_sig import SillageSIG
 
 SEP = "─" * 74
@@ -35,7 +34,7 @@ def main():
     t_all = time.perf_counter()
     print("╔" + "═" * 72 + "╗")
     print("║  SILLAGE — démonstrateur de la suite cryptographique            ║")
-    print("║  KEM par décodage bruité · BRUME-512 (wide-trail prouvé) ·      ║")
+    print("║  KEM par décodage bruité · BRUME-1024q (c = 384, 32 tours) ·    ║")
     print("║  signatures par décodage de syndrome                            ║")
     print("╚" + "═" * 72 + "╝")
 
@@ -69,10 +68,10 @@ def main():
           f"(Eve obtient une clé inutilisable, sans le savoir)")
 
     # ------------------------------------------------------------------
-    step("2. Canal chiffré — BRUME-512 v1 (clé dérivée du KEM)")
+    step("2. Canal chiffré — BRUME-1024q (clé dérivée du KEM)")
     from sillage.sillage_common import shake
-    brume = Brume512("BRUME-512",
-                     key=shake(ss_alice, 64, b"SILLAGE|brume-key"))  # KDF 512 bits
+    brume = Brume1024("BRUME-1024q",
+                      key=shake(ss_alice, 64, b"SILLAGE|brume-key"))  # KDF 512 bits
     nonce = os.urandom(24)
     mission = ("ORDRE 2026-114 — Rendez-vous au point VAUTOUR à 04h00, "
                "emporter le matériel gamma, brûler après lecture.").encode("utf-8")
@@ -81,21 +80,21 @@ def main():
     print(f"  chiffré (32 o)  : {ct[:32].hex()}")
     pt = brume.decrypt(nonce, ct, tag)
     print(f"  déchiffrement   : {'OK' if pt == mission else 'ÉCHEC'} | "
-          f"tag 128 bits vérifié")
+          f"tag 256 bits vérifié")
 
     # Attaque : altération du tag
     try:
         brume.decrypt(nonce, ct, bytes(len(tag)), )
         print("  [attaque] tag falsifié  → ACCEPTÉ (bug !)")
-    except Brume512TagError:
-        print("  [attaque] tag falsifié  → rejeté (Brume512TagError)")
+    except Brume1024TagError:
+        print("  [attaque] tag falsifié  → rejeté (Brume1024TagError)")
 
     # Attaque : extension du chiffré (bloc nul absorbé)
     try:
         brume.decrypt(nonce, ct + b"\x00" * 32, tag)
         print("  [attaque] ct étendu     → ACCEPTÉ (bug !)")
-    except Brume512TagError:
-        print("  [attaque] ct étendu     → rejeté (finalisation sur la longueur)")
+    except Brume1024TagError:
+        print("  [attaque] ct étendu     → rejeté (le bourrage 0x01 et le domaine délimitent le texte)")
 
     # ------------------------------------------------------------------
     step("3. Mode auto-correcteur (TE) — canal bruité, altération, réparation")
@@ -116,8 +115,8 @@ def main():
     try:
         brume.decrypt_te(nonce, bytes(canal2), pars, tag_te, meta)
         print("  2 erreurs/bloc  : non détectées (bug)")
-    except Brume512TamperError:
-        print("  2 erreurs/bloc  : ÉCHEC BRUYANT (Brume512TamperError) — "
+    except (Brume1024TamperError, Brume1024TagError) as e:
+        print(f"  2 erreurs/bloc  : ÉCHEC BRUYANT ({type(e).__name__}) — "
               "tamper-evidence native")
 
     # ------------------------------------------------------------------
@@ -145,10 +144,10 @@ def main():
   Propriétés illustrées
     · établissement de clé par décodage de syndrome quasi-cyclique (LPN
       creux, transformée FO à rejet implicite) ;
-    · confidentialité + intégrité du canal (BRUME-512 : duplex à clé sur la
-      permutation, S-box 4 bits optimale, graphe de Cayley pondéré, B = 8
-      certifié → bornes de trails 2^-256 diff / 2^-128 lin à 32 tours —
-      batterie : python3 -m tests.run_all) ;
+    · confidentialité + intégrité du canal (BRUME-1024q : duplex à clé dans
+      tout l'état, c = 384 pour 128 bits quantiques, S-box 4 bits optimale,
+      graphe de Cayley pondéré de D256 ; C3 ≥ 21 et C4 ≥ 28 certifiés →
+      ≥ 224 S-box actives sur 32 tours — batterie : python3 -m tests.run_all) ;
     · réparation des erreurs canal accidentelles (mode TE) ; l'intégrité
       face à un adversaire reste assurée par le tag ;
     · non-répudiation par décodage de syndrome (45 ans de cryptanalyse,

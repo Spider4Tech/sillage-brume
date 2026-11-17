@@ -18,7 +18,7 @@ log "lancement (ou reprise), $W processus, charge $(cat /proc/loadavg)"
 if [ ! -d $D/src ]; then mkdir -p $D/src && tar xzf "$ARCHIVE" -C $D/src || exit 1; log "sources extraites"; fi
 S=$D/src; B=$S/prototypes/brume_q/b1024
 INC="-I $S/sillage/c -I $S/tests/c -I $B"
-LIB="$S/sillage/c/commun.c $S/sillage/c/brume512.c $S/sillage/c/brume512_avx2.c -lm"
+LIB="$S/sillage/c/commun.c -lm"
 SUPP="LSAN_OPTIONS=suppressions=$B/lsan_harnais.supp"
 
 # mode « aide » (machine d'appoint) : LISTE = fichier des survivants de la passe 1 (un numéro par ligne), NC = contrôles de

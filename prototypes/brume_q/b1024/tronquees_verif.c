@@ -11,7 +11,7 @@
  *
  *   tronquees_verif r log2_paires [nb_entrees] [paires_de_nibbles 0|1] [graine]
  *   cc -O3 -march=native -fopenmp -DSANS_MAIN -I sillage/c -I tests/c -I prototypes/brume_q/b1024 \
- *      prototypes/brume_q/b1024/tronquees_verif.c sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c -lm
+ *      prototypes/brume_q/b1024/tronquees_verif.c sillage/c/commun.c -lm
  * Sortie : une ligne JSON. */
 #include <math.h>
 #include <omp.h>
@@ -37,7 +37,7 @@ int main(int argc, char **argv)
     int nent = argc > 3 ? atoi(argv[3]) : 16, deux = argc > 4 ? atoi(argv[4]) : 0;
     uint64_t graine = argc > 5 ? strtoull(argv[5], 0, 0) : 0x5EED1024ULL;
     if (r < 1 || r > 16 || lp < 8 || lp > 40 || nent < 1 || nent > N1) return 2;
-    if (!bref_init() || !ref_init() || !init_noyaux()) { fprintf(stderr, "init\n"); return 2; }
+    if (!ref_init() || !init_noyaux()) { fprintf(stderr, "init\n"); return 2; }
     /* contrôle : perm1 à r tours = r applications de ref_tour */
     {
         uint8_t w[128], x[N1];

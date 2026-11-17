@@ -22,7 +22,7 @@ CFLAGS = ["-O3", "-g", "-mavx2", "-mpclmul", "-fopenmp", "-I", VOLE, "-I", os.pa
 def construire(ct):
     exe = OUT + ("_ct" if ct else "_mem")
     subprocess.run(["gcc", *CFLAGS, *(["-DSL_VALGRIND"] if ct else []), "-o", exe, os.path.join(VOLE, "vole_proto.c"),
-                    os.path.join(LIB, "commun.c"), os.path.join(LIB, "brume512.c"), os.path.join(LIB, "brume512_avx2.c"), "-lm"],
+                    os.path.join(LIB, "commun.c"), os.path.join(LIB, "brume1024.c"), "-lm"],
                    check=True)
     return exe
 

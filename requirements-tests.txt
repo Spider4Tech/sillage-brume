@@ -1,7 +1,10 @@
 # Full test and cryptanalysis suite (python3 -m tests.run_all), on top of requirements.txt.
 # Versions are not pinned: record the installed versions with each published run.
+# Outside pip: gcc with OpenMP, valgrind (constant-time checks), and for tests/test_b1024_etudes.py the SAT solvers
+# cryptominisat5 and cadical on the PATH.
 -r requirements.txt
 networkx
 ortools
 python-sat
 matplotlib
+scipy

@@ -116,7 +116,7 @@ a **mandatory** second checker. It accepts the intact proofs and rejects a mutat
   proof, every proof accepted by both checkers. So the bound no longer rests on our checker alone.
 - Not done: a check with the formally verified `cake_lpr` (CakeML).
 
-**BRUME-1024** (`-DB1024`, `../b1024/README.md`), also with both checkers:
+**BRUME-1024** (`-DB1024`, `docs/brume1024/README.md`), also with both checkers:
 - C3 ≥ 18: 361 / 361;
 - C3 ≥ 21: 484 / 484, of which 4 leaves through sub-cubes and one sub-cube through 128 fine cubes (`cubes_fins.sh`);
 - **C4 ≥ 28** (15 November, 4 rounds, K = 28, 841 leaves on (W₀, W₁)): 831 leaves directly, then three more levels of
@@ -128,13 +128,15 @@ a **mandatory** second checker. It accepts the intact proofs and rejects a mutat
   CNFs, one result line per unit, scripts and tool versions; the audit rebuilds each completeness CNF from the lists, and
   with `--reprouver n` redoes the completeness proofs and a sample of leaves on the regenerated CNF (SHA-256 checked).
   The proofs themselves were deleted once checked, as above. Run with HyperCompute on four
-  machines, 11.3 h of solver time in total. Details: `../b1024/README.md` § 3.
+  machines, 11.3 h of solver time in total. Details: `docs/brume1024/README.md` § 3.
 
 ## 5. Reproduce
 
 ```bash
-cc -O3 -march=native -fopenmp -I sillage/c -I tests/c prototypes/brume_q/sat/c3_cnf.c sillage/c/commun.c \
-   sillage/c/brume512.c sillage/c/brume512_avx2.c -lm -o tests/c/build/c3_cnf
+# v0.6: the BRUME-512 reference used by the 512-bit mode is archived in tests/historique_v05/
+cc -O3 -march=native -fopenmp -I sillage/c -I tests/c -I tests/historique_v05/c_tests -I tests/historique_v05/c \
+   -I prototypes/brume_q/b1024 prototypes/brume_q/sat/c3_cnf.c sillage/c/commun.c sillage/c/brume1024.c \
+   -lm -o tests/c/build/c3_cnf
 tests/c/build/c3_cnf verif 20000                       # (i), (ii)
 prototypes/brume_q/sat/cubes.sh diff 3 21 11           # (iii): needs cadical in the PATH; work directory ~/orion_sat
 prototypes/brume_q/sat/sous_cubes.sh diff 3 21 7 "4 9" "6 9"   # optional: split the hardest leaves by W2

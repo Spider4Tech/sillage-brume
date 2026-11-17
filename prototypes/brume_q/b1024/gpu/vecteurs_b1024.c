@@ -7,7 +7,7 @@
 
 int main(int argc, char **argv)
 {
-    if (argc != 2 || !bref_init() || !ref_init())
+    if (argc != 2 || !ref_init())
         return 2;
     FILE *f = fopen(argv[1], "wb");
     if (!f)

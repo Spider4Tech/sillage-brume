@@ -1,5 +1,7 @@
 # BRUME-1024q, v0.6: the TE mode and the parallel AEAD (design and proofs before any code)
 
+> **v0.6 (17 November 2026).** This document now lives in `docs/brume1024/`. BRUME-1024q is the permutation of the suite: its code is `sillage/c/brume1024.c` and its checks are in the battery (`tests/c/brume1024.c`, `tests/c/brume1024_api.c`, `tests/test_b1024_*.py`). File names cited below without a path are documents of this folder (`*.md`) or tools of `prototypes/brume_q/b1024/` (programs, scripts, `dp1024/`, `gpu/`, `cm26_verif/`, …); `brume1024.c` meant the prototype, whose code is now the library.
+
 Written on 14 November 2026, after the author's decision D4 (`docs/MIGRATION_V06.md`): **the parallel AEAD and the TE mode
 are ported to BRUME-1024q**, since BRUME-512 leaves the suite. Following the rule "a function change comes with its
 argument first", this document gives each mode, its proof, and what is checked mechanically. **The parameters of § 2.1

@@ -1,4 +1,4 @@
-/* BRUME-1024q — temps constant mesuré, méthode « dudect » (Reparaz, Balasch, Verbauwhede 2017), protocole de la suite
+/* Batterie v0.6 — BRUME-1024q : temps constant mesuré, méthode « dudect » (Reparaz, Balasch, Verbauwhede 2017), protocole de la suite
  * (tests/c/temps.c) : temps (rdtscp) d'une opération sur une entrée FIXE (classe 0) ou ALÉATOIRE (classe 1) ; classes tirées
  * au hasard et entrelacées ; un paquet d'entrées est préparé AVANT ses mesures, puis chaque entrée est recopiée dans un
  * tampon commun par le même memcpy dans les deux classes (mêmes adresses, même empreinte de cache) ; test t de Welch après
@@ -14,21 +14,19 @@
  *   temoin        aa + 300 cycles d'attente en classe 1 : sensibilité du banc (doit être détecté) ;
  *   permutation_ref  référence dense par tables (indices dépendant des données) : témoin indicatif, sans contrôle ;
  *   ouvrir       déchiffrement vérifié (aead_ouvrir), clé et clair secrets, tag valide (chemin d'acceptation) ;
- *   permutation_portable  noyau portable à temps constant (b1024_portable.h, C pur, plans de bits), état secret ;
+ *   permutation_portable  noyau portable à temps constant (sillage/c/brume1024_portable.h, C pur, plans de bits), état secret ;
  *   aead_portable  l'AEAD sur le noyau portable, clé et clair secrets ;
  *   ouvrir_rejet le même avec un tag faux (chemin de rejet, sortie effacée). Le verdict étant public, on ne compare pas
  *                acceptation et rejet entre eux : chaque mesure compare clé fixe et clé aléatoire sur le même chemin.
  * Un test statistique ne prouve pas l'absence de fuite ; il en détecte. À lancer sur une machine au repos, jamais pendant
  * un calcul GPU.
- *   cc -O3 -march=native -fopenmp -DSANS_MAIN -I sillage/c -I tests/c -I prototypes/brume_q/b1024 \
- *      prototypes/brume_q/b1024/temps1024.c sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c -lm \
- *      -o tests/c/build/temps1024 && OMP_NUM_THREADS=1 tests/c/build/temps1024   → resultats/temps1024.json
+ *   make -C tests/c build/temps1024 && OMP_NUM_THREADS=1 tests/c/build/temps1024   → resultats/temps1024.json
+ *   (compilé avec -DSANS_MAIN ; il inclut tests/c/brume1024.c, donc la bibliothèque sillage/c/brume1024.c)
  *   tests/c/build/temps1024 <opération> <mesures> : une seule opération, sortie JSON sur une ligne. */
 #include <math.h>
 #include <x86intrin.h>
 
 #include "brume1024.c"
-#include "b1024_portable.h"
 
 #define PAQ 256
 #define SEUIL 4.5
@@ -145,7 +143,7 @@ static void afficher(int op, mesure_t r)
 
 int main(int argc, char **argv)
 {
-    if (!bref_init() || !ref_init() || !init_noyaux() || !pp_init())
+    if (!ref_init() || !init_noyaux() || !pp_init())
         return 2;
     prepare_iv();
     sl_init();
@@ -158,7 +156,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "opération inconnue : %s\n", argv[1]);
         return 2;
     }
-    resultat_t res = {.nom = "temps1024", .titre = "BRUME-1024q (prototype) : temps constant mesure (dudect)"};
+    resultat_t res = {.nom = "temps1024", .titre = "BRUME-1024q (v0.6) : temps constant mesure (dudect), noyaux AVX2 et portable, AEAD et dechiffrement verifie"};
     const long N[NOP] = {1000000, 40000, 500000, 500000, 500000, 500000, 200000, 20000, 500000, 500000, 500000, 300000};
     double t[NOP];
     for (int op = 0; op < NOP; op++) {

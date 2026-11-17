@@ -9,7 +9,7 @@
  *                transposition 256 états ↔ plans de bits comprise à chaque appel ;
  *   bs256_noyau  le même sans la transposition (l'état resterait bitslicé d'un bloc à l'autre) : chronométrage seul.
  *   cc -O3 -march=native -fopenmp -DSANS_MAIN -I sillage/c -I tests/c -I prototypes/brume_q/b1024 \
- *      prototypes/brume_q/b1024/bench_lot.c sillage/c/commun.c sillage/c/brume512.c sillage/c/brume512_avx2.c -lm \
+ *      prototypes/brume_q/b1024/bench_lot.c sillage/c/commun.c -lm \
  *      -o tests/c/build/bench_lot && tests/c/build/bench_lot      (tailles du code : nm -S --size-sort) */
 #include "brume1024.c"
 #include "b1024_lot_var.h"
@@ -185,7 +185,7 @@ static const struct { const char *nom; lot_f f; int etats; } V[] = {
 
 int main(int argc, char **argv)
 {
-    if (!bref_init() || !ref_init() || !init_noyaux())
+    if (!ref_init() || !init_noyaux())
         return 2;
     init_boucle();
     prepare_iv();

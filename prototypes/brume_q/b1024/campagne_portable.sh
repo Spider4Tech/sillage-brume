@@ -15,7 +15,7 @@ log "lancement (ou reprise), charge $(cat /proc/loadavg)"
 if [ ! -d $D/src ]; then mkdir -p $D/src && tar xzf "$ARCHIVE" -C $D/src || exit 1; log "sources extraites"; fi
 S=$D/src; B=$S/prototypes/brume_q/b1024
 INC="-I $S/sillage/c -I $S/tests/c -I $B"
-LIB="$S/sillage/c/commun.c $S/sillage/c/brume512.c $S/sillage/c/brume512_avx2.c -lm"
+LIB="$S/sillage/c/commun.c -lm"
 for p in agregation2 cubes_degre; do
   [ -x $D/$p ] || gcc -O3 -march=native -fopenmp -DSANS_MAIN -w $INC $B/$p.c $LIB -o $D/$p || { log "compilation de $p impossible"; exit 1; }
 done

@@ -1,0 +1,1323 @@
+/* Batterie v0.6 — BRUME-1024q : contrôles de la bibliothèque (sillage/c/brume1024.c), repris du prototype.
+ *
+ * Ce fichier INCLUT sillage/c/brume1024.c pour atteindre ses fonctions internes (noyaux, référence dense, modes) : c'est
+ * donc le code de la bibliothèque qui est contrôlé. Il ajoute les références écrites à part (éponge et arbre sur l'état
+ * emballé par la référence dense, transcription littérale de l'algorithme 1 de DMV17, décodeur du chemin final), les KAT
+ * figés (tests/c/kat_b1024.h, SPEC § 4) et les contrôles structurels. Écrit resultats/brume1024.json.
+ *   tests/c/build/brume1024          les contrôles (profil R = 32)
+ *   tests/c/build/brume1024 R        les mêmes à R tours (les KAT ne sont alors pas comparés)
+ *   tests/c/build/brume1024 kat      écrit kat_b1024.h sur la sortie standard (noyau et référence dense concordants)
+ * Les outils de prototypes/brume_q/b1024/ incluent ce fichier (par prototypes/brume_q/b1024/brume1024.c) avec -DSANS_MAIN. */
+#include <stdio.h>
+#include <time.h>
+
+#include "resultat.h"
+#include "../../sillage/c/brume1024.c"
+
+/* ------------------------------------------------------------ référence dense des modes sans clé (contrôles) */
+/* même calcul que eponge(), entièrement sur l'état emballé et par la référence dense (contrôle) */
+static void eponge_ref(const uint8_t *m, size_t len, int dom, uint8_t *out, size_t outlen)
+{
+    uint8_t w[128], x[N1];
+    memset(w, 0, 128);
+    cadre_iv(w, MODE_EPONGE);
+    deballer_ref(w, x);
+    for (int r = 0; r < R1; r++) ref_tour(x, r);
+    emballer_ref(x, w);
+    size_t i = 0;
+    for (;; i += RB) {
+        int fin = i + RB > len;
+        size_t n = fin ? len - i : RB;
+        for (size_t k = 0; k < n; k++)
+            w[k] ^= m[i + k];
+        if (fin) {
+            w[n] ^= 0x01;
+            w[127] ^= (uint8_t)(dom << 4);
+        }
+        deballer_ref(w, x);
+        for (int r = 0; r < R1; r++) ref_tour(x, r);
+        emballer_ref(x, w);
+        if (fin)
+            break;
+    }
+    for (size_t o = 0; o < outlen; o += RB) {
+        size_t k = outlen - o < RB ? outlen - o : RB;
+        memcpy(out + o, w, k);
+        if (o + RB < outlen) {
+            deballer_ref(w, x);
+            for (int r = 0; r < R1; r++) ref_tour(x, r);
+            emballer_ref(x, w);
+        }
+    }
+}
+
+
+/* ------------------------------------------------------------ référence « DMV17 littérale » (contrôle de aead()) */
+/* Algorithme 1 de DMV17 (p. 615) transcrit tel quel sur l'état emballé, écrit indépendamment de aead() :
+ *   Init(K, iv, σ, flag) : s ← f(K ‖ iv) ; Z ← ⌊s⌋_r ; si flag : σ̄ ← σ̄ + Z ; s ← s + σ
+ *   Duplexing(σ, flag)   : s ← f(s)      ; Z ← ⌊s⌋_r ; si flag : σ̄ ← σ̄ + Z ; s ← s + σ
+ * Le drapeau porte sur les nv premiers octets de la partie externe (nv = 80 : algorithme 1 tel quel ; nv = r < 80 : dernier
+ * bloc partiel au déchiffrement, seul écart, signalé dans AEAD_SECURITY.md). Le mode est écrit comme une suite d'appels. */
+/* ch (facultatif, contrôles seulement) : reçoit l'entrée de chemin σ̃ de chaque appel (σ après l'ajustement du drapeau),
+ * c'est-à-dire le chemin de l'IXIF de DMV17 (algorithme 2) ; nch appels au plus, ich = nombre d'appels faits. */
+typedef struct { uint8_t s[128]; perm_f P; uint8_t (*ch)[128]; size_t nch, ich; } kd_t;
+static void kd_suite(kd_t *d, const uint8_t sigma[128], int nv, uint8_t Z[RB])
+{
+    uint8_t sg[128];
+    memcpy(sg, sigma, 128);
+    memcpy(Z, d->s, RB);
+    for (int k = 0; k < nv; k++)
+        sg[k] ^= Z[k];
+    if (d->ch && d->ich < d->nch)
+        memcpy(d->ch[d->ich], sg, 128);
+    d->ich++;
+    for (int k = 0; k < 128; k++)
+        d->s[k] ^= sg[k];
+}
+static void kd_init(kd_t *d, const uint8_t K[64], const uint8_t iv[64], const uint8_t sigma[128], int nv, uint8_t Z[RB])
+{
+    memcpy(d->s, K, 64);
+    memcpy(d->s + 64, iv, 64);
+    d->P(d->s, R1);
+    kd_suite(d, sigma, nv, Z);
+}
+static void kd_duplexing(kd_t *d, const uint8_t sigma[128], int nv, uint8_t Z[RB])
+{
+    d->P(d->s, R1);
+    kd_suite(d, sigma, nv, Z);
+}
+
+static void aead_kd_chemin(perm_f P, const uint8_t cle[64], const uint8_t nonce[24], const uint8_t *aad, size_t aadlen,
+                           const uint8_t *in, size_t len, int dech, uint8_t *out, uint8_t tag[32],
+                           uint8_t (*ch)[128], size_t nch, size_t *ich)
+{
+    kd_t d = {.P = P, .ch = ch, .nch = nch};
+    uint8_t iv[64] = {0}, sg[128], Z[RB];
+    memcpy(iv, nonce, 24);                               /* iv = nonce ‖ 0^264 ‖ cadre (octets 64..127 de l'état) */
+    iv[121 - 64] = (uint8_t)R1; iv[124 - 64] = 2 * RB; iv[125 - 64] = 0x10; iv[126 - 64] = 'q'; iv[127 - 64] = MODE_AEAD;
+    /* données associées : blocs de A ‖ 0x01 ‖ 0*, domaine sur le dernier, drapeau faux ; le premier par Init */
+    size_t nb = aadlen / RB + 1;
+    for (size_t b = 0; b < nb; b++) {
+        memset(sg, 0, 128);
+        for (size_t k = 0; k < RB; k++) {
+            size_t i = b * RB + k;
+            sg[k] = i < aadlen ? aad[i] : (i == aadlen ? 0x01 : 0);
+        }
+        if (b + 1 == nb)
+            sg[127] = DOM_AAD << 4;
+        if (b == 0)
+            kd_init(&d, cle, iv, sg, 0, Z);
+        else
+            kd_duplexing(&d, sg, 0, Z);
+    }
+    /* texte : chiffrement σ = clair, drapeau faux ; déchiffrement σ = chiffré, drapeau vrai (écrasement) */
+    size_t i = 0;
+    for (;; i += RB) {
+        const int fin = i + RB > len;
+        const size_t r = fin ? len - i : RB;
+        memset(sg, 0, 128);
+        memcpy(sg, in + i, r);
+        if (fin) {
+            sg[r] ^= 0x01;
+            sg[127] = DOM_TEXTE << 4;
+        }
+        kd_duplexing(&d, sg, dech ? (int)r : 0, Z);
+        for (size_t k = 0; k < r; k++)
+            out[i + k] = in[i + k] ^ Z[k];
+        if (fin)
+            break;
+    }
+    /* un appel de plus, σ = 0, pour lire le tag (le dernier bloc de texte, DOM_TEXTE, termine le chemin final) */
+    memset(sg, 0, 128);
+    kd_duplexing(&d, sg, 0, Z);
+    memcpy(tag, Z, 32);
+    if (ich)
+        *ich = d.ich;
+    sl_effacer(&d, sizeof d);
+}
+static void aead_kd(perm_f P, const uint8_t cle[64], const uint8_t nonce[24], const uint8_t *aad, size_t aadlen,
+                    const uint8_t *in, size_t len, int dech, uint8_t *out, uint8_t tag[32])
+{
+    aead_kd_chemin(P, cle, nonce, aad, aadlen, in, len, dech, out, tag, NULL, 0, NULL);
+}
+
+/* Décodeur du chemin final (AEAD_SECURITY.md § 4 bis, étape AE, ingrédient 3) : à partir des entrées σ̃_0 … σ̃_{n−1} des
+ * appels (sans l'appel du tag, dont σ = 0 n'entre dans aucun chemin lu), retrouve (A, M), ou rend −1 si le chemin n'est
+ * pas de la forme produite par le mode. Rôles lus sur le nibble haut de l'octet 127 : 0 (bloc non final), DOM_AAD (dernier
+ * bloc de A), DOM_TEXTE (dernier bloc du texte, dernière entrée du chemin final). Le décodeur est une inverse à gauche du
+ * codage (A, M) ↦ chemin : celui-ci est donc injectif, et le rôle de la dernière entrée d'un chemin se lit sur elle seule. */
+static int decoder_chemin(const uint8_t (*ch)[128], size_t n, uint8_t *A, size_t *alen, uint8_t *M, size_t *mlen,
+                          size_t cap)
+{
+    size_t e = 0, la = 0, lm = 0;
+    for (int phase = 0; phase < 2; phase++) {             /* 0 : AAD, 1 : texte */
+        const int dom = phase ? DOM_TEXTE : DOM_AAD;
+        uint8_t *o = phase ? M : A;
+        size_t *l = phase ? &lm : &la;
+        for (;; e++) {
+            if (e >= n)
+                return -1;
+            const uint8_t *s = ch[e];
+            for (int k = RB; k < 127; k++)                 /* capacité nulle, sauf le domaine */
+                if (s[k])
+                    return -1;
+            const int nib = s[127] >> 4;
+            if ((s[127] & 15) || (nib != 0 && nib != dom))
+                return -1;
+            if (nib == 0) {                                /* bloc plein */
+                if (*l + RB > cap)
+                    return -1;
+                memcpy(o + *l, s, RB);
+                *l += RB;
+                continue;
+            }
+            int p = RB - 1;                                /* dernier bloc : retirer 0* puis 0x01 */
+            while (p >= 0 && s[p] == 0)
+                p--;
+            if (p < 0 || s[p] != 0x01 || *l + (size_t)p > cap)
+                return -1;
+            memcpy(o + *l, s, (size_t)p);
+            *l += (size_t)p;
+            e++;
+            break;
+        }
+    }
+    if (e != n)                                            /* le dernier bloc du texte termine le chemin */
+        return -1;
+    *alen = la;
+    *mlen = lm;
+    return 0;
+}
+/* contrôles : decoder_chemin sur une copie de taille exacte (n entrées ; A et M reçus dans des tampons de cap octets
+ * exactement, ASan voit toute lecture ou écriture hors limites). Rend −1 (rejet), 0 (décodé en (A, M)), 1 (décodé, mais
+ * en autre chose), ou la valeur rendue par le décodeur si elle n'est ni 0 ni −1. */
+static int dec_essai(const uint8_t (*ch)[128], size_t n, size_t cap, const uint8_t *A, size_t la, const uint8_t *M,
+                     size_t lm)
+{
+    uint8_t(*cp)[128] = malloc(n ? n * 128 : 1), *dA = malloc(cap ? cap : 1), *dM = malloc(cap ? cap : 1);
+    if (n)
+        memcpy(cp, ch, n * 128);
+    size_t a = 0, b = 0;
+    int r = decoder_chemin((const uint8_t(*)[128])cp, n, dA, &a, dM, &b, cap);
+    if (r == 0 && !(a == la && b == lm && !memcmp(dA, A, la) && !memcmp(dM, M, lm)))
+        r = 1;
+    free(cp);
+    free(dA);
+    free(dM);
+    return r;
+}
+
+/* ------------------------------------------------------------ contrôles et mesures */
+static double maintenant(void)
+{
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return t.tv_sec + t.tv_nsec * 1e-9;
+}
+
+static void hexa(const uint8_t *x, int n, char *s)
+{
+    for (int i = 0; i < n; i++)
+        sprintf(s + 2 * i, "%02x", x[i]);
+}
+
+static double mediane(double *t, int n)
+{
+    for (int i = 0; i < n; i++)
+        for (int j = i + 1; j < n; j++)
+            if (t[j] < t[i]) { double u = t[i]; t[i] = t[j]; t[j] = u; }
+    return t[n / 2];
+}
+
+/* ------------------------------------------------------------ KAT figés (profil R = 32) */
+/* Message de test : octet i = i mod 251 ; clé : octet i = i ; nonce : octet i = 0x80 + i ; AAD : 9 octets du message
+ * à partir de l'octet 1000. Chaque KAT est calculé deux fois, par le noyau AVX2 et par la référence dense (éponge et arbre
+ * réécrits à part sur l'état emballé), et comparé aux valeurs figées de kat_b1024.h. AEAD : tag ‖ SHAKE256(chiffré)[0..31]. */
+#define NKAT 23
+typedef struct { char nom[24]; char hex[401]; } kat_t;
+
+/* arbre de référence : même cadrage que arbre(), réécrit séquentiellement sur eponge_ref (contrôle indépendant du cadrage) */
+static void arbre_ref(const uint8_t *m, size_t len, uint8_t *out, size_t outlen)
+{
+    if (len <= FEUILLE) {
+        eponge_ref(m, len, DOM_SEUL, out, outlen);
+        return;
+    }
+    size_t k = (len + FEUILLE - 1) / FEUILLE, lr = (size_t)CVL * k + 12;
+    uint8_t *r = malloc(lr), *q = r + (size_t)CVL * k;
+    for (size_t i = 0; i < k; i++) {
+        size_t l = len - i * FEUILLE < FEUILLE ? len - i * FEUILLE : FEUILLE;
+        eponge_ref(m + i * FEUILLE, l, DOM_FEUILLE, r + i * CVL, CVL);
+    }
+    for (int i = 0; i < 8; i++)
+        q[i] = (uint8_t)((uint64_t)k >> (56 - 8 * i));   /* nombre de feuilles, gros-boutiste */
+    q[8] = 0; q[9] = 0; q[10] = FEUILLE >> 8; q[11] = FEUILLE & 0xFF;
+    eponge_ref(r, lr, DOM_RACINE, out, outlen);
+    free(r);
+}
+
+/* ref = 0 : noyau AVX2 ; ref = 1 : référence dense. Les entrées de 100 et 300 feuilles ne sont calculées que par le noyau
+ * (la référence dense y prendrait plusieurs minutes) : hex vide côté référence. Rend le nombre de KAT. */
+static int calculer_kats(int ref, kat_t *k)
+{
+    const size_t TM = 300 * 8192 + 5;
+    uint8_t *m = malloc(TM), out[200], cle[64], nonce[24], *c = malloc(3 * 8192 + 5), tag[32];
+    for (size_t i = 0; i < TM; i++)
+        m[i] = (uint8_t)(i % 251);
+    for (int i = 0; i < 64; i++)
+        cle[i] = (uint8_t)i;
+    for (int i = 0; i < 24; i++)
+        nonce[i] = (uint8_t)(0x80 + i);
+    int n = 0;
+    const size_t LH[] = {0, 1, 79, 80, 81, 8192, 8193, 3 * 8192 + 5, 100 * 8192 + 77, 300 * 8192 + 5};
+    for (size_t t = 0; t < sizeof LH / sizeof *LH; t++, n++) {
+        snprintf(k[n].nom, sizeof k[n].nom, "hachage_%zu", LH[t]);
+        k[n].hex[0] = 0;
+        if (ref && LH[t] > 4 * FEUILLE)
+            continue;
+        if (ref)
+            arbre_ref(m, LH[t], out, 64);
+        else
+            arbre(m, LH[t], out, 64, 1);
+        hexa(out, 64, k[n].hex);
+    }
+    snprintf(k[n].nom, sizeof k[n].nom, "hachage_abc");
+    if (ref)
+        arbre_ref((const uint8_t *)"abc", 3, out, 64);
+    else
+        arbre((const uint8_t *)"abc", 3, out, 64, 1);
+    hexa(out, 64, k[n++].hex);
+    const size_t LX[] = {0, 200};
+    for (size_t t = 0; t < 2; t++, n++) {
+        snprintf(k[n].nom, sizeof k[n].nom, "xof_%zu", LX[t]);
+        (ref ? eponge_ref : eponge)(m, LX[t], DOM_SEQ, out, 200);
+        hexa(out, 200, k[n].hex);
+    }
+    const size_t LA[] = {0, 16, 64, 1000, 64};
+    for (size_t t = 0; t < 5; t++, n++) {
+        size_t aadlen = t < 4 ? 9 : 0;   /* dernier : sans données associées */
+        snprintf(k[n].nom, sizeof k[n].nom, "aead_%zu%s", LA[t], aadlen ? "" : "_sans_aad");
+        aead(ref ? perm_ref : perm1, cle, nonce, m + 1000, aadlen, m, LA[t], 0, c, tag);
+        memcpy(out, tag, 32);
+        sl_shake256(c, LA[t], out + 32, 32);
+        hexa(out, 64, k[n].hex);
+    }
+    const size_t LP[] = {0, 1000, 8192, 8193, 3 * 8192 + 5};   /* AEAD parallèle (v0.6) : 1, 1, 1, 2 et 3 feuilles */
+    for (size_t t = 0; t < 5; t++, n++) {
+        snprintf(k[n].nom, sizeof k[n].nom, "aeadp_%zu", LP[t]);
+        aeadp(ref ? perm_ref : perm1, cle, nonce, m + 1000, 9, m, LP[t], 0, c, tag);
+        memcpy(out, tag, 32);
+        sl_shake256(c, LP[t], out + 32, 32);
+        hexa(out, 64, k[n].hex);
+    }
+    free(c);
+    free(m);
+    return n;
+}
+
+#if __has_include("kat_b1024.h")
+#include "kat_b1024.h"
+#define KAT_PRESENTS 1
+#else
+#define KAT_PRESENTS 0
+#endif
+
+/* « brume1024 kat » : écrit kat_b1024.h sur la sortie standard, si le noyau et la référence concordent */
+static int generer_kats(void)
+{
+    static kat_t kn[NKAT], kr[NKAT];
+    if (calculer_kats(0, kn) != NKAT || calculer_kats(1, kr) != NKAT)
+        return 2;
+    for (int i = 0; i < NKAT; i++)
+        if (kr[i].hex[0] && strcmp(kn[i].hex, kr[i].hex)) {
+            fprintf(stderr, "désaccord noyau / référence : %s\n", kn[i].nom);
+            return 1;
+        }
+    printf("/* KAT figés de BRUME-1024q, profil R = %d, généré par « brume1024 kat » (noyau AVX2 et référence dense concordants).\n"
+           " * Ne pas régénérer pour faire passer un contrôle : une différence signale un changement de la fonction. Message,\n"
+           " * clé, nonce et AAD : voir calculer_kats() dans brume1024.c.\n"
+           " * Historique : 13 novembre 2026, orientation SpongeWrap de l'AEAD (AEAD_SECURITY.md § 6) : les 4 KAT de l'AEAD avec\n"
+           " * texte ont changé, volontairement ; les 14 autres sont restés identiques.\n"
+           " * 14 novembre 2026, fusion du bloc de longueur (option A, AEAD_SECURITY.md § 6 bis) : les 5 KAT de l'AEAD ont changé,\n"
+           " * volontairement ; les 13 autres sont restés identiques.\n"
+           " * 14 novembre 2026, AEAD parallèle (v0.6, V06_MODES.md § 2) : 5 KAT ajoutés (aeadp_*) ; les 18 autres sont inchangés. */\n", R1);
+    printf("static const char *const KAT_FIGES[%d][2] = {\n", NKAT);
+    for (int i = 0; i < NKAT; i++)
+        printf("    {\"%s\",\n     \"%s\"},\n", kn[i].nom, kn[i].hex);
+    printf("};\n");
+    return 0;
+}
+
+/* ------------------------------------------------------------ séparation des domaines (DOMAINS.md), contrôles structurels */
+static int controle_domaines(void)
+{
+    int ok = 1;
+    /* 1. modes (nibble bas de l'octet 127) et domaines (nibble haut) : valeurs < 16, distinctes dans chaque construction ;
+     *    dans l'AEAD, les domaines de fin de phase sont non nuls (les autres blocs portent 0) */
+    const int de[] = {DOM_SEQ, DOM_FEUILLE, DOM_RACINE, DOM_SEUL}, da[] = {0, DOM_AAD, DOM_TEXTE};
+    for (int i = 0; i < 4; i++)
+        for (int j = 0; j < 4; j++) {
+            ok &= de[i] >= 0 && de[i] < 16;
+            if (i != j)
+                ok &= de[i] != de[j];
+        }
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++) {
+            ok &= da[i] >= 0 && da[i] < 16;
+            if (i != j)
+                ok &= da[i] != da[j];
+        }
+    ok &= MODE_EPONGE != MODE_AEAD && MODE_EPONGE < 16 && MODE_AEAD < 16;
+    /* 2. états avant la première permutation : éponge = 0^121 ‖ cadre(5), AEAD = clé ‖ nonce ‖ 0^33 ‖ cadre(3). On contrôle
+     *    que etat_aead() n'écrit la clé que dans 0..63, le nonce que dans 64..87, et que 88..127 ne dépendent pas d'eux :
+     *    les deux états diffèrent alors à l'octet 127 pour toute clé et tout nonce. Clés et nonces extrêmes et aléatoires. */
+    uint8_t e[128], fa[128], w[128], tc[64 + 8], tn[24 + 8], *cle = tc, *nonce = tn;   /* 8 octets de garde non nuls */
+    memset(tc + 64, 0xC3, 8);
+    memset(tn + 24, 0x3C, 8);
+    memset(e, 0, 128);
+    cadre_iv(e, MODE_EPONGE);
+    memset(fa, 0, 128);
+    cadre_iv(fa, MODE_AEAD);
+    for (int essai = 0; essai < 6; essai++) {
+        if (essai < 4) {
+            memset(cle, essai == 1 ? 0xFF : essai == 3 ? MODE_EPONGE : 0, 64);
+            memset(nonce, essai == 1 ? 0xFF : essai == 3 ? MODE_EPONGE : 0, 24);
+            if (essai == 2) {          /* clé et nonce recopiés de l'état initial de l'éponge */
+                memcpy(cle, e, 64);
+                memcpy(nonce, e + 64, 24);
+            }
+        } else {
+            sl_alea(cle, 64);
+            sl_alea(nonce, 24);
+        }
+        memset(w, 0xA5, 128);
+        etat_aead(w, cle, nonce);
+        ok &= !memcmp(w, cle, 64) && !memcmp(w + 64, nonce, 24) && !memcmp(w + 88, fa + 88, 40);
+        ok &= w[127] != e[127] && memcmp(w, e, 128) != 0;
+    }
+    /* 3. P(IV) en cache identique au calcul direct */
+    memcpy(w, e, 128);
+    perm1(w, R1);
+    uint8_t c[128];
+    etat_iv(c, MODE_EPONGE);
+    ok &= !memcmp(w, c, 128);
+    /* 4. même message, domaines différents : sorties toutes distinctes (4 domaines × 3 longueurs autour du débit) */
+    uint8_t m[81], h[12][32];
+    for (int i = 0; i < 81; i++)
+        m[i] = (uint8_t)i;
+    const size_t L[] = {0, 79, 80};
+    for (int d = 0; d < 4; d++)
+        for (int l = 0; l < 3; l++)
+            eponge(m, L[l], de[d], h[3 * d + l], 32);
+    for (int i = 0; i < 12; i++)
+        for (int j = i + 1; j < 12; j++)
+            ok &= memcmp(h[i], h[j], 32) != 0;
+    return ok;
+}
+
+#ifndef SANS_MAIN
+int main(int argc, char **argv)
+{
+    int kat = argc > 1 && !strcmp(argv[1], "kat");   /* brume1024 kat > kat_b1024.h : fige les KAT du profil R = 32 */
+    if (argc > 1 && !kat)
+        R1 = atoi(argv[1]);
+    if (R1 < 1 || R1 > B1_RT || !ref_init() || !pp_init())
+        return 2;
+#ifdef __AVX2__
+    if (!init_noyaux())
+        return 2;
+#endif
+    prepare_iv();
+    sl_init();
+    if (kat)
+        return generer_kats();
+    resultat_t res = {.nom = "brume1024", .titre = "BRUME-1024q (v0.6) : permutation de 1 024 bits, eponge c = 384, modes de la bibliotheque"};
+    uint64_t g = 0x1024;
+    size_t TAILLE = (size_t)64 << 20;
+    uint8_t *m = malloc(TAILLE);
+    for (size_t i = 0; i < TAILLE; i++) {
+        g = g * 6364136223846793005ULL + 1442695040888963407ULL;
+        m[i] = (uint8_t)(g >> 56);
+    }
+    /* 1. noyau 1 état ≡ référence dense ; inverse dense */
+    int ok1 = 1, okinv = 1;
+    for (int e = 0; e < 64; e++) {
+        uint8_t w[128], x[N1], y[N1];
+        memcpy(w, m + 128 * e, 128);
+        deballer_ref(w, x);
+        memcpy(y, x, N1);
+        for (int r = 0; r < R1; r++)
+            ref_tour(x, r);
+        perm1(w, R1);
+        uint8_t z[128];
+        emballer_ref(x, z);
+        ok1 &= !memcmp(z, w, 128);
+        for (int r = R1 - 1; r >= 0; r--)
+            ref_tour_inv(x, r);
+        okinv &= !memcmp(x, y, N1);
+    }
+    res_controle(&res, "noyau_1_etat_identique_a_la_reference_dense", ok1);
+    res_controle(&res, "tours_inverses_denses_inversent_la_permutation", okinv);
+    /* 1 bis. noyau portable à temps constant (b1024_portable.h, C pur) ≡ noyau AVX2 : chaque nombre de tours de la table,
+     * 64 états à R1 tours, et l'AEAD aux frontières de blocs (chiffrement et déchiffrement) */
+    int okp = PP_PRET;
+    for (int R = 1; R <= B1_RT; R++)
+        for (int e = 0; e < 4; e++) {
+            uint8_t a[128], b[128];
+            memcpy(a, m + 128 * (64 + 4 * R + e), 128);
+            memcpy(b, a, 128);
+            pp_perm(a, R);
+            perm1(b, R);
+            okp &= !memcmp(a, b, 128);
+        }
+    for (int e = 0; e < 64; e++) {
+        uint8_t a[128], b[128];
+        memcpy(a, m + 128 * (512 + e), 128);
+        memcpy(b, a, 128);
+        pp_perm(a, R1);
+        perm1(b, R1);
+        okp &= !memcmp(a, b, 128);
+    }
+    {
+        static const size_t LP[] = {0, 1, 79, 80, 81, 159, 160, 1000};
+        for (int i = 0; i < 8; i++)
+            for (int dec = 0; dec < 2; dec++) {
+                uint8_t c1[1000], c2[1000], t1[32], t2[32];
+                const uint8_t *k = m + 100000, *n = m + 100064, *aad = m + 100100, *x = m + 200000;
+                int r1 = aead(pp_perm, k, n, aad, LP[i] % 97, x, LP[i], dec, c1, t1);
+                int r2 = aead(perm1, k, n, aad, LP[i] % 97, x, LP[i], dec, c2, t2);
+                okp &= r1 == r2 && !memcmp(c1, c2, LP[i]) && !memcmp(t1, t2, 32);
+            }
+    }
+    res_controle(&res, "noyau_portable_temps_constant_identique_au_noyau_avx2_tous_tours_et_aead", okp);
+    /* 2. noyau 32 états ≡ 1 état */
+    int ok32 = 1;
+    {
+        uint8_t (*e)[128] = aligned_alloc(64, 32 * 128), w[128];
+        memcpy(e, m + 4096, 32 * 128);
+        lot(e, R1);
+        for (int i = 0; i < 32; i++) {
+            memcpy(w, m + 4096 + 128 * i, 128);
+            perm1(w, R1);
+            ok32 &= !memcmp(w, e[i], 128);
+        }
+        free(e);
+    }
+    res_controle(&res, "noyau_32_etats_identique_au_noyau_1_etat", ok32);
+    /* 2 bis. noyau bitslicé (256 états) ≡ 1 état, transpositions comprises */
+    int okbs = 1;
+    {
+        uint8_t (*e)[128] = aligned_alloc(64, 256 * 128), (*f)[128] = aligned_alloc(64, 256 * 128);
+        memcpy(e, m + 8192, 256 * 128);
+        memset(BS_P, 0, sizeof BS_P);
+        bs_absorber(BS_P, e[0], 128, 8);
+        bs_perm(BS_P, R1);
+        bs_extraire((const __m256i (*)[4])BS_P, f[0], 128, 8);
+        for (int i = 0; i < 256; i++) {
+            uint8_t w[128];
+            memcpy(w, e[i], 128);
+            perm1(w, R1);
+            okbs &= !memcmp(w, f[i], 128);
+        }
+        free(e);
+        free(f);
+    }
+    res_controle(&res, "noyau_bitslice_256_etats_identique_au_noyau_1_etat", okbs);
+    /* 3. éponge (état déballé) ≡ éponge de référence, longueurs limites */
+    const size_t LONG[] = {0, 1, 79, 80, 81, 159, 160, 161, 1000, 8191, 8192, 8193, 20000};
+    int okep = 1;
+    for (size_t t = 0; t < sizeof LONG / sizeof *LONG; t++) {
+        uint8_t a[200], b[200];
+        eponge(m, LONG[t], DOM_SEQ, a, 200);
+        eponge_ref(m, LONG[t], DOM_SEQ, b, 200);
+        okep &= !memcmp(a, b, 200);
+    }
+    res_controle(&res, "eponge_etat_deballe_identique_a_l_eponge_de_reference", okep);
+    /* 4. arbre : lot ≡ séquentiel */
+    int okarbre = 1;
+    omp_set_num_threads(1);   /* sur 1 thread, le chemin par lots sert dès 32 feuilles : il est donc bien contrôlé */
+    const size_t LA[] = {8193, 16384, 16385, 32 * 8192, 33 * 8192 + 5, 100 * 8192 + 77, 256 * 8192 + 1, 300 * 8192 + 5, 600 * 8192};
+    for (size_t t = 0; t < sizeof LA / sizeof *LA; t++) {
+        uint8_t a[64], b[64];
+        arbre(m, LA[t], a, 64, 1);
+        arbre(m, LA[t], b, 64, 0);
+        okarbre &= !memcmp(a, b, 64);
+    }
+    omp_set_num_threads(omp_get_num_procs());
+    {   /* et sur tous les threads (chemin par feuille en dessous de 32 feuilles par thread) */
+        uint8_t a[64], b[64];
+        arbre(m, 100 * 8192 + 77, a, 64, 1);
+        omp_set_num_threads(1);
+        arbre(m, 100 * 8192 + 77, b, 64, 1);
+        omp_set_num_threads(omp_get_num_procs());
+        okarbre &= !memcmp(a, b, 64);
+    }
+    res_controle(&res, "arbre_noyau_32_etats_identique_aux_feuilles_sequentielles", okarbre);
+    /* trous comblés (score de mutation du 13 novembre) : seuils de l'ordonnanceur de l'arbre, valeur de retour, nombre de
+     * tours par défaut, changement du nombre de tours en cours de route */
+    {
+        int okb = 1;
+        uint8_t a[64], b[64];
+        omp_set_num_threads(1);   /* nombres de feuilles pleines autour de 128, 256, 512 (seuils et découpage des lots) */
+        const size_t NF[] = {127, 128, 129, 255, 256, 257, 261, 288, 511, 512, 513, 544};
+        for (size_t t = 0; t < sizeof NF / sizeof *NF; t++) {
+            size_t L = NF[t] * 8192 + 7;
+            memset(a, 0xA5, 64);
+            okb &= arbre(m, L, a, 64, 1) == 0;
+            arbre(m, L, b, 64, 0);
+            okb &= !memcmp(a, b, 64);
+        }
+        const size_t nt = (size_t)omp_get_num_procs();   /* tous les threads : autour de 128 et 32 feuilles par thread */
+        omp_set_num_threads((int)nt);
+        const size_t NT2[] = {128 * nt - 1, 128 * nt, 128 * nt + 1, 256 * ((128 * nt + 255) / 256) + 5, 32 * nt - 1, 32 * nt};
+        for (size_t t = 0; t < sizeof NT2 / sizeof *NT2; t++) {
+            size_t L = NT2[t] * 8192 + 7;
+            if (L > TAILLE)
+                continue;
+            arbre(m, L, a, 64, 1);
+            arbre(m, L, b, 64, 0);
+            okb &= !memcmp(a, b, 64);
+        }
+        okb &= arbre(m, 100, a, 64, 1) == 0 && arbre(m, 8192, b, 64, 1) == 0;   /* valeur de retour, message seul */
+        res_controle(&res, "arbre_seuils_de_l_ordonnanceur_et_valeur_de_retour", okb);
+        res_controle(&res, "profil_par_defaut_32_tours", argc > 1 || R1 == 32);
+        /* nombre de tours changé en cours de route : le cache de P(IV) et ses plans de bits doivent suivre */
+        int okr = 1;
+        uint8_t h32[64], hA[64], hB[64];
+        const int R0 = R1;
+        eponge(m, 500, DOM_SEQ, h32, 64);
+        R1 = R0 - 1;
+        eponge(m, 500, DOM_SEQ, hA, 64);
+        eponge_ref(m, 500, DOM_SEQ, hB, 64);
+        okr &= !memcmp(hA, hB, 64) && memcmp(hA, h32, 64) != 0;
+        omp_set_num_threads(1);
+        arbre(m, 300 * 8192 + 5, hA, 64, 1);   /* lots bitslicés : BS_IV doit être celui de R0 − 1 tours */
+        arbre(m, 300 * 8192 + 5, hB, 64, 0);
+        okr &= !memcmp(hA, hB, 64);
+        R1 = R0;
+        eponge(m, 500, DOM_SEQ, hA, 64);
+        okr &= !memcmp(hA, h32, 64);
+        arbre(m, 300 * 8192 + 5, hA, 64, 1);
+        arbre(m, 300 * 8192 + 5, hB, 64, 0);
+        okr &= !memcmp(hA, hB, 64);
+        omp_set_num_threads((int)nt);
+        res_controle(&res, "changement_du_nombre_de_tours_cache_et_plans_de_bits_suivent", okr);
+    }
+    /* 4 bis. AEAD : noyau AVX2 ≡ référence dense ; déchiffrement ; altérations rejetées */
+    {
+        int oka = 1;
+        const size_t LT[] = {0, 1, 79, 80, 81, 1000};
+        for (size_t t = 0; t < sizeof LT / sizeof *LT; t++) {
+            uint8_t c1[1000], c2[1000], d[1000], t1[32], t2[32], t3[32];
+            aead(perm1, m, m + 64, m + 100, 9 + t, m + 300, LT[t], 0, c1, t1);
+            aead(perm_ref, m, m + 64, m + 100, 9 + t, m + 300, LT[t], 0, c2, t2);
+            oka &= !memcmp(c1, c2, LT[t]) && !memcmp(t1, t2, 32);
+            aead(perm1, m, m + 64, m + 100, 9 + t, c1, LT[t], 1, d, t3);
+            oka &= !memcmp(d, m + 300, LT[t]) && !memcmp(t1, t3, 32);
+            if (LT[t]) {
+                c1[LT[t] / 2] ^= 1;
+                aead(perm1, m, m + 64, m + 100, 9 + t, c1, LT[t], 1, d, t3);
+                oka &= memcmp(t1, t3, 32) != 0;
+            }
+            uint8_t n2[24];
+            memcpy(n2, m + 64, 24);
+            n2[23] ^= 0x80;
+            aead(perm1, m, n2, m + 100, 9 + t, m + 300, LT[t], 0, c2, t3);
+            oka &= memcmp(t1, t3, 32) != 0;
+        }
+        res_controle(&res, "aead_noyau_identique_a_la_reference_dechiffre_et_rejette_les_alterations", oka);
+        /* frontières : AAD × texte autour du débit (80) et de deux blocs (160), noyau ≡ référence dense */
+        const size_t FR[] = {0, 1, 79, 80, 81, 159, 160, 161};
+        int okf = 1;
+        for (size_t i = 0; i < 8; i++)
+            for (size_t j = 0; j < 8; j++) {
+                uint8_t c1[161], c2[161], t1[32], t2[32];
+                aead(perm1, m, m + 64, m + 500, FR[i], m + 1000, FR[j], 0, c1, t1);
+                aead(perm_ref, m, m + 64, m + 500, FR[i], m + 1000, FR[j], 0, c2, t2);
+                okf &= !memcmp(c1, c2, FR[j]) && !memcmp(t1, t2, 32);
+            }
+        res_controle(&res, "aead_frontieres_aad_et_texte_croisees_identiques_a_la_reference", okf);
+        /* référence DMV17 littérale : chiffrement et déchiffrement, 64 combinaisons AAD × texte (noyau AVX2), et 16 avec la
+         * permutation dense (référence entièrement indépendante du noyau et du code du mode) */
+        int okk = 1;
+        for (size_t i = 0; i < 8; i++)
+            for (size_t j = 0; j < 8; j++)
+                for (int dech = 0; dech < 2; dech++) {
+                    uint8_t c1[161], c2[161], t1[32], t2[32];
+                    perm_f P = (i % 2 == 0 && j % 2 == 0 && !dech) ? perm_ref : perm1;
+                    aead(perm1, m + 3, m + 70, m + 500, FR[i], m + 1000, FR[j], dech, c1, t1);
+                    aead_kd(P, m + 3, m + 70, m + 500, FR[i], m + 1000, FR[j], dech, c2, t2);
+                    okk &= !memcmp(c1, c2, FR[j]) && !memcmp(t1, t2, 32);
+                }
+        res_controle(&res, "aead_identique_a_la_reference_dmv17_litterale_chiffrement_et_dechiffrement", okk);
+        /* étape AE (AEAD_SECURITY.md § 4 bis) : (1) le chemin IXIF du déchiffrement de (A, C) est celui du chiffrement de
+         * (A, M), drapeau partiel du dernier bloc compris ; (2) le chemin final se décode en (A, M) (codage injectif) ;
+         * (3) rôles : le flux de clé de chaque bloc de texte est lu après une entrée de nibble DOM_AAD ou 0, le tag après
+         * l'entrée DOM_TEXTE du dernier bloc du texte (dernière entrée du chemin final, aucun flux n'est lu après elle) ;
+         * l'appel du tag injecte σ = 0 ; nombre d'appels = ⌈(|A|+1)/80⌉ + ⌊|M|/80⌋ + 2 (sans bloc de longueur). */
+        int okch = 1;
+        for (size_t i = 0; i < 8; i++)
+            for (size_t j = 0; j < 8; j++) {
+                const size_t A = FR[i], L = FR[j];
+                uint8_t ce[16][128], cd[16][128], c[161], p[161], t1[32], t2[32], dA[200], dM[200];
+                size_t ne = 0, nd = 0, la = 9999, lm = 9999;
+                aead_kd_chemin(perm1, m + 3, m + 70, m + 500, A, m + 1000, L, 0, c, t1, ce, 16, &ne);
+                aead_kd_chemin(perm1, m + 3, m + 70, m + 500, A, c, L, 1, p, t2, cd, 16, &nd);
+                const size_t na = A / RB + 1, nm = L / RB + 1;
+                okch &= ne == na + nm + 1 && nd == ne && !memcmp(ce, cd, ne * 128) && !memcmp(t1, t2, 32) &&
+                        !memcmp(p, m + 1000, L);
+                okch &= decoder_chemin((const uint8_t(*)[128])ce, ne - 1, dA, &la, dM, &lm, 200) == 0 && la == A &&
+                        lm == L && !memcmp(dA, m + 500, A) && !memcmp(dM, m + 1000, L);
+                int zero = 1;
+                for (int k = 0; k < 128; k++)
+                    zero &= ce[ne - 1][k] == 0;
+                okch &= zero && (ce[na - 1][127] >> 4) == DOM_AAD && (ce[ne - 2][127] >> 4) == DOM_TEXTE;
+                for (size_t t = 0; t < nm; t++)            /* entrée lue avant le bloc de texte t */
+                    okch &= (ce[na + t - 1][127] >> 4) == (t == 0 ? DOM_AAD : 0);
+                /* témoins : une entrée altérée (domaine, bourrage, capacité, dernier bloc) ne se décode pas en (A, M) */
+                const int pos[4][2] = {{(int)(na - 1), 127}, {(int)(na + nm - 1), (int)(L % RB)}, {0, 100},
+                                       {(int)(ne - 2), 0}};
+                for (int w = 0; w < 4; w++) {
+                    uint8_t cw[16][128];
+                    memcpy(cw, ce, sizeof cw);
+                    cw[pos[w][0]][pos[w][1]] ^= w == 0 ? 0x30 : 0x01;
+                    size_t la2 = 0, lm2 = 0;
+                    const int r = decoder_chemin((const uint8_t(*)[128])cw, ne - 1, dA, &la2, dM, &lm2, 200);
+                    okch &= r == -1 || la2 != A || lm2 != L || memcmp(dA, m + 500, A) || memcmp(dM, m + 1000, L);
+                }
+            }
+        res_controle(&res, "etape_ae_chemin_du_dechiffrement_egal_au_chiffrement_decodable_et_roles", okch);
+        /* décodeur du chemin final, branche par branche (trous de la 3e passe de mutation, 14 novembre) : chaque forme
+         * invalide rend EXACTEMENT −1 ; tampons de taille exacte ; textes de plusieurs blocs (300 et 70 000 octets) ;
+         * capacité exacte acceptée, capacité − 1 refusée ; l'enregistrement du chemin s'arrête à nch (garde) */
+        int okd = 1, ndec = 0;
+        {
+            const size_t DA[] = {0, 81}, DL[] = {0, 79, 80, 300, 70000};
+            for (size_t ia = 0; ia < 2; ia++)
+                for (size_t il = 0; il < 5; il++) {
+                    const size_t A = DA[ia], L = DL[il], na = A / RB + 1, nm = L / RB + 1, ne = na + nm + 1, n0 = ne - 1;
+                    const size_t cap = A > L ? A : L;
+                    const uint8_t *vA = m + 500, *vM = m + 1000;
+                    uint8_t(*ce)[128] = malloc((ne + 1) * 128), (*x)[128] = malloc((ne + 1) * 128), *c = malloc(L + 1),
+                        t[32];
+                    size_t nr = 0;
+                    memset(ce, 0xA5, (ne + 1) * 128);
+                    aead_kd_chemin(perm1, m + 3, m + 70, vA, A, vM, L, 0, c, t, ce, ne, &nr);
+                    for (int k = 0; k < 128; k++)          /* garde : rien d'écrit après nch entrées */
+                        okd &= ce[ne][k] == 0xA5;
+                    okd &= nr == ne;
+                    memset(x, 0xA5, (ne + 1) * 128);       /* nch plus petit que le nombre d'appels : 2 entrées seulement */
+                    aead_kd_chemin(perm1, m + 3, m + 70, vA, A, vM, L, 0, c, t, x, 2, &nr);
+                    okd &= nr == ne && !memcmp(x, ce, 2 * 128);
+                    for (size_t e = 2; e <= ne; e++)        /* rien d'écrit au-delà de nch */
+                        for (int k = 0; k < 128; k++)
+                            okd &= x[e][k] == 0xA5;
+                    okd &= dec_essai((const uint8_t(*)[128])ce, n0, cap, vA, A, vM, L) == 0;
+                    int nok = 0, ntot = 0;
+#define DEC_REJET(nlig)                                                                                                \
+    do {                                                                                                               \
+        nok += dec_essai((const uint8_t(*)[128])x, (nlig), cap, vA, A, vM, L) == -1;                                   \
+        ntot++;                                                                                                        \
+        memcpy(x, ce, (ne + 1) * 128);                                                                                 \
+    } while (0)
+                    memcpy(x, ce, (ne + 1) * 128);
+                    if (cap) {                                  /* capacité − 1 */
+                        nok += dec_essai((const uint8_t(*)[128])ce, n0, cap - 1, vA, A, vM, L) == -1;
+                        ntot++;
+                    }
+                    DEC_REJET(n0 - 1);                          /* dernier bloc du texte absent */
+                    if (n0 >= 2)
+                        DEC_REJET(n0 - 2);
+                    memcpy(x[n0], ce[n0 - 1], 128);             /* une entrée de trop */
+                    DEC_REJET(n0 + 1);
+                    for (size_t e = 0; e < n0; e++) {
+                        const int KC[] = {RB, 100, 126};
+                        for (int i = 0; i < 3; i++) {           /* capacité non nulle */
+                            x[e][KC[i]] ^= 0x01;
+                            DEC_REJET(n0);
+                        }
+                        x[e][127] ^= 0x01;                      /* nibble bas de l'octet 127 */
+                        DEC_REJET(n0);
+                    }
+                    x[na - 1][127] = DOM_TEXTE << 4;            /* domaine du texte dans la phase AAD */
+                    DEC_REJET(n0);
+                    x[na + nm - 1][127] = DOM_AAD << 4;         /* domaine AAD dans la phase texte */
+                    DEC_REJET(n0);
+                    x[n0 - 1][127] = 0;                         /* dernier bloc du texte sans DOM_TEXTE */
+                    DEC_REJET(n0);
+                    x[n0 - 1][127] = 4 << 4;                    /* nibble 4 (ancien domaine du bloc de longueur) */
+                    DEC_REJET(n0);
+                    if (na > 1) {                               /* bloc plein de A marqué d'un domaine */
+                        x[0][127] = 4 << 4;
+                        DEC_REJET(n0);
+                    }
+                    x[na - 1][A % RB] = 0x02;                   /* bourrage 0x01 remplacé */
+                    DEC_REJET(n0);
+                    x[na + nm - 1][L % RB] = 0x02;
+                    DEC_REJET(n0);
+#undef DEC_REJET
+                    okd &= nok == ntot;
+                    ndec += ntot;
+                    free(ce);
+                    free(x);
+                    free(c);
+                }
+        }
+        res_mesure(&res, "decodeur_formes_invalides_essayees", "%d", ndec);
+        res_controle(&res, "decodeur_chemin_rejette_exactement_chaque_forme_invalide_et_garde_nch", okd && ndec > 0);
+        /* réutilisation de nonce, fuite exacte (AEAD_SECURITY.md § 4 (e)) : même clé et même nonce, (A, M) et (A', M').
+         * Le flux du bloc de texte t ne dépend que du chemin qui le précède : il est le même pour les deux messages SI ET
+         * SEULEMENT SI les entrées σ̃ (A et blocs de texte bourrés) coïncident jusqu'au bloc t − 1. Donc c ⊕ c' = m ⊕ m' sur
+         * tous les blocs jusqu'au premier bloc dont l'entrée diffère, celui-ci compris, puis plus rien. Tags : (A, M) = (A', M') ⇒ T = T'
+         * (déterminisme) ; la réciproque n'est pas vraie en général (tag de 256 bits, collision ≈ 2^−256 par paire) : la
+         * grille ci-dessous observe seulement que ses paires distinctes ont des tags distincts. Mesuré sur aead() (l'implémentation), prédit par les chemins de aead_kd_chemin(). */
+        int oknr = 1, nprev = 0;
+        {
+            const size_t AL[] = {0, 79, 80}, LL[] = {0, 1, 79, 80, 81, 159, 160, 161, 200};
+            uint8_t base[200], var[200];
+            memcpy(base, m + 7000, 200);
+            for (int cas = 0; cas < 4; cas++)
+                for (size_t a = 0; a < 3; a++)
+                    for (size_t a2 = 0; a2 < 3; a2++)
+                        for (size_t l = 0; l < 9; l++)
+                            for (size_t l2 = 0; l2 < 9; l2++) {
+                                const size_t A = AL[a], A2 = AL[a2], L = LL[l], L2 = LL[l2];
+                                memcpy(var, base, 200);           /* cas 0 : M' préfixe ou prolongement de M */
+                                if (cas >= 1 && L2 > 0) {         /* cas 1, 2, 3 : un octet change (début, milieu, fin) */
+                                    const size_t d = cas == 1 ? 0 : cas == 2 ? L2 / 2 : L2 - 1;
+                                    var[d] ^= (uint8_t)(1 + m[8000 + d] % 255);
+                                }
+                                uint8_t c1[200], c2[200], t1[32], t2[32], e1[16][128], e2[16][128], z[200], tz[32];
+                                size_t n1 = 0, n2 = 0;
+                                aead(perm1, m, m + 64, m + 100, A, base, L, 0, c1, t1);
+                                aead(perm1, m, m + 64, m + 100 + (A2 != A ? 300 : 0), A2, var, L2, 0, c2, t2);
+                                aead_kd_chemin(perm1, m, m + 64, m + 100, A, base, L, 0, z, tz, e1, 16, &n1);
+                                aead_kd_chemin(perm1, m, m + 64, m + 100 + (A2 != A ? 300 : 0), A2, var, L2, 0, z, tz,
+                                               e2, 16, &n2);
+                                const size_t na1 = A / RB + 1, na2 = A2 / RB + 1, nm1 = L / RB + 1, nm2 = L2 / RB + 1;
+                                const int memes = A == A2 && L == L2 && !memcmp(base, var, L);
+                                oknr &= memes == !memcmp(t1, t2, 32);
+                                for (size_t t = 0; t < nm1 && t < nm2; t++) {
+                                    /* prédiction : chemins égaux avant le bloc t (même nombre de blocs de A, entrées égales) */
+                                    const int pred = na1 == na2 && !memcmp(e1, e2, (na1 + t) * 128);
+                                    const size_t deb = t * RB, l1 = L - deb < RB ? L - deb : RB, l2 = L2 - deb < RB ? L2 - deb : RB;
+                                    const size_t lc = l1 < l2 ? l1 : l2;
+                                    int egal = 1;
+                                    for (size_t k = 0; k < lc; k++)
+                                        egal &= (c1[deb + k] ^ c2[deb + k]) == (base[deb + k] ^ var[deb + k]);
+                                    if (pred)
+                                        oknr &= egal, nprev++;
+                                    else if (lc >= 8)              /* fausse égalité : probabilité ≤ 2^−64 */
+                                        oknr &= !egal;
+                                }
+                            }
+        }
+        res_mesure(&res, "nonce_reutilise_blocs_de_flux_prevus_egaux", "%d", nprev);
+        res_controle(&res, "nonce_reutilise_fuite_exacte_flux_egal_ssi_chemin_egal_aux_frontieres", oknr && nprev > 0);
+        /* déchiffrement vérifié : aller-retour, puis 14 altérations rejetées, texte effacé à chaque rejet */
+        int oko = 1, nalt = 0;
+        const size_t AO[] = {0, 9, 80, 161}, LO[] = {0, 1, 79, 80, 81, 160, 1000};
+        for (size_t a = 0; a < 4; a++)
+            for (size_t t = 0; t < 7; t++) {
+                const size_t A = AO[a], L = LO[t];
+                uint8_t cle[64], nonce[24], aad[200], ct[1002], tag[32], pt[1002], k2[64], n2[24], a2[200], c2[1002], t2[32];
+                memcpy(cle, m + 7, 64);
+                memcpy(nonce, m + 90, 24);
+                memcpy(aad, m + 300, A);
+                aead(perm1, cle, nonce, aad, A, m + 2000, L, 0, ct, tag);
+                oko &= aead_ouvrir(cle, nonce, aad, A, ct, L, tag, pt) == 0 && !memcmp(pt, m + 2000, L);
+                /* chaque altération : rejet, et le tampon de sortie entièrement à zéro */
+#define REJET(K, N, AA, AL, C, CL, T)                                                                                   \
+    do {                                                                                                                 \
+        memset(pt, 0xEE, sizeof pt);                                                                                     \
+        int r_ = aead_ouvrir(K, N, AA, AL, C, CL, T, pt), z_ = 1;                                                        \
+        for (size_t q_ = 0; q_ < (CL); q_++)                                                                             \
+            z_ &= pt[q_] == 0;                                                                                           \
+        oko &= r_ == -1 && z_;                                                                                           \
+        nalt++;                                                                                                          \
+    } while (0)
+                memcpy(k2, cle, 64); k2[0] ^= 1; REJET(k2, nonce, aad, A, ct, L, tag);
+                memcpy(k2, cle, 64); k2[63] ^= 0x80; REJET(k2, nonce, aad, A, ct, L, tag);
+                memcpy(n2, nonce, 24); n2[0] ^= 1; REJET(cle, n2, aad, A, ct, L, tag);
+                memcpy(n2, nonce, 24); n2[23] ^= 0x80; REJET(cle, n2, aad, A, ct, L, tag);
+                memcpy(t2, tag, 32); t2[0] ^= 1; REJET(cle, nonce, aad, A, ct, L, t2);
+                memcpy(t2, tag, 32); t2[31] ^= 0x80; REJET(cle, nonce, aad, A, ct, L, t2);
+                /* altérations dont les différences s'annulent par XOR (deux octets, même écart ; les 32 octets) : une
+                 * comparaison qui cumulerait par ^ au lieu de | les accepterait */
+                memcpy(t2, tag, 32); t2[3] ^= 0x5A; t2[17] ^= 0x5A; REJET(cle, nonce, aad, A, ct, L, t2);
+                memcpy(t2, tag, 32); for (int q = 0; q < 32; q++) t2[q] ^= 1; REJET(cle, nonce, aad, A, ct, L, t2);
+                if (A) {
+                    memcpy(a2, aad, A); a2[0] ^= 1; REJET(cle, nonce, a2, A, ct, L, tag);
+                    memcpy(a2, aad, A); a2[A - 1] ^= 0x80; REJET(cle, nonce, a2, A, ct, L, tag);
+                    REJET(cle, nonce, aad, A - 1, ct, L, tag);                                  /* AAD tronquées */
+                    memcpy(c2 + 1, ct, L); c2[0] = aad[A - 1];                                  /* frontière AAD | texte */
+                    REJET(cle, nonce, aad, A - 1, c2, L + 1, tag);
+                } else {
+                    a2[0] = 0; REJET(cle, nonce, a2, 1, ct, L, tag);                            /* AAD vides ≠ un octet nul */
+                }
+                if (L) {
+                    memcpy(c2, ct, L); c2[0] ^= 1; REJET(cle, nonce, aad, A, c2, L, tag);
+                    memcpy(c2, ct, L); c2[L - 1] ^= 0x80; REJET(cle, nonce, aad, A, c2, L, tag);
+                    REJET(cle, nonce, aad, A, ct, L - 1, tag);                                  /* chiffré tronqué */
+                    memcpy(a2, aad, A); a2[A] = ct[0];                                          /* frontière déplacée */
+                    REJET(cle, nonce, a2, A + 1, ct + 1, L - 1, tag);
+                }
+                memcpy(c2, ct, L); c2[L] = 0; REJET(cle, nonce, aad, A, c2, L + 1, tag);        /* chiffré allongé */
+#undef REJET
+            }
+        printf("déchiffrement vérifié : %d altérations, toutes rejetées et effacées : %s\n", nalt, oko ? "oui" : "NON");
+        res_mesure(&res, "aead_alterations_testees", "%d", nalt);
+        res_controle(&res, "aead_ouvrir_verifie_rejette_les_alterations_et_n_en_rend_rien", oko);
+        /* réutilisation de nonce : comportement documenté (pas une propriété de sécurité). Même clé, nonce et AAD : le premier
+         * bloc a le même flux (c1 ⊕ c2 = p1 ⊕ p2 sur 80 octets) ; ensuite le débit, qui reçoit des chiffrés différents,
+         * fait diverger les flux (fuite exacte : contrôle nonce_reutilise_fuite_exacte_…). Et le chiffrement est déterministe. */
+        {
+            uint8_t p1[200], p2[200], c1[200], c2[200], c3[200], t1[32], t2[32], t3[32];
+            for (int i = 0; i < 200; i++) {   /* p2 diffère de p1 sur chaque octet */
+                p1[i] = m[5000 + i];
+                p2[i] = (uint8_t)(p1[i] ^ (1 + m[6000 + i] % 255));
+            }
+            aead(perm1, m, m + 64, m + 100, 9, p1, 200, 0, c1, t1);
+            aead(perm1, m, m + 64, m + 100, 9, p2, 200, 0, c2, t2);
+            aead(perm1, m, m + 64, m + 100, 9, p1, 200, 0, c3, t3);
+            int premier = 1, suite = 1;
+            for (int i = 0; i < 80; i++)
+                premier &= (c1[i] ^ c2[i]) == (p1[i] ^ p2[i]);
+            for (int i = 80; i < 160; i++)
+                suite &= (c1[i] ^ c2[i]) == (p1[i] ^ p2[i]);
+            res_controle(&res, "nonce_reutilise_comportement_documente_premier_bloc_seul_et_determinisme",
+                         premier && !suite && !memcmp(c1, c3, 200) && !memcmp(t1, t3, 32));
+        }
+        int okm = 1;
+        omp_set_num_threads(1);   /* sur 1 thread : 5 messages → un message par tâche (moins de 32 par thread : chemin
+                                     trouvé non couvert par le score de mutation, 13 novembre) ; 37 → lots de 32 (un plein,
+                                     un partiel) ; 300 → un lot bitslicé de 256 puis un lot de 32 et un partiel */
+        const size_t LM[] = {0, 1, 79, 80, 81, 160, 1000}, AM[] = {0, 9, 80, 161}, NM[] = {5, 37, 300};
+        uint8_t *o = malloc(300 * 1000), *tg = malloc(300 * 32);
+        for (size_t q = 0; q < 3; q++)
+            for (size_t t = 0; t < sizeof LM / sizeof *LM; t++)
+                for (size_t a = 0; a < sizeof AM / sizeof *AM; a++) {
+                    size_t nmsg = NM[q], L = LM[t];
+                    uint8_t c1[1000], t1[32];
+                    aead_multi(nmsg, m, m + 20000, m + 100, AM[a], m + 30000, L, o, tg);
+                    for (size_t j = 0; j < nmsg; j++) {
+                        aead(perm1, m + 64 * j, m + 20000 + 24 * j, m + 100, AM[a], m + 30000 + j * L, L, 0, c1, t1);
+                        okm &= !memcmp(c1, o + j * L, L) && !memcmp(t1, tg + 32 * j, 32);
+                    }
+                }
+        free(o);
+        free(tg);
+        omp_set_num_threads(omp_get_num_procs());
+        res_controle(&res, "aead_multi_lots_de_32_et_bitslices_identiques_a_l_aead_unitaire", okm);
+        /* échecs d'allocation injectés (sur 1 thread : ordre des allocations déterministe) : l'arbre rend −1 et une sortie
+         * effacée si la racine manque, sinon les mêmes sorties ; l'AEAD multi rend les mêmes sorties (replis) */
+        {
+            int oke = 1, injectes = 0;
+            omp_set_num_threads(1);
+            const size_t LA2 = 600 * 8192 + 3, NM2 = 300, LT2 = 81;
+            uint8_t h0[64], h1[64], *o0 = malloc(NM2 * LT2), *o1 = malloc(NM2 * LT2), g0[300 * 32], g1[300 * 32];
+            arbre(m, LA2, h0, 64, 1);
+            aead_multi(NM2, m, m + 20000, m + 100, 9, m + 30000, LT2, o0, g0);
+            ALLOC_INJECTES = 0;
+            for (long k = 0; k < 3; k++) {   /* arbre : 4 allocations (racine + 3 lots de 32) ; AEAD multi : 3 (lot de 256 + 2 de 32) */
+                ALLOC_ECHEC = k;
+                memset(h1, 0xA5, 64);        /* tampons effacés : un repli défaillant ne peut pas reprendre une sortie précédente */
+                int rc = arbre(m, LA2, h1, 64, 1);
+                int vide = 1;
+                for (int q = 0; q < 64; q++)
+                    vide &= h1[q] == 0;
+                oke &= k == 0 ? (rc == -1 && vide) : (rc == 0 && !memcmp(h0, h1, 64));
+                injectes += ALLOC_ECHEC < 0;
+                ALLOC_ECHEC = k;
+                memset(o1, 0xA5, NM2 * LT2);
+                memset(g1, 0xA5, sizeof g1);
+                aead_multi(NM2, m, m + 20000, m + 100, 9, m + 30000, LT2, o1, g1);
+                oke &= !memcmp(o0, o1, NM2 * LT2) && !memcmp(g0, g1, sizeof g0);
+                injectes += ALLOC_ECHEC < 0;
+            }
+            ALLOC_ECHEC = -1;
+            free(o0);
+            free(o1);
+            omp_set_num_threads(omp_get_num_procs());
+            printf("échecs d'allocation injectés : %ld provoqués sur 6 essais (sorties %s)\n", ALLOC_INJECTES, oke ? "conformes" : "FAUSSES");
+            res_controle(&res, "echecs_d_allocation_injectes_replis_identiques_ou_erreur_signalee", oke && injectes == 6 && ALLOC_INJECTES == 6);
+        }
+        /* tampons exacts (2e passe du score de mutation, 13 novembre) : des débordements d'un élément (lot de 256 traitant un
+         * 257e message, feuille de trop en queue d'arbre ou dans le repli de feuilles(), clé lue sur 65 octets) survivaient,
+         * car les contrôles écrivent dans de grands tampons. Ici chaque entrée est allouée à sa taille exacte (une lecture de
+         * trop est vue par ASan), et chaque sortie est suivie de 64 octets de garde (une écriture de trop est vue partout).
+         * Sur 1 thread : le lot bitslicé de 256 est le dernier lot ; avec et sans échec d'allocation injecté (replis). */
+        {
+            int okx = 1;
+            omp_set_num_threads(1);
+            const size_t NX = 256, LX = 81, G = 64;
+            uint8_t *kx = malloc(64 * NX), *nx = malloc(24 * NX), *ix = malloc(NX * LX), *ox = malloc(NX * LX + G),
+                    *tx = malloc(32 * NX + G), c1[LX], t1[32];
+            memcpy(kx, m + 11, 64 * NX);
+            memcpy(nx, m + 40000, 24 * NX);
+            memcpy(ix, m + 50000, NX * LX);
+            for (long inj = -1; inj < 1; inj++) {
+                memset(ox, 0xA5, NX * LX + G);
+                memset(tx, 0x5A, 32 * NX + G);
+                ALLOC_ECHEC = inj;
+                aead_multi(NX, kx, nx, m + 100, 9, ix, LX, ox, tx);
+                ALLOC_ECHEC = -1;
+                for (size_t q = 0; q < G; q++)
+                    okx &= ox[NX * LX + q] == 0xA5 && tx[32 * NX + q] == 0x5A;
+                for (size_t j = 0; j < NX; j++) {
+                    aead(perm1, kx + 64 * j, nx + 24 * j, m + 100, 9, ix + LX * j, LX, 0, c1, t1);
+                    okx &= !memcmp(c1, ox + LX * j, LX) && !memcmp(t1, tx + 32 * j, 32);
+                }
+            }
+            /* arbre : entrée de taille exacte, dernière feuille partielle ou pleine, avec et sans repli de feuilles() */
+            const size_t LA[] = {600 * 8192 + 3, 300 * 8192, 40 * 8192 + 1};
+            for (int a = 0; a < 3; a++)
+                for (long inj = -1; inj < 4; inj += 1 + (inj == -1)) {   /* −1 : sans échec ; 1, 2, 3 : un lot de 32
+                                                                             (dont le dernier : la feuille de queue suit) */
+                    uint8_t *mx = malloc(LA[a]), h0[64 + 64], h1[64];
+                    for (size_t q = 0; q < LA[a]; q++)
+                        mx[q] = m[q % 100000];
+                    memset(h0, 0xC3, sizeof h0);
+                    ALLOC_ECHEC = inj;
+                    const int rc = arbre(mx, LA[a], h0, 64, 1);
+                    ALLOC_ECHEC = -1;
+                    arbre(mx, LA[a], h1, 64, 0);   /* sans lots : une éponge par feuille */
+                    okx &= rc == 0 && !memcmp(h0, h1, 64);
+                    for (int q = 64; q < 128; q++)
+                        okx &= h0[q] == 0xC3;
+                    free(mx);
+                }
+            /* référence DMV17 littérale : clé, nonce et texte à leur taille exacte */
+            {
+                uint8_t *ke = malloc(64), *ne = malloc(24), *ie = malloc(LX), *oe = malloc(LX + G), te[32], c2[LX], t2[32];
+                memcpy(ke, kx, 64);
+                memcpy(ne, nx, 24);
+                memcpy(ie, ix, LX);
+                memset(oe, 0xA5, LX + G);
+                aead_kd(perm1, ke, ne, m + 100, 9, ie, LX, 0, oe, te);
+                aead(perm1, ke, ne, m + 100, 9, ie, LX, 0, c2, t2);
+                okx &= !memcmp(oe, c2, LX) && !memcmp(te, t2, 32);
+                for (size_t q = 0; q < G; q++)
+                    okx &= oe[LX + q] == 0xA5;
+                free(ke); free(ne); free(ie); free(oe);
+            }
+            free(kx); free(nx); free(ix); free(ox); free(tx);
+            omp_set_num_threads(omp_get_num_procs());
+            res_controle(&res, "tampons_exacts_lots_arbre_replis_et_reference_sans_debordement", okx);
+        }
+        /* cache de P(IV) : après prepare_iv(), ni l'arbre (lots bitslicés compris) ni l'AEAD multi sur tous les threads ne
+         * recalculent P(IV) ni ses plans de bits (un recalcul en région parallèle serait une course, même à valeur égale) */
+        {
+            prepare_iv();
+            const long avant = IV_CALCULS;
+            uint8_t hh[64], *oo = malloc(300 * 81), gg[300 * 32];
+            arbre(m, 600 * 8192 + 3, hh, 64, 1);
+            aead_multi(300, m, m + 20000, m + 100, 9, m + 30000, 81, oo, gg);
+            free(oo);
+            res_controle(&res, "cache_piv_aucun_recalcul_apres_preparation_arbre_et_aead_multi", IV_CALCULS == avant);
+            /* le compteur lui-même : +2 (P(IV) et ses plans de bits) quand le nombre de tours change, +1 (les plans de
+             * bits, toujours refaits par prepare_iv) quand le cache de P(IV) est valide */
+            const int R0 = R1;
+            const long c0 = IV_CALCULS;
+            R1 = R0 - 1;
+            prepare_iv();
+            const long c1 = IV_CALCULS;
+            prepare_iv();
+            const long c2 = IV_CALCULS;
+            R1 = R0;
+            prepare_iv();
+            const long c3 = IV_CALCULS;
+            res_controle(&res, "compteur_piv_exact_2_au_changement_de_tours_1_sinon",
+                         c1 - c0 == 2 && c2 - c1 == 1 && c3 - c2 == 2);
+        }
+        /* trous comblés après le score de mutation du 13 novembre (resultats/mutants_20261113.txt) */
+        {
+            /* aead_multi : 2 lots bitslicés et plus, et un reste traité message par message après un lot (1 thread) */
+            int okn = 1;
+            omp_set_num_threads(1);
+            const size_t NN[] = {261, 288, 600}, LN[] = {0, 81, 160}, AN[] = {0, 9};
+            uint8_t *o = malloc(600 * 160), *tg = malloc(600 * 32);
+            for (size_t q = 0; q < 3; q++)
+                for (size_t t = 0; t < 3; t++)
+                    for (size_t a = 0; a < 2; a++) {
+                        memset(o, 0xA5, 600 * 160);
+                        aead_multi(NN[q], m, m + 50000, m + 100, AN[a], m + 70000, LN[t], o, tg);
+                        for (size_t j = 0; j < NN[q]; j++) {
+                            uint8_t c1[160], t1[32];
+                            aead(perm1, m + 64 * j, m + 50000 + 24 * j, m + 100, AN[a], m + 70000 + j * LN[t], LN[t], 0, c1, t1);
+                            okn &= !memcmp(c1, o + j * LN[t], LN[t]) && !memcmp(t1, tg + 32 * j, 32);
+                        }
+                    }
+            free(o);
+            free(tg);
+            omp_set_num_threads(omp_get_num_procs());
+            res_controle(&res, "aead_multi_plusieurs_lots_bitslices_et_reste_message_par_message", okn);
+        }
+        {
+            /* référence DMV17 au-delà de 255 et de 65 535 octets (encodage de la longueur), AAD de 300 octets */
+            int okl = 1;
+            const size_t LL[] = {255, 256, 300, 65535, 65536, 70000}, AL[] = {0, 300};
+            uint8_t *c1 = malloc(70000), *c2 = malloc(70000), t1[32], t2[32];
+            for (size_t i = 0; i < 6; i++)
+                for (size_t a = 0; a < 2; a++)
+                    for (int dech = 0; dech < 2; dech++) {
+                        aead(perm1, m + 9, m + 80, m + 1000, AL[a], m + 100000, LL[i], dech, c1, t1);
+                        aead_kd(perm1, m + 9, m + 80, m + 1000, AL[a], m + 100000, LL[i], dech, c2, t2);
+                        okl &= !memcmp(c1, c2, LL[i]) && !memcmp(t1, t2, 32);
+                    }
+            free(c1);
+            free(c2);
+            res_controle(&res, "aead_identique_a_la_reference_dmv17_grandes_longueurs", okl);
+        }
+    }
+    /* 4 octies. longueurs hors limite (SPEC.md § 3.5) : aead(), aead_ouvrir() et aead_multi() rendent −1 sans rien lire ni
+     * écrire (tampons réels de quelques octets, octets témoins ; sans la garde, la lecture sort du tampon) ; la limite
+     * elle-même est admise ; aead_multi() refuse aussi n·len et 64·n qui débordent ; les longueurs admises marchent. */
+    {
+        int okh = longueurs_admises(AEAD_LONGUEUR_MAX, AEAD_LONGUEUR_MAX) && longueurs_admises(0, 0) &&
+                  !longueurs_admises(AEAD_LONGUEUR_MAX + 1, 0) && !longueurs_admises(0, AEAD_LONGUEUR_MAX + 1) &&
+                  AEAD_LONGUEUR_MAX == (size_t)INT64_MAX;
+        const size_t H[] = {AEAD_LONGUEUR_MAX + 1, (size_t)1 << 63, SIZE_MAX - 2 * RB, SIZE_MAX - RB, SIZE_MAX - 1, SIZE_MAX};
+        uint8_t ent[96], sor[96], tg[32], pt[96], tg0[32];
+        memcpy(ent, m + 777, sizeof ent);
+        memcpy(tg0, m + 999, sizeof tg0);
+        for (size_t h = 0; h < sizeof H / sizeof H[0]; h++)
+            for (int role = 0; role < 3; role++) {           /* 0 : A hors limite ; 1 : texte ; 2 : les deux */
+                const size_t al = role == 1 ? 9 : H[h], tl = role == 0 ? 9 : H[h];
+                for (int f = 0; f < 4; f++) {
+                    memset(sor, 0xA5, sizeof sor);
+                    memset(tg, 0x5A, sizeof tg);
+                    memset(pt, 0xC3, sizeof pt);
+                    int r;
+                    if (f < 2)
+                        r = aead(perm1, m, m + 64, ent, al, ent, tl, f, sor, tg);
+                    else if (f == 2)
+                        r = aead_ouvrir(m, m + 64, ent, al, ent, tl, tg0, pt);
+                    else
+                        r = aead_multi(1, m, m + 64, ent, al, ent, tl, sor, tg);
+                    int intact = 1;
+                    for (size_t k = 0; k < sizeof sor; k++)
+                        intact &= sor[k] == 0xA5 && pt[k] == 0xC3;
+                    for (size_t k = 0; k < sizeof tg; k++)
+                        intact &= tg[k] == 0x5A;
+                    okh &= r == -1 && intact;
+                }
+            }
+        /* aead_multi : n·len au-delà de la limite (len admis seul), 64·n qui déborde (len = 0), puis cas admis */
+        okh &= aead_multi(2, m, m + 64, ent, 9, ent, AEAD_LONGUEUR_MAX / 2 + 1, sor, tg) == -1;
+        okh &= aead_multi(3, m, m + 64, ent, 9, ent, AEAD_LONGUEUR_MAX / 3 + 1, sor, tg) == -1;
+        okh &= aead_multi(SIZE_MAX / 64 + 1, m, m + 64, ent, 9, ent, 0, sor, tg) == -1;
+        {
+            uint8_t o2[2 * 40], t2[2 * 32], c1[40], t1[32];
+            okh &= aead_multi(2, m, m + 200, ent, 9, ent, 40, o2, t2) == 0;
+            for (int j2 = 0; j2 < 2; j2++) {
+                okh &= aead(perm1, m + 64 * j2, m + 200 + 24 * j2, ent, 9, ent + 40 * j2, 40, 0, c1, t1) == 0;
+                okh &= !memcmp(c1, o2 + 40 * j2, 40) && !memcmp(t1, t2 + 32 * j2, 32);
+            }
+            okh &= aead(perm1, m, m + 64, ent, 0, ent, 0, 0, c1, t1) == 0 && aead_ouvrir(m, m + 64, ent, 0, ent, 0, t1, c1) == 0;
+        }
+        res_controle(&res, "longueurs_hors_limite_rejetees_sans_lecture_ni_ecriture", okh);
+    }
+    /* 5. KAT */
+    {
+        uint8_t h[64];
+        char s[129];
+        arbre((const uint8_t *)"", 0, h, 64, 1);
+        hexa(h, 64, s);
+        printf("KAT BRUME-1024q R=%d hachage(\"\")    = %s\n", R1, s);
+        res_mesure(&res, "kat_vide", "\"%s\"", s);
+        arbre((const uint8_t *)"abc", 3, h, 64, 1);
+        hexa(h, 64, s);
+        printf("KAT BRUME-1024q R=%d hachage(\"abc\") = %s\n", R1, s);
+        res_mesure(&res, "kat_abc", "\"%s\"", s);
+    }
+    /* 4 ter. AEAD parallèle (v0.6, V06_MODES.md § 2) : noyau ≡ référence dense aux frontières de feuilles, déchiffrement,
+     * altérations rejetées sans rien rendre, feuilles indépendantes, séparation d'avec l'AEAD séquentiel, repli sans
+     * allocation identique, longueurs hors limite */
+    {
+        static const size_t LPAR[] = {0, 1, 79, 80, 8191, 8192, 8193, 16384, 16385, 3 * 8192 + 5};
+        const size_t NMAX = 3 * 8192 + 5;
+        uint8_t *c1 = malloc(NMAX), *c2 = malloc(NMAX), *pt = malloc(NMAX + 1), *alt = malloc(NMAX + 1);   /* +1 : cas « prolongé » */
+        const uint8_t *cle = m + 300000, *non = m + 300100, *aad = m + 300200, *x = m + 400000;
+        int okp1 = 1, nref = 0;
+        for (int a = 0; a < 2; a++)
+            for (size_t i = 0; i < sizeof LPAR / sizeof *LPAR; i++) {
+                size_t L = LPAR[i], la = a ? 81 : 0;
+                uint8_t t1[32], t2[32];
+                okp1 &= aeadp(perm1, cle, non, aad, la, x, L, 0, c1, t1) == 0;
+                if (L <= 16385 || a == 0) {                          /* la référence dense est lente : 19 cas sur 20 */
+                    aeadp(perm_ref, cle, non, aad, la, x, L, 0, c2, t2);
+                    okp1 &= !memcmp(c1, c2, L) && !memcmp(t1, t2, 32);
+                    nref++;
+                }
+                memset(pt, 0xA5, NMAX);
+                okp1 &= aeadp_ouvrir(cle, non, aad, la, c1, L, t1, pt) == 0 && !memcmp(pt, x, L);
+            }
+        res_controle(&res, "aead_parallele_noyau_identique_a_la_reference_dense_et_dechiffre", okp1 && nref == 19);
+        /* altérations : chaque cas doit rendre −1 et une sortie effacée */
+        size_t L = NMAX;
+        uint8_t t[32];
+        aeadp(perm1, cle, non, aad, 9, x, L, 0, c1, t);
+        int okp2 = 1, nalt = 0;
+        for (int cas = 0; cas < 14; cas++) {
+            uint8_t k2[64], n2[24], a2[9], t2[32];
+            size_t L2 = L;
+            memcpy(k2, cle, 64); memcpy(n2, non, 24); memcpy(a2, aad, 9); memcpy(t2, t, 32);
+            memcpy(alt, c1, L);
+            switch (cas) {
+            case 0: alt[5] ^= 1; break;                          /* feuille 0 */
+            case 1: alt[8192 + 77] ^= 0x80; break;                /* feuille 1 */
+            case 2: alt[L - 1] ^= 1; break;                       /* dernière feuille, dernier octet */
+            case 3: memcpy(alt, c1 + 8192, 8192); memcpy(alt + 8192, c1, 8192); break;   /* feuilles 0 et 1 échangées */
+            case 4: L2 = L - 1; break;                            /* tronqué */
+            case 5: alt[L] = 0; L2 = L + 1; break;                /* prolongé */
+            case 6: L2 = 2 * 8192; break;                         /* une feuille de moins */
+            case 7: a2[3] ^= 1; break;
+            case 8: n2[23] ^= 1; break;                           /* octet du nonce dans la capacité */
+            case 9: t2[31] ^= 1; break;
+            case 10: k2[0] ^= 1; break;
+            case 11: L2 = 8192; break;                            /* première feuille seule */
+            case 12: alt[8191] ^= 1; alt[8192] ^= 1; break;       /* frontière entre feuilles */
+            case 13: t2[0] ^= 0x5A; t2[9] ^= 0x5A; break;         /* écarts qui s'annulent par XOR */
+            }
+            memset(pt, 0xA5, NMAX + 1);
+            int rr = aeadp_ouvrir(k2, n2, a2, 9, alt, L2, t2, pt);
+            int efface = 1;
+            for (size_t j = 0; j < L2; j++)
+                efface &= pt[j] == 0;
+            okp2 &= rr == -1 && efface;
+            nalt++;
+        }
+        res_controle(&res, "aead_parallele_rejette_les_alterations_et_n_en_rend_rien", okp2 && nalt == 14);
+        /* indépendance des feuilles, séparation d'avec l'AEAD séquentiel, repli sans allocation, longueurs hors limite */
+        uint8_t ta[32], tb[32];
+        memcpy(alt, x, L);
+        alt[8192 + 10] ^= 1;                                      /* clair modifié dans la feuille 1 */
+        aeadp(perm1, cle, non, aad, 9, alt, L, 0, c2, tb);
+        int okp3 = !memcmp(c1, c2, 8192) && !memcmp(c1 + 16384, c2 + 16384, L - 16384) && memcmp(c1 + 8192, c2 + 8192, 8192)
+                   && memcmp(t, tb, 32);
+        aead(perm1, cle, non, aad, 9, x, 64, 0, c2, ta);
+        aeadp(perm1, cle, non, aad, 9, x, 64, 0, pt, tb);
+        okp3 &= memcmp(c2, pt, 64) && memcmp(ta, tb, 32);
+        long inj = ALLOC_INJECTES;
+        ALLOC_ECHEC = 0;                                          /* le prochain tampon de CV échoue : repli feuille par feuille */
+        aeadp(perm1, cle, non, aad, 9, x, L, 0, c2, tb);
+        ALLOC_ECHEC = -1;
+        okp3 &= ALLOC_INJECTES == inj + 1 && !memcmp(c1, c2, L) && !memcmp(t, tb, 32);
+        okp3 &= aeadp(perm1, cle, non, aad, SIZE_MAX, x, 0, 0, c2, tb) == -1 && aeadp(perm1, cle, non, aad, 0, x, SIZE_MAX, 0, c2, tb) == -1;
+        res_controle(&res, "aead_parallele_feuilles_independantes_separe_du_sequentiel_repli_identique", okp3);
+        free(c1); free(c2); free(pt); free(alt);
+    }
+    /* 5 bis. KAT figés (profil R = 32) : noyau AVX2 et référence dense contre kat_b1024.h ; table des domaines */
+    if (R1 == 32) {
+        static kat_t kn[NKAT], kr[NKAT];
+        int okn = KAT_PRESENTS, okr = KAT_PRESENTS, nref = 0;
+        calculer_kats(0, kn);
+        calculer_kats(1, kr);
+#if KAT_PRESENTS
+        for (int i = 0; i < NKAT; i++) {
+            int bon = !strcmp(kn[i].nom, KAT_FIGES[i][0]) && !strcmp(kn[i].hex, KAT_FIGES[i][1]);
+            if (!bon)
+                printf("KAT différent (noyau) : %s\n", kn[i].nom);
+            okn &= bon;
+            if (kr[i].hex[0]) {
+                nref++;
+                if (strcmp(kr[i].hex, KAT_FIGES[i][1]))
+                    printf("KAT différent (référence) : %s\n", kr[i].nom);
+                okr &= !strcmp(kr[i].hex, KAT_FIGES[i][1]);
+            }
+        }
+#endif
+        printf("KAT figés : %d (noyau), %d recalculés par la référence dense\n", NKAT, nref);
+        res_mesure(&res, "kat_figes", "%d", NKAT);
+        res_mesure(&res, "kat_figes_par_la_reference", "%d", nref);
+        res_controle(&res, "kat_figes_noyau_avx2", okn);
+        res_controle(&res, "kat_figes_reference_dense", okr);
+    }
+    res_controle(&res, "separation_des_domaines_structurelle", controle_domaines());
+    /* 6. diffusion effective à travers la permutation (S-box comprises) : nibbles dépendants d'un nibble, r tours */
+    {
+        int dep[8] = {0};
+        for (int r = 1; r <= 5; r++) {
+            uint8_t vu[N1] = {0};
+            for (int e = 0; e < 64; e++) {
+                uint8_t x[N1], y[N1];
+                memcpy(x, m + 256 * e, N1);
+                for (int j = 0; j < N1; j++)
+                    x[j] &= 15;
+                memcpy(y, x, N1);
+                y[0] ^= (uint8_t)(1 + e % 15);
+                for (int t = 0; t < r; t++) {
+                    ref_tour(x, t);
+                    ref_tour(y, t);
+                }
+                for (int j = 0; j < N1; j++)
+                    vu[j] |= x[j] != y[j];
+            }
+            for (int j = 0; j < N1; j++)
+                dep[r] += vu[j];
+        }
+        printf("diffusion effective d'un nibble (64 essais) : %d %d %d %d %d\n", dep[1], dep[2], dep[3], dep[4], dep[5]);
+        res_mesure(&res, "diffusion_effective", "[%d, %d, %d, %d, %d]", dep[1], dep[2], dep[3], dep[4], dep[5]);
+        res_controle(&res, "diffusion_effective_complete_en_5_tours", dep[5] == N1);
+    }
+    /* 7. mesures (sautées si BRUME1024_RAPIDE est défini : contrôles seuls, pour Valgrind et le score de mutation) */
+    if (!getenv("BRUME1024_RAPIDE")) {
+        double tp[7], tl[7], tb[7], te[7], ta1[7], tan[7];
+        uint8_t w[128] = {1}, h[64];
+        uint8_t (*e)[128] = aligned_alloc(64, 32 * 128);
+        memcpy(e, m, 32 * 128);
+        size_t L1 = (size_t)4 << 20, L2 = (size_t)64 << 20;
+        for (int s = 0; s < 7; s++) {
+            double t0 = maintenant();
+            for (int i = 0; i < 100000; i++)
+                perm1(w, R1);
+            tp[s] = (maintenant() - t0) / 100000 * 1e9;
+            t0 = maintenant();
+            for (int i = 0; i < 4000; i++)
+                lot(e, R1);
+            tl[s] = (maintenant() - t0) / 4000 / 32 * 1e9;
+            t0 = maintenant();
+            for (int i = 0; i < 500; i++)
+                bs_perm(BS_P, R1);
+            tb[s] = (maintenant() - t0) / 500 / 256 * 1e9;
+            t0 = maintenant();
+            eponge(m, L1, DOM_SEQ, h, 64);
+            te[s] = L1 / (maintenant() - t0) / 1e6;
+            omp_set_num_threads(1);
+            t0 = maintenant();
+            arbre(m, L2 / 4, h, 64, 1);
+            ta1[s] = (L2 / 4) / (maintenant() - t0) / 1e6;
+            omp_set_num_threads(omp_get_num_procs());
+            t0 = maintenant();
+            arbre(m, L2, h, 64, 1);
+            tan[s] = L2 / (maintenant() - t0) / 1e6;
+        }
+        double bsl = mediane(tb, 7);
+        printf("noyau bitslicé (256 états) : %.0f ns par état, sans transposition\n", bsl);
+        res_mesure(&res, "permutation_bitslicee_ns_par_etat", "%.1f", bsl);
+        double p = mediane(tp, 7), l = mediane(tl, 7), ep = mediane(te, 7), a1 = mediane(ta1, 7), an = mediane(tan, 7);
+        printf("BRUME-1024q R=%d c=384 : permutation %.0f ns (1 etat), %.0f ns/etat (lot de 32) ; eponge 1 coeur %.1f Mo/s ; "
+               "arbre 1 coeur %.1f Mo/s ; arbre %d threads %.1f Mo/s (%x)\n", R1, p, l, ep, a1, omp_get_num_procs(), an, w[0] ^ e[0][0] ^ h[0]);
+        res_mesure(&res, "permutation_ns", "%.1f", p);
+        res_mesure(&res, "permutation_lot_ns_par_etat", "%.1f", l);
+        res_mesure(&res, "eponge_mo_s", "%.1f", ep);
+        res_mesure(&res, "arbre_1_coeur_mo_s", "%.1f", a1);
+        res_mesure(&res, "arbre_tous_coeurs_mo_s", "%.1f", an);
+        double ta[7];
+        uint8_t *c = malloc(L1), tg[32];
+        for (int s2 = 0; s2 < 7; s2++) {
+            double t0 = maintenant();
+            aead(perm1, m, m + 64, m + 100, 16, m, L1, 0, c, tg);
+            ta[s2] = L1 / (maintenant() - t0) / 1e6;
+        }
+        double aa = mediane(ta, 7);
+        printf("AEAD-1024q (cle 64 o, tag 32 o) : %.1f Mo/s (%02x)\n", aa, tg[0] ^ c[0]);
+        res_mesure(&res, "aead_mo_s", "%.1f", aa);
+        free(c);
+        free(e);
+    }
+    free(m);
+    return res_ecrire(&res);
+}
+#endif /* SANS_MAIN */

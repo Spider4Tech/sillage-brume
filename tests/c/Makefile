@@ -4,14 +4,30 @@
 CC      ?= gcc
 CFLAGS  ?= -O3 -march=native -fopenmp -Wall -Wextra
 LIB     := ../../sillage/c
-SRC     := $(LIB)/commun.c $(LIB)/brume512.c $(LIB)/brume512_avx2.c $(LIB)/kem.c $(LIB)/sig.c
-NATIFS  := revue_c h1p_fourier invariants kem_rejet brume_gd2 sig_kz structure_miss isd_reel isd_comparaison diffusion_support kem_distributions sig_flux brume_attaques mini_brume compression_sig
-NUIT    := nuit_cryptanalyse nuit_kem_reel nuit_isd sat_trails
+SRC     := $(LIB)/commun.c $(LIB)/brume1024.c $(LIB)/kem.c $(LIB)/sig.c
+NATIFS  := revue_c h1p_fourier kem_rejet sig_kz isd_reel isd_comparaison kem_distributions sig_flux compression_sig brume1024 brume1024_api brume1024_api_portable temps1024
+NUIT    := nuit_kem_reel nuit_isd
 all: $(addprefix build/,$(NATIFS)) build/vole_proto
 nuit: $(addprefix build/,$(NUIT))
-build/%: %.c resultat.h brume_ref.h $(SRC)
+build/%: %.c resultat.h $(SRC)
 	@mkdir -p build
 	$(CC) $(CFLAGS) -I $(LIB) -o $@ $< $(SRC) -lm
+# brume1024 (BRUME-1024q, v0.6) inclut sillage/c/brume1024.c (fonctions internes) : on ne le relie pas une seconde fois
+B1024H  := $(wildcard $(LIB)/brume1024*.h) kat_b1024.h
+build/brume1024: brume1024.c resultat.h $(B1024H) $(LIB)/brume1024.c $(LIB)/commun.c
+	@mkdir -p build
+	$(CC) $(CFLAGS) -I $(LIB) -o $@ $< $(LIB)/commun.c -lm
+# temps1024 (dudect, BRUME-1024q) : inclut tests/c/brume1024.c (-DSANS_MAIN)
+build/temps1024: temps1024.c brume1024.c resultat.h $(B1024H) $(LIB)/brume1024.c $(LIB)/commun.c
+	@mkdir -p build
+	$(CC) $(CFLAGS) -DSANS_MAIN -I $(LIB) -o $@ $< $(LIB)/commun.c -lm
+# brume1024_api : l'API publique sur la bibliothèque telle quelle, avec AVX2 et sans (noyau portable)
+build/brume1024_api: brume1024_api.c resultat.h kat_b1024.h $(B1024H) $(SRC)
+	@mkdir -p build
+	$(CC) $(CFLAGS) -I $(LIB) -o $@ $< $(SRC) -lm
+build/brume1024_api_portable: brume1024_api.c resultat.h kat_b1024.h $(B1024H) $(SRC)
+	@mkdir -p build
+	$(CC) $(CFLAGS) -mno-avx2 -DB1024_API_PORTABLE -I $(LIB) -o $@ $< $(SRC) -lm
 # kem_distributions et nuit_kem_reel incluent kem.c (fonctions internes) : on ne le relie pas une seconde fois
 build/kem_distributions build/nuit_kem_reel build/kem_rejet: build/%: %.c resultat.h $(SRC)
 	@mkdir -p build
@@ -23,17 +39,17 @@ build/sig_flux: sig_flux.c trace_pc.c resultat.h $(SRC)
 	$(CC) $(CFLAGS) -c -o build/trace_pc.o trace_pc.c
 	$(CC) $(CFLAGS) -Dsl_alea=sl_alea_systeme -I $(LIB) -c -o build/commun_rejeu.o $(LIB)/commun.c
 	$(CC) $(CFLAGS) -fsanitize-coverage=trace-pc -I $(LIB) -o $@ $< build/trace_pc.o build/commun_rejeu.o \
-		$(LIB)/brume512.c $(LIB)/brume512_avx2.c -lm
+		$(LIB)/brume1024.c -lm
 # Études de taille et attaques sur SD régulier (docs/LEADS.md, piste 9). kem_var.c : kem.c avec sa table de paramètres modifiable, pour ce seul outil
 compression: build/compression_kem build/compression_sig build/vole_params build/vole_proto build/rsd_attaques
 build/rsd_attaques: rsd_attaques.c resultat.h $(LIB)/isd.c
 	@mkdir -p build
-	$(CC) $(CFLAGS) -I $(LIB) -o $@ $< $(LIB)/isd.c $(LIB)/commun.c $(LIB)/brume512.c $(LIB)/brume512_avx2.c -lquadmath -lm
+	$(CC) $(CFLAGS) -I $(LIB) -o $@ $< $(LIB)/isd.c $(LIB)/commun.c $(LIB)/brume1024.c -lquadmath -lm
 # prototype VOLE-in-the-Head (hors suite) : sources dans prototypes/vole/, binaires ici comme les autres tests
 VOLE    := ../../prototypes/vole
 build/vole_proto: $(VOLE)/vole_proto.c $(VOLE)/vole_kat.h $(LIB)/vole.c resultat.h $(LIB)/commun.c
 	@mkdir -p build
-	$(CC) $(CFLAGS) -I . -I $(LIB) -o $@ $< $(LIB)/commun.c $(LIB)/brume512.c $(LIB)/brume512_avx2.c -lm
+	$(CC) $(CFLAGS) -I . -I $(LIB) -o $@ $< $(LIB)/commun.c $(LIB)/brume1024.c -lm
 build/vole_params: $(VOLE)/vole_params.c resultat.h $(LIB)/isd.c
 	@mkdir -p build
 	$(CC) $(CFLAGS) -I . -I $(LIB) -o $@ $< $(LIB)/isd.c -lm

@@ -286,7 +286,7 @@ journal "construction"
 make -s -C sillage/c >>"$LOG" 2>&1 || { journal "ÉCHEC de construction de la bibliothèque"; exit 1; }
 make -s -C tests/c all nuit >>"$LOG" 2>&1 || { journal "ÉCHEC de construction des tests C"; exit 1; }
 LIB=sillage/c
-SRC="$LIB/commun.c $LIB/brume512.c $LIB/brume512_avx2.c"
+SRC="$LIB/commun.c $LIB/brume1024.c"
 gcc -O3 -march=native -fopenmp -I $LIB -o tests/c/build/temps tests/c/temps.c $SRC -lm >>"$LOG" 2>&1 \
     || { journal "ÉCHEC de construction de dudect"; exit 1; }
 gcc -O1 -g -march=native -fopenmp -fsanitize=undefined,bounds -fsanitize-trap=all -fstack-protector-all \
@@ -488,12 +488,9 @@ else journal "4/6 ISD réel : non lancé (temps restant insuffisant)"; fi
 
 # --- 5. BRUME et modèles de preuve --------------------------------------------
 B=$(part 0.30); [ "$B" -gt "$(( $(reste) - MARGE ))" ] && B=$(( $(reste) - MARGE ))
-if fait5; then :
-elif [ "$B" -gt 120 ]; then
-    journal "5/6 BRUME et modèles de preuve : $B s"
-    echeance "BRUME" $((B * 2 + 3600))
-    lancer nuit_brume BRUME python3 -m tests.nuit_brume "$B" $([ "$REPRISE" = 1 ] && echo --reprise)
-else journal "5/6 BRUME : non lancé (temps restant insuffisant)"; fi
+# v0.6 : cette phase portait sur BRUME-512 (tests/historique_v05/nuit_brume.py) ; les campagnes longues de BRUME-1024q
+# sont celles de prototypes/brume_q/b1024/ (campagne_locale.sh, HyperCompute). Phase non lancée.
+journal "5/6 BRUME : phase de la v0.5 (BRUME-512), non lancée en v0.6"
 
 # --- 5 bis. prototype VOLE et attaques sur SD régulier ------------------------
 campagne_vole() {
@@ -559,12 +556,8 @@ else journal "5bis/6 VOLE : non lancé (temps restant insuffisant)"; fi
 
 # --- 6. cryptanalyse à la frontière (tout le temps restant) -----------------
 B=$(( $(reste) - MARGE / 2 ))
-if [ "$B" -gt 20 ]; then
-    journal "6/6 cryptanalyse à la frontière : $B s"
-    echeance "la cryptanalyse" $((B * 2 + 3600))
-    lancer nuit_cryptanalyse cryptanalyse tests/c/build/nuit_cryptanalyse "$B"
-    : > resultats/nuit/echeance
-else journal "6/6 cryptanalyse : non lancée (temps restant insuffisant)"; fi
+# v0.6 : la cryptanalyse à la frontière portait sur BRUME-512 (tests/historique_v05/c_tests/nuit_cryptanalyse.c) ; non lancée.
+journal "6/6 cryptanalyse à la frontière : phase de la v0.5 (BRUME-512), non lancée en v0.6"
 
 # --- complément de reprise : le code modifié depuis le début de la campagne n'a pas vu ses campagnes déjà finies
 if [ "$SRC_CHANGE" = 1 ] && [ "$(cat resultats/nuit/sources_complement.sha 2>/dev/null)" != "$SOURCES" ]; then

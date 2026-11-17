@@ -18,7 +18,7 @@ def construire():
     obj = OUT + "_commun.o"
     subprocess.run(["gcc", *CFLAGS, "-Dsl_alea=sl_alea_systeme", "-c", "-o", obj, os.path.join(LIB, "commun.c")], check=True)
     subprocess.run(["gcc", *CFLAGS, "-o", OUT, os.path.join(RACINE, "tests", "c", "kem_valgrind.c"), obj,
-                    os.path.join(LIB, "brume512.c"), os.path.join(LIB, "brume512_avx2.c"), "-lm"], check=True)
+                    os.path.join(LIB, "brume1024.c"), "-lm"], check=True)
 
 
 def run():
