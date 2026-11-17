@@ -143,7 +143,9 @@ rational arithmetic, deterministic), and \emph{measured} by Monte Carlo simulati
 of Section~\ref{sec:gap2}), given with their standard error, a control experiment, and a second independent
 implementation. We quote DMV17 from its full version~\cite{DMV17}, by section number.
 This work has not been peer reviewed. We searched for an earlier report of these points and found none in
-\cite{DMV17,DM19,Men23}; Mennink~\cite[Section~8.3]{Men23} discusses the same sentence about $S$, but as a
+\cite{DMV17,DM19,Men23}, nor in the later analyses of the Ascon mode~\cite{CDN23,CDN24,LM24,LM25}, which cite DMV17
+without reporting an issue (the systematisation of Lefevre and Mennink~\cite{LM25} points out flaws in other analyses,
+not in DMV17); Mennink~\cite[Section~8.3]{Men23} discusses the same sentence about $S$, but as a
 \emph{lossy} (too pessimistic) step, in a setting where the adversary never learns the outer parts.
 
 \section{Preliminaries}\label{sec:prelim}
@@ -843,6 +845,17 @@ leakage; we did not review its proof, and we do not claim that it is a repair of
 Theorem~1 of~\cite{Men23} restates the bound of DMV17 for a slightly different phasing of the calls; we expect that it
 inherits the issue, but we did not adapt the distinguisher to that phasing.
 
+\paragraph{Dedicated analyses of Ascon.}
+Later proofs for the authenticated encryption mode of Ascon, whose decryption also overwrites the outer part of the
+state, contain a term of the same kind. In the nonce-respecting bound of Chakraborty, Dhar and
+Nandi~\cite[Theorem~2]{CDN23}, restated by Lefevre and Mennink~\cite[Theorem~1]{LM25}, the event that an input or
+output of the permutation coming from a decryption query or a primitive query coincides with one coming from an
+encryption query is bounded by $\mathrm{mcoll}(\sigma_e, 2^r)(\sigma_d + q_p)/2^c$~\cite[Lemma~6]{CDN23}, where
+$\mathrm{mcoll}(\sigma_e, 2^r)$ bounds the expected largest number of the $\sigma_e$ encryption blocks sharing an outer part
+and $\sigma_d$ is the number of decryption blocks. This is the mechanism of Section~\ref{sec:gap1}, a chosen outer part
+aimed at a multicollision of observed outer parts, accounted for in a different construction (with key blinding) and
+a different model. As for~\cite{DM19}, we give this as an indication only.
+
 \paragraph{Limits of this work.}
 (1) It has not been peer reviewed, and it has not yet been submitted to the authors of~\cite{DMV17}.
 (2) In the repair we rely on the parts of the proof of DMV17 that we do not modify (the identity $\KD = \RD^{I,E}$ and the
@@ -853,8 +866,8 @@ substitute. Since the proposition contradicts a published theorem, an independen
 desirable; we wrote it so that each conditional probability refers to Fact~0.
 (4) The failure of the claim of Section~\ref{sec:gap2} in the randomized-duplex world is shown by simulation only (two
 implementations), not by a proof.
-(5) Our search for earlier reports of these points was limited to~\cite{DMV17,DM19,Men23} and to web searches; we do
-not claim that it is exhaustive.
+(5) Our search for earlier reports of these points was limited to the texts of~\cite{DMV17,DM19,Men23,CDN23,CDN24,LM24,LM25}
+and to web searches; we do not claim that it is exhaustive.
 
 \appendix
 \section{Reproducibility}\label{app:repro}
@@ -894,15 +907,23 @@ give $\Pr[D = 1] = 0.08529 \pm 0.00020$ ($2 \cdot 10^6$ trials) and $0.08508 \pm
 implementation only: on this small model the bound $B$ of Theorem~D1 is $0.1126$, above the measured value, and no
 violation is claimed there.
 
-\begin{thebibliography}{9}
+\begin{thebibliography}{99}
 \bibitem{BDPV11} G.~Bertoni, J.~Daemen, M.~Peeters, G.~Van Assche. Duplexing the Sponge: Single-Pass Authenticated
 Encryption and Other Applications. SAC 2011, LNCS 7118, pp.~320--337. Springer, 2012.
+\bibitem{CDN23} B.~Chakraborty, C.~Dhar, M.~Nandi. Exact Security Analysis of ASCON. ASIACRYPT 2023, Part~III,
+LNCS 14440, pp.~346--369. Springer, 2023. Full version: IACR Cryptology ePrint Archive, Report 2023/775.
+\bibitem{CDN24} B.~Chakraborty, C.~Dhar, M.~Nandi. Tight Multi-user Security of Ascon and Its Large Key Extension.
+ACISP 2024, Part~I, LNCS 14895, pp.~57--76. Springer, 2024. Full version: IACR Cryptology ePrint Archive, Report 2024/579.
 \bibitem{CS14} S.~Chen, J.~P.~Steinberger. Tight Security Bounds for Key-Alternating Ciphers. EUROCRYPT 2014,
 LNCS 8441, pp.~327--350. Springer, 2014.
 \bibitem{DMV17} J.~Daemen, B.~Mennink, G.~Van Assche. Full-State Keyed Duplex with Built-In Multi-user Support.
 ASIACRYPT 2017, Part~II, LNCS 10625, pp.~606--637. Springer, 2017. Full version: IACR Cryptology ePrint Archive, Report 2017/498.
 \bibitem{DM19} C.~Dobraunig, B.~Mennink. Leakage Resilience of the Duplex Construction. ASIACRYPT 2019, Part~III,
 LNCS 11923, pp.~225--255. Springer, 2019. Full version: IACR Cryptology ePrint Archive, Report 2019/225.
+\bibitem{LM24} C.~Lefevre, B.~Mennink. Generic Security of the Ascon Mode: On the Power of Key Blinding. SAC 2024.
+Full version: IACR Cryptology ePrint Archive, Report 2023/796.
+\bibitem{LM25} C.~Lefevre, B.~Mennink. SoK: Security of the Ascon Modes. IACR Transactions on Symmetric Cryptology,
+2025(1), pp.~138--210. IACR Cryptology ePrint Archive, Report 2024/1969.
 \bibitem{Men23} B.~Mennink. Understanding the Duplex and Its Security. IACR Transactions on Symmetric Cryptology,
 2023(2), pp.~1--46. IACR Cryptology ePrint Archive, Report 2022/1340.
 \bibitem{MRV15} B.~Mennink, R.~Reyhanitabar, D.~Viz\'ar. Security of Full-State Keyed Sponge and Duplex: Applications to
