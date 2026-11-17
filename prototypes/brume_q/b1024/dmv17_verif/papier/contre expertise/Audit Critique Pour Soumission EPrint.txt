@@ -1,0 +1,189 @@
+﻿Audit critique et vérification intégrale de paper.tex avant publication sur ePrint
+Le manuscrit paper.tex (18 348 caractères, daté du 16 novembre 2026) repose sur une contribution cryptanalytique mathématiquement solide : l'identification d'une erreur de comptage dans la preuve du Lemme 2 de Daemen, Mennink et Van Assche (DMV17), la construction d'un distingueur explicite dépassant formellement les bornes énoncées du Lemme 2 et du Théorème 1 de DMV17, la mise en évidence d'une faille de preuve dans le Lemme 3 de DMV17, ainsi qu'une réparation cohérente1. Toutefois, en l'état, le document n'est pas publiable sur IACR ePrint : un audit ligne par ligne met en évidence des marqueurs bruts non substitués (\author, SIMROWS, SIMTEXT) privant l'affirmation du résumé sur les « 17 écarts-types » de tout étayage dans le corps du texte, une erreur de formule dans la dernière colonne de la Table 1, une impropriété méthodologique dans la légende de la Table 3, des protocoles de simulation incomplets et plusieurs hypothèses implicites à expliciter dans les preuves1.
+Nos recalculs indépendants en arithmétique rationnelle, en multi-précision et par simulations Monte Carlo confirment l'exactitude des Propositions 1, 2 et 3, du polynôme et du seuil de l'Exemple 1, des sept premières colonnes de la Table 1 et de toutes les valeurs numériques de la Table 2 (sur des paramètres allant de b = 36 à b = 320, avec des rapports LB/B compris entre 1,0163 et 1,0209)1. Ils confirment également les ordres de grandeur des probabilités simulées pour le Gap 2 et la vérification croisée de l'Annexe A, tout en révélant des ambiguïtés dans la description des règles d'arrêt3.
+En revanche, deux volets essentiels restent hors du périmètre vérifiable à partir des seuls fichiers inspectés : d'une part, les dix scripts et les sorties results/ listés dans README.md et l'Annexe A sont absents des documents disponibles1 ; d'autre part, les passages précis cités de DMV17 (ePrint 2017/498, notamment les Algorithmes 1–3, les Sections 6.2–6.3, les Lemmes 4–6 et l'équation (28)), de Dobraunig et Mennink (ePrint 2019/225) et de Mennink (ePrint 2022/1340, notamment le Théorème 2 et la Section 8.3) n'ont pas pu être confrontés mot à mot aux PDF complets1. La validation finale de la réparation exige une vérification directe de ces textes primaires.
+État de complétude éditoriale et périmètre non vérifiable
+Le tableau suivant recense les éléments incomplets, incohérents ou matériellement absents qui bloquent une soumission immédiate de paper.tex1.
+
+
+Élément inspecté
+	Constat factuel
+	Impact avant soumission
+	Champ \author
+	Contient [author name and affiliation to be completed]1
+	Bloquant pour dépôt ePrint
+	Table 3 (tab:sim)
+	Corps remplacé par le marqueur SIMROWS1
+	Bloquant (le résumé cite 17 écarts-types sans données dans le texte)
+	Section 4.4 (sec:sim)
+	Paragraphe remplacé par le marqueur SIMTEXT1
+	Bloquant (section de simulation vide)
+	Programmes compagnons et results/
+	Annoncés dans README.md et l'Annexe A, absents des pièces inspectées1
+	Exécution et code source non vérifiables directement
+	Référence [DMV17]
+	Pagination LNCS 10625 omise, alors que toutes les autres références LNCS/ToSC donnent les pages1
+	Défaut bibliographique mineur à compléter
+	Sur le plan bibliographique, les métadonnées principales de DMV17 (ePrint 2017/498), DM19 (ePrint 2019/225) et Men23 (ePrint 2022/1340, version finale ToSC du 23 mai 2023) sont confirmées, et les pages publiques de Joan Daemen et de Bart Mennink ne signalent aucun erratum connu pour ePrint 2017/498 (contrairement à une note explicite d'erratum publiée par Mennink pour un autre article, 2015/363.pdf)5. En revanche, les extraits accessibles de Men23 ne couvrent que les premières sections : ils confirment que KD.init y prend    avec    et soulignent une différence de phasage par rapport à DM19 et DMV17, mais ne permettent de vérifier ni le contenu exact de la Section 8.3 et du Théorème 2 de Men23, ni l'indexation des clés (à partir de 0 ou de 1) et la formulation exacte des équations (16) et (28) dans DMV171.
+Audit du Gap 1 : formule exacte, Exemple 1 et divergence de la Table 1
+La démonstration de la Proposition 1 (prop:f2) dans la Section 3 de paper.tex est conceptuellement exacte, mais son expression comporte une fragilité formelle aux petits paramètres, et la dernière colonne de la Table 1 (tab:f2) ne correspond pas à la formule annoncée1.
+Dans la Proposition 1, pour    et   , la formule    est juste dès que   1. Toutefois, si   , l'évènement    annule    et engendre une division    ; remplacer l'expression par    élimine cette singularité sans modifier la preuve. Il convient également de fixer une règle déterministe de départage en cas d'égalité de multiplicité maximale (comme à la Section 4.1), même si la symétrie des bacs préserve la loi1. Par ailleurs, le développement au premier ordre en    donné sous la Table 1 est vérifié algébriquement, tout comme le polynôme exact de l'Exemple 1 (  ), la borne écrite   , la preuve de dépassement pour tout    (puisque    et que la somme des termes de degré 3 à 8 est positive) et les rapports exacts donnés pour c = 8 (0,9738, sans dépassement), c = 12 (1,0030), c = 16 (1,0048) et c = 64 (1,0049)1.
+En revanche, la dernière colonne de la Table 1 est fausse au regard de sa propre définition1. Selon la légende de la Table 1 et la Remarque 2, cette colonne doit représenter la partie   -collision de la borne    du Lemme    (Section 6.1), soit, pour    :
+  
+
+Or nos calculs exacts montrent que les valeurs imprimées dans paper.tex correspondent en réalité à l'expression   , qui substitue fautivement    à    dans le terme multiplié par   3. Sur la ligne (2, 30), l'erreur sous-estime la vraie valeur du Lemme    d'un facteur proche de 3 (7,597 × 10⁻³ contre 2,176 × 10⁻²)1. L'inégalité    reste satisfaite dans les huit cas, mais f2_exact.py, la Table 1 et la Remarque 2 doivent être corrigés afin que la colonne reflète la formule réellement démontrée au Lemme   , d'autant que la substitution de    à    n'est pas valide pour un adversaire général pouvant placer des appels avec drapeau sur des chemins répétés1. On notera au passage que pour la ligne (2, 30),    est arrondi au demi-supérieur (1,063) dans la Table 11.
+(Mu​,Ω)
+	A1​ exact
+	Contrôle
+	Borne écrite
+	A1​/eˊcrite
+	E[m∗]
+	Table 1 imprimée
+	Vraie formule Lemme 2′
+	(4, 8)
+	5,974 × 10⁻⁴
+	4,634 × 10⁻⁴
+	6,123 × 10⁻⁴
+	0,976
+	1,349
+	6,580 × 10⁻⁴
+	1,116 × 10⁻³
+	(8, 8)
+	7,056 × 10⁻⁴
+	5,149 × 10⁻⁴
+	6,638 × 10⁻⁴
+	1,063
+	2,063
+	8,774 × 10⁻⁴
+	1,579 × 10⁻³
+	(16, 1)
+	1,614 × 10⁻⁴
+	1,297 × 10⁻⁴
+	1,450 × 10⁻⁴
+	1,113
+	3,078
+	2,594 × 10⁻⁴
+	2,747 × 10⁻⁴
+	(16, 8)
+	9,171 × 10⁻⁴
+	6,636 × 10⁻⁴
+	8,125 × 10⁻⁴
+	1,129
+	3,078
+	1,728 × 10⁻³
+	2,918 × 10⁻³
+	(24, 16)
+	3,063 × 10⁻³
+	2,458 × 10⁻³
+	2,819 × 10⁻³
+	1,086
+	3,984
+	7,030 × 10⁻³
+	1,472 × 10⁻²
+	(32, 4)
+	8,591 × 10⁻⁴
+	6,864 × 10⁻⁴
+	7,534 × 10⁻⁴
+	1,140
+	4,830
+	2,645 × 10⁻³
+	3,157 × 10⁻³
+	(40, 2)
+	9,305 × 10⁻⁴
+	8,351 × 10⁻⁴
+	8,669 × 10⁻⁴
+	1,073
+	5,630
+	2,355 × 10⁻³
+	2,509 × 10⁻³
+	(2, 30)
+	7,101 × 10⁻³
+	6,674 × 10⁻³
+	7,568 × 10⁻³
+	0,938
+	1,063
+	7,597 × 10⁻³
+	2,176 × 10⁻²
+	Audit du distingueur et réfutation du Théorème 1 de DMV17
+La démonstration de la Proposition 2 (prop:dist) dans la Section 4.2 et l'évaluation exacte de la Table 2 (tab:inst) dans la Section 4.3 établissent rigoureusement l'existence de paramètres respectant les hypothèses du Théorème 1 de DMV17 et du Lemme 2 de DMV17 pour lesquels l'avantage du distingueur    dépasse leurs bornes énoncées1. L'indexation des requêtes de    est cohérente avec l'ordre opérationnel de Duplexing (extraction de    avant l'absorption ou l'écrasement par   ), ce qui garantit que    reflète encore l'état de la chaîne issue de    avant l'écrasement opéré à l'étape   , et que la requête finale    fournit bien   1. Dans le monde idéal, l'indépendance de    vis-à-vis de    et des sorties précédentes est exacte ; dans les mondes réels    et   , la disjonction des évènements   , la cardinalité exacte    des sorties hors de    dans    (valable pour    dans les deux mondes car    appartiennent à ces bacs) et le décompte    sont exacts1. Deux hypothèses implicites doivent toutefois être ajoutées à l'énoncé de la Proposition 2 :    (pour garantir   ) et    (pour définir   ), ainsi que la précision    lorsque   1.
+Nos calculs exacts en arithmétique rationnelle et multi-précision confirment l'ensemble des valeurs imprimées dans la Table 2, le respect de la contrainte    ainsi que l'égalité exacte    sur les cinq lignes1. Pour les lignes 1 à 4, la combinaison d'une borne inférieure par association négative et de la borne d'union binomiale encadre exactement   3. Pour la ligne 5 (  ), le calcul flottant naïf en association négative à 50 chiffres sous-dépasse à 0 en raison de la proximité de    avec 1, mais la borne inférieure de Bonferroni du second ordre (   à l'ordre   , face à    à l'ordre   ) établit bien   3. De même, la majoration de    utilisée pour    est mathématiquement valide sous    via    et    (donnant 0,011113 contre 0,011101 exact sur la ligne 3), mais sa courte preuve mérite de figurer dans paper.tex plutôt que d'être donnée sans justification1. Enfin, la règle heuristique mentionnée sous l'équation (1) (   et quelques dizaines de requêtes avec drapeau) suppose implicitement que    ne soit pas trop faible devant    (sinon le terme de clé    domine).
+
+
+(b,r,c,k)(b, r, c, k)(b,r,c,k)
+	(Mu,Ω,v)(M_u, \Omega, v)(Mu​,Ω,v)
+	MMM
+	νˉ=νr,c2M\bar\nu = \nu^{2M}_{r,c}νˉ=νr,c2M​
+	B2⋅2cB_2 \cdot 2^cB2​⋅2c
+	B⋅2cB \cdot 2^cB⋅2c
+	LB⋅2c\mathit{LB} \cdot 2^cLB⋅2c
+	LB/B\mathit{LB} / BLB/B
+	(36, 16, 20, 16)
+	(640, 64, 2)
+	771
+	53
+	2089,06
+	2099,08
+	2135,09
+	1,0172
+	(36, 16, 20, 16)
+	(768, 48, 2)
+	867
+	53
+	1187,46
+	1197,48
+	1220,81
+	1,0195
+	(64, 24, 40, 24)
+	(3·2¹², 64, 3)
+	12 484
+	53
+	2089,29
+	2099,29
+	2143,24
+	1,0209
+	(96, 32, 64, 32)
+	(3·2¹⁶, 64, 3)
+	196 804
+	63
+	2089,02
+	2101,02
+	2143,29
+	1,0201
+	(320, 64, 256, 128)
+	(3·2³², 64, 5)
+	12 884 902 214
+	101
+	2089,00
+	2109,00
+	2143,29
+	1,0163
+	Au-delà de l'absence des blocs SIMROWS et SIMTEXT à la Section 4.4 (sec:sim), deux points de protocole de simulation doivent être corrigés1. D'abord, la légende de la Table 3 définit la dernière colonne par    en comparant    à la borne    du Théorème D11. Or    majore l'avantage   , et non    seul : la Table 3 doit rapporter l'avantage estimé    face à    avec son erreur standard combinée    (même si pour   , le plafond théorique idéal    reste modeste devant l'erreur standard attendue d'environ 2,26 × 10⁻⁶ sur 4 × 10⁸ essais). Ensuite, dans la vérification croisée de l'Annexe A (  ), les erreurs standard rapportées (0,08529 ± 0,00020 sur 2 × 10⁶ essais et 0,08508 ± 0,00051 sur 3 × 10⁵ essais) sont arithmétiquement cohérentes, mais l'Annexe A omet de préciser    et le monde simulé1. Une simulation indépendante (50 000 essais) confirme 0,08322 ± 0,00124 dans    et 0,08566 ± 0,00125 dans    contre 0 dans    (où   ), et montre que sur ce jeu réduit    reste supérieur à    et à la mesure : il s'agit uniquement d'une validation d'implémentation, ce qui mérite d'être rappelé explicitement3.
+Audit du Gap 2 : multiplicité avant et protocoles de simulation
+L'analyse de la Section 5 (sec:gap2) démontre de façon rigoureuse que l'affirmation du Lemme 3 de DMV17 (   dans les deux mondes    et   ) échoue dans chacun d'eux1. Dans la démonstration de la Proposition 3 (prop:f3), deux passages gagneraient toutefois à être explicités pour prévenir toute objection de relecture : d'une part, lors de l'échantillonnage paresseux de    pour un candidat    fixé, le fait que l'évènement «    passe les    vérifications » ne dépend que de    et non de l'exploration des candidats précédents    ; d'autre part, le détail arithmétique justifiant    via    et   1. Sur le plan numérique, nos calculs exacts confirment les minorations de la Proposition 3 aux points fixes    pour les trois jeux de paramètres cités — soit respectivement 0,0333, 0,0333 et 0,0200 face aux bornes revendiquées de 1,91 × 10⁻⁶, 1,63 × 10⁻¹⁹ et 4,32 × 10⁻⁷⁷ — ainsi que les valeurs exactes   ,    et   1.
+L'audit des simulations du Gap 2 révèle en revanche un décalage non documenté entre la stratégie statique de la Proposition 3 et les résultats simulés dans   1. Pour   , un adversaire statique respectant    et    ne peut fixer qu'au plus    candidats, ce qui ne produit que 0,0309 ± 0,0012 (et 0,0364 ± 0,0013 à    pour   )3. À l'inverse, un adversaire qui tire des candidats dans un ordre aléatoire et interrompt sa recherche de manière adaptative dès que le budget restant de requêtes à    atteint la réserve nécessaire aux    appels finaux atteint 0,0467 ± 0,0011 (taux de passage de 78,45 %) pour un budget de recherche de 390, et 0,0496 ± 0,0011 (79,13 %) pour 398, en plein accord avec les chiffres rapportés par paper.tex (0,0481 ± 0,0005 en C, 0,0469 ± 0,0015 en Python et 78 % de candidats acceptés)1. De même, pour le test à    (0,0656 ± 0,0018 rapporté), la règle adaptative donne 0,0679 ± 0,0013 pour    et   , mais ces deux valeurs doivent être indiquées explicitement au lieu d'être laissées implicites dans l'indice de   1.
+Pour la simulation dans    (  ), notre réplication donne 0,0829 ± 0,0012 pour   , 10,18 % de répétitions d'état (en accord avec la probabilité analytique   ) et 8,29 % de détection de cycle, ce qui recoupe les valeurs du manuscrit (0,0819 ± 0,0001, 10,1 % et 8,2 %)1. Toutefois, paper.tex doit préciser explicitement trois détails de l'adversaire : l'appel initial Init se fait avec flag = false (sans quoi    vaudrait 31), la recherche de périodicité s'effectue sur la fenêtre finale des    appels avec drapeau, et l'indice    dans `Duplexing(Z_{n-p} |
+| 0^c, false)désigne l'indice courant de la requête qui vient de s'achever (et dont la sortie reste à exploiter)1. Enfin, à la Section 5.1, le texte utilise  après ajustement dans la définition de , puis écrit «  » pour l'entrée avant ajustement : même si les deux coïncident ici parce queflag = false`, rappeler cette convention évite toute confusion1.
+Audit de la réparation : Lemme 2′, Lemme 3′ et Théorème 1′
+La réparation proposée à la Section 6 (sec:repair) est globalement solide et l'identité binomiale de la Remarque 1 est exacte1, mais quatre points de rigueur et de dépendance externe doivent être sécurisés avant publication.
+Dans le Lemme   , l'inégalité    par la technique des coefficients H est valide dès lors que    est une injection bien définie (ce qui suppose implicitement dans    que   ) et que Encode garantit la disjonction entre chemins d'Init et chemins de Duplexing (automatique si `Encode(\delta) |
+| ivest de longueur fixe ou sans préfixe)1. Il convient toutefois de supposer sans perte de généralité l'adversaire  déterministe et de définir un tuple comme *libre* « si à sa **première** requête son chemin est nouveau etflag = false», car une seconde requête sur le même chemin avecflag = true` et    reproduit exactement le même tuple    sans en modifier l'état. La Remarque 2 devra également être relue après correction de la Table 1 pour ne pas renvoyer à des chiffres erronés1.
+Dans le Lemme   , la technique de troncature par les adversaires    et    (Étape 2) est rigoureuse et préserve bien les bornes    et   , tandis que l'Étape 1 borne correctement    sous   1. En revanche, trois défauts formels affectent la rédaction du Lemme    et du Théorème    : La définition de    donnée à la Section 5.1 compte les requêtes    (  ), alors que l'Étape 3 du Lemme    borne    en comptant au plus    tuples contrôlés et    tuples libres1. Si    comptait les requêtes répétées à l'identique (par exemple des appels répétés à Init(0, 0, 0, false) qui laissent   ),    dépasserait    avec probabilité 1 alors que    et    ; il faut donc définir explicitement    sur les tuples distincts    (ou dédupliquer sans perte de généralité les requêtes identiques dans   ). Ensuite, à l'Étape 3, l'application du Lemme    à l'évènement de   -collision dans    nécessite de fixer l'oracle aléatoire    par indépendance avec    (justification qui n'apparaît aujourd'hui que plus bas dans la preuve du Théorème   ), et l'argument probabiliste bornant    doit mentionner explicitement le couplage par bacs factices en cas de   -collision préalable1.
+Enfin, la Remarque 1 indique que la condition    du Théorème D1 n'est plus nécessaire dans le Théorème    parce que les Lemmes 4–6 de DMV17 ne sont plus utilisés1. Or l'Étape 1 du Lemme    importe en boîte noire l'équation (28) des Sections 6.2–6.3 de DMV17 sans poser aucune contrainte supérieure sur    dans le Théorème   1. Comme le texte complet de DMV17 n'est pas disponible dans les documents audités, il est impératif de vérifier dans les Sections 6.2–6.3 de ePrint 2017/498 que la dérivation de l'équation (28) n'utilise ni   , ni une condition du type   1. Sur le plan quantitatif, en choisissant le plus petit    tel que   , les cinq jeux de paramètres de la Table 2 donnent    (pour   ),    (  ),    (  ) et    (  ), et le Théorème    fournit des bornes de 4761,97·2⁻ᶜ, 2932,20·2⁻ᶜ, 4773,33·2⁻ᶜ, 4755,18·2⁻ᶜ et 4770,66·2⁻ᶜ, soit environ 2,2 fois    sur les cas à   3.
+Plan d'action correctif avant soumission sur ePrint
+1. Compléter \author, remplacer les marqueurs SIMROWS et SIMTEXT par les sorties vérifiées de thm1_distinguisher.c, modifier la Table 3 pour comparer à    l'avantage estimé    (avec son erreur standard combinée) plutôt que    brut, et ajouter la taille   , le monde simulé et le rappel    à la vérification croisée de l'Annexe A1.
+2. Corriger f2_exact.py, la dernière colonne de la Table 1 (tab:f2) et la Remarque 2 pour calculer littéralement    au lieu de substituer    à   1.
+3. Réécrire le produit de la Proposition 1 sans division par    (et fixer une règle de départage en cas d'égalité), ajouter   ,    et le cas    à la Proposition 2 avec la preuve en deux lignes de la majoration de   , et expliciter les deux justifications mineures de la Proposition 3 (indépendance vis-à-vis de    et   )1.
+4. Documenter sans ambiguïté les protocoles de simulation du Gap 2 : règle dynamique d'arrêt sur budget    et paramètres    (pour   ) dans   , Init avec flag = false, instant du test de périodicité et définition de    dans   , ainsi que la convention avant/après drapeau sur    à la Section 5.11.
+5. Renforcer le Lemme    (adversaire déterministe, définition d'un tuple libre à sa première requête, condition implicite    et propriété de Encode) et le Lemme    (définir explicitement    sur les tuples distincts ou dédupliquer   , rapatrier le conditionnement sur    à l'Étape 3, et expliciter le couplage par bacs factices)1.
+6. Vérifier mot à mot dans les PDF complets de DMV17 (ePrint 2017/498), DM19 (ePrint 2019/225) et Men23 (ePrint 2022/1340) les citations littérales, l'indexation des clés (   ou   ), le maintien de l'équation (28) des Sections 6.2–6.3 de DMV17 sans la condition    (ni borne sur   ), le Théorème 2 et la Section 8.3 de Men23, puis compléter la pagination de [DMV17] et inspecter tous les scripts listés par run_all.sh1.
+Sources des citations
+   1. paper.tex
+   2.    3. unknown_url
+   4. README.md
+   5. Full-State Keyed Duplex With Built-In Multi-User Support, https://eprint.iacr.org/2017/498
+   6. Leakage Resilience of the Duplex Construction, https://eprint.iacr.org/2019/225
+   7. Understanding the Duplex and Its Security - Cryptology ePrint Archive, https://eprint.iacr.org/2022/1340
+   8. Read the thesis - PhD Defense, https://phd-defense.viguier.nl/Thesis.pdf
+   9. Joan Daemen Papers, https://cs.ru.nl/~joan/JoanDaemenPapers.html
+   10. Bart Mennink, https://www.bartmennink.nl/
+   11. Understanding the Duplex and Its Security, https://d-nb.info/1302201271/34

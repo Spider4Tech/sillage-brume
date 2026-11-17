@@ -1,0 +1,2 @@
+c=10 nu=6 F=7 M=10 N<=92 trials=20000 seed=101 : Pr_O(mu_fw > 6) = 0.06560 +- 0.00175 ; heuristic prediction 0.06577 ; claimed nu/2^c = 0.005859 ; ratio 11.2
+c=12 nu=7 F=8 M=11 N<=398 trials=20000 seed=102 : Pr_O(mu_fw > 7) = 0.04690 +- 0.00149 ; heuristic prediction 0.04752 ; claimed nu/2^c = 0.001709 ; ratio 27.4

@@ -1,0 +1,912 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{microtype}
+\emergencystretch=1.5em
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{url}
+
+\newtheorem*{thmD}{Theorem D1 {\normalfont (DMV17, Theorem~1)}}
+\newtheorem*{lemDtwo}{Lemma D2 {\normalfont (DMV17, Lemma~2)}}
+\newtheorem*{lemDthree}{Lemma D3 {\normalfont (DMV17, Lemma~3)}}
+\newtheorem*{lemtwop}{Lemma $2'$ {\normalfont (replaces Lemma~D2)}}
+\newtheorem*{lemthreep}{Lemma $3'$ {\normalfont (replaces Lemma~D3)}}
+\newtheorem*{thmonep}{Theorem $1'$ {\normalfont (replaces Theorem~D1)}}
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{example}{Example}
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+\newcommand{\KD}{\mathsf{KD}}
+\newcommand{\RD}{\mathsf{RD}}
+\newcommand{\IXIF}{\mathsf{IXIF}}
+\newcommand{\RO}{\mathsf{RO}}
+\newcommand{\Path}{\mathit{Path}}
+\newcommand{\flag}{\mathit{flag}}
+\newcommand{\true}{\mathsf{true}}
+\newcommand{\false}{\mathsf{false}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\outp}[1]{\overline{#1}}
+\newcommand{\inp}[1]{\widehat{#1}}
+\newcommand{\mufw}{\mu_{\mathrm{fw}}}
+\newcommand{\mubw}{\mu_{\mathrm{bw}}}
+\newcommand{\Tfw}{T_{\mathrm{fw}}}
+\newcommand{\Tbw}{T_{\mathrm{bw}}}
+\newcommand{\Hmin}{H_{\min}}
+\newcommand{\Hcoll}{H_{\mathrm{coll}}}
+\newcommand{\NR}{\mathsf{NR}}
+\newcommand{\file}[1]{\texttt{#1}}
+
+\title{The Security Proof of the Full-State Keyed Duplex, Revisited:\\
+Two Gaps, a Distinguisher Exceeding the Stated Bound, and a Repair}
+\hypersetup{pdftitle={The Security Proof of the Full-State Keyed Duplex, Revisited},pdfauthor={Math\'eo Grillon}}
+\author{Math\'eo Grillon\\[2pt] \normalsize Altrion-systems}
+\date{17 November 2026 --- preliminary version, not peer reviewed}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The full-state keyed duplex of Daemen, Mennink and Van Assche (ASIACRYPT 2017) is the reference model for
+permutation-based authenticated encryption, and its security bound (their Theorem~1) is used as a black box in
+later work. We re-examine the proof of that theorem and report three findings.
+(i) In the proof of Lemma~2 (randomized duplex versus ideal function), the number $S$ of pairs of queries whose
+states can collide with probability $2^{-c}$ is bounded by $\binom{L+\Omega+1}{2}$. This count ignores that a query
+whose outer part is chosen by the adversary can be aimed at a \emph{multicollision} of the outer parts that the
+adversary does not control but observes. We compute the collision probability exactly and show that it exceeds the
+bound written in the proof.
+(ii) This is not only a gap in the proof. We describe a distinguisher that makes no query to the permutation and
+whose advantage exceeds the bound of Lemma~2 and the bound of Theorem~1 itself. We prove a lower bound on its
+advantage and evaluate both sides in exact rational arithmetic for five parameter sets (from $b=36$ to $b=320$,
+$c=256$): the proven lower bound is $1.6$ to $2.1\,\%$ above the bound of Theorem~1. A simulation on the $36$-bit
+sets agrees with the proof (three independent runs, each more than $15$ standard errors above the bound of
+Theorem~1). On these instances the excess is small; it sits in a term of the form $(L+\Omega)\,\nu/2^c$ that is absent
+from Theorem~1, whereas the later bound of Dobraunig and Mennink (ASIACRYPT 2019) has a term of this form.
+(iii) In the proof of Lemma~3, the probability that the forward multiplicity exceeds its threshold is claimed to be at
+most $\nu/2^c$ in both worlds. We prove that this fails in the real world (state recovery through the public
+permutation: a lower bound that is a constant, against a claim of order $2^{-c}$), and we show by simulation only that
+it fails in the randomized-duplex world (state repetition).
+Finally we repair the proof. The repaired theorem keeps the structure of the original one; its bound is essentially
+the original bound with the two terms of Lemma~2 counted twice, plus $2(L+\Omega)\binom{M-L}{2}/2^b$, with the
+multicollision terms expressed by a direct union bound; on the five instances it is about $2.3$ times the original
+bound. All numerical claims are produced by short programs, listed in the appendix and available with their outputs.
+\end{abstract}
+
+\section{Introduction}
+
+\paragraph{Context.}
+The duplex construction of Bertoni et al.~\cite{BDPV11} turns a public permutation $f$ on $b = r + c$ bits into a
+stateful keyed object: each call applies $f$, outputs the $r$-bit \emph{outer part} of the state and absorbs a
+block. Mennink, Reyhanitabar and Viz\'ar~\cite{MRV15} analysed the \emph{full-state} variant, in which the absorbed
+block covers the whole state. Daemen, Mennink and Van Assche~\cite{DMV17} (DMV17 below) generalised it further: several
+keys, a re-phased interface, and a $\flag$ input that lets a call \emph{overwrite} the outer part, as decryption
+does in SpongeWrap-like modes. Their Theorem~1 bounds the advantage of distinguishing this keyed duplex $\KD$ from
+an ideal extendable input function $\IXIF$ in terms of six resources $(N, M, q, q_{iv}, L, \Omega)$ and of a
+\emph{multicollision limit function} $\nu$. Dobraunig and Mennink~\cite{DM19} later gave a bound of the same kind, by a
+different proof, in the setting of leakage resilience. Mennink~\cite{Men23} restates both bounds side by side
+(his Theorems~1 and~2) and derives the security of a number of modes from them.
+
+We studied the proof of DMV17 while deriving the security of a duplex-based authenticated encryption mode from it.
+Checking it step by step for our parameters, we met two steps that we could not justify, then found that they do
+not hold as written, and finally that the first one leads to a distinguisher that contradicts the statement of the
+theorem.
+
+\paragraph{Contributions.}
+In this introduction, ``Theorem~1'', ``Lemma~2'' and ``Lemma~3'' are those of DMV17.
+\begin{enumerate}[leftmargin=*,itemsep=2pt]
+\item \textbf{Gap 1: the count $S$ in Lemma~2} (Section~\ref{sec:gap1}). The proof bounds the probability of a state
+collision in the ideal world using $S \le \binom{L+\Omega+1}{2}$. Mennink~\cite[Section~8.3]{Men23} already noted that this
+step is \emph{lossy} when the adversary never sees the outer parts; we consider the general model, where it sees them,
+and show by an exact computation that an adaptive adversary then \emph{exceeds} the resulting bound (Proposition~\ref{prop:f2}, Table~\ref{tab:f2}, and an example small enough
+to be checked by hand).
+\item \textbf{A distinguisher exceeding Lemma~2 and Theorem~1} (Section~\ref{sec:dist}). It uses $M_u$ ordinary
+calls, observes a collision among their outer parts, and aims $\Omega$ overwriting calls at it. Proposition~\ref{prop:dist}
+is a proven lower bound on its advantage. Table~\ref{tab:inst} compares it, in exact arithmetic, with the bounds of
+Lemma~2 and Theorem~1: the lower bound is larger for all five parameter sets, from $b = 36$ to $b = 320$.
+Table~\ref{tab:sim} reports the simulation on the $36$-bit sets.
+\item \textbf{Gap 2: the forward multiplicity in Lemma~3} (Section~\ref{sec:gap2}). The claim
+$\Pr(\mufw > \Tfw) \le \nu/2^c$ ``for both'' worlds fails in each of them. In the real world we prove
+(Proposition~\ref{prop:f3}) that an adversary within the resources of the theorem reaches $\mufw > \Tfw$ with
+probability about $1/(10v)$ for a small integer $v$ (for instance $0.02$ for $b = 320$, $c = 256$); in the randomized-duplex world we show it by simulation.
+\item \textbf{A repair} (Section~\ref{sec:repair}): Lemma~$2'$ replaces Lemma~2, Lemma~$3'$
+replaces Lemma~3, and Theorem~$1'$ replaces Theorem~1. The proofs reuse the parts of the original
+proof that are not affected.
+\end{enumerate}
+
+\paragraph{What is and is not claimed.}
+The statement of Theorem~1 of DMV17 does not hold as written: Proposition~\ref{prop:dist} and Table~\ref{tab:inst}
+exhibit parameters, satisfying all its hypotheses, for which a distinguisher has a larger advantage. The violation
+that we exhibit is \emph{quantitatively small}: on our five instances the proven lower bound is $1.6$ to $2.1\,\%$
+above the bound, in a term of order $(L+\Omega)/2^c$. This is what our distinguisher achieves, not an upper bound on
+what other distinguishers could achieve. It needs $L + \Omega \ge 1$: when $L = \Omega = 0$ the distinguisher does not
+apply and our repaired Lemma~$2'$ coincides with the original Lemma~2. We do not claim any attack on a deployed
+scheme. The repaired bound of Theorem~$1'$ is larger than the original one by a factor of about $2.3$ on these
+instances (Section~\ref{sec:discussion}); this is a property of our proof, not an attack. The bound of
+Dobraunig and Mennink~\cite{DM19}, proven in a different way and in a different setting, has a term of the kind that
+Theorem~1 lacks (Section~\ref{sec:discussion}); we did not review that proof. Gap~2 is a gap in the proof only: the
+terms of Theorem~1 cover the attacks we use to exhibit it.
+
+\paragraph{Method and reproducibility.}
+Every quantitative statement of this paper is either proven here or produced by a program listed in
+Appendix~\ref{app:repro}. We keep three kinds of statements apart: \emph{proven} (Propositions~\ref{prop:f2}--\ref{prop:f3},
+Lemmas~$2'$ and $3'$, Theorem~$1'$), \emph{computed exactly} from proven formulas (Tables~\ref{tab:f2} and~\ref{tab:inst},
+rational arithmetic, deterministic), and \emph{measured} by Monte Carlo simulation (Table~\ref{tab:sim} and the experiments
+of Section~\ref{sec:gap2}), given with their standard error, a control experiment, and a second independent
+implementation. We quote DMV17 from its full version~\cite{DMV17}, by section number.
+This work has not been peer reviewed. We searched for an earlier report of these points and found none in
+\cite{DMV17,DM19,Men23}; Mennink~\cite[Section~8.3]{Men23} discusses the same sentence about $S$, but as a
+\emph{lossy} (too pessimistic) step, in a setting where the adversary never learns the outer parts.
+
+\section{Preliminaries}\label{sec:prelim}
+
+\subsection{Notation}
+Let $b = r + c$ with $r, c \ge 1$. For $x \in \Z_2^b$ we write $\outp{x} \in \Z_2^r$ for its first $r$ bits (the
+\emph{outer part}) and $\inp{x} \in \Z_2^c$ for its last $c$ bits (the \emph{inner part}), so $x = \outp{x} \,\|\, \inp{x}$.
+Addition in $\Z_2^n$ is bitwise. $\binom{n}{2} = n(n-1)/2$, and $\binom{n}{j} = 0$ for $j > n$.
+
+\subsection{The three constructions}
+We recall Algorithms~1--3 of DMV17. All have two interfaces, namely $\mathsf{Init}(\delta, iv, \sigma, \flag)$ and
+$\mathsf{Duplexing}(\sigma, \flag)$, with $\delta$ a key index, $iv \in \Z_2^{b-k}$, $\sigma \in \Z_2^b$ and
+$\flag \in \{\true, \false\}$; both return $Z \in \Z_2^r$.
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+\item $\KD^f_K$ (keyed duplex) uses a $b$-bit permutation $f$ and an array $K$ of $u$ keys of $k \le b$ bits, drawn
+from a distribution $D_K$. $\mathsf{Init}$ sets $s \leftarrow f(K[\delta] \,\|\, iv)$ and $\mathsf{Duplexing}$ sets
+$s \leftarrow f(s)$. Then both do: $Z \leftarrow \outp{s}$; if $\flag = \true$ then $\sigma \leftarrow \sigma + (Z \| 0^c)$;
+$s \leftarrow s + \sigma$; return $Z$.
+\item $\RD^{\phi,\pi}$ (randomized duplex) is the same with $s \leftarrow \phi(\delta, iv)$ in $\mathsf{Init}$ and
+$s \leftarrow \pi(s)$ in $\mathsf{Duplexing}$, for a uniformly random injection $\phi$ and an independent uniformly
+random permutation $\pi$ of $\Z_2^b$.
+\item $\IXIF^{\RO}$ keeps a string $\Path$ instead of a state. $\mathsf{Init}$ sets
+$\Path \leftarrow \mathrm{Encode}(\delta) \| iv$. Then both interfaces do: $Z \leftarrow \RO(\Path)$; if $\flag = \true$
+then $\sigma \leftarrow \sigma + (Z \| 0^c)$; $\Path \leftarrow \Path \| \sigma$; return $Z$. Here $\RO$ is a random oracle
+with $r$-bit outputs.
+\end{itemize}
+In a call with $\flag = \false$ the outer part of the new state is $Z + \outp{\sigma}$: the adversary chooses
+$\outp{\sigma}$ before seeing $Z$, and learns the outer part afterwards. In a call with $\flag = \true$ the outer part of
+the new state is $\outp{\sigma}$: it is \emph{overwritten} with a value chosen by the adversary.
+
+\subsection{Transcripts and resources}
+Following DMV17 (Section~4.1), a $\Path$ is associated with every construction query in all three worlds, and a
+query is summarised by a tuple $(\Path, Z, \sigma)$ in which $\sigma$ denotes the value \emph{after} the adjustment by
+the flag. We call $t$ the state from which $Z$ is extracted ($\outp{t} = Z$) and $s = t + \sigma$ the state after the
+injection. The resources of an adversary are:
+$N$, the number of queries to $f$ or $f^{-1}$; $M$, the number of distinct tuples $(\Path, \sigma)$;
+$q$, the number of distinct initialisation tuples $(\delta, iv)$; $q_{iv}$, the maximum number of them sharing one
+$iv$; $\Omega$, the number of queries with $\flag = \true$; and $L$, which is $M$ minus the number of distinct paths.
+
+\begin{definition}[DMV17, Definition~2]
+Throw $M$ balls uniformly and independently into $2^r$ bins and let $\mu$ be the largest number of balls in a bin.
+The multicollision limit function $\nu^M_{r,c}$ is the smallest natural number $x$ such that $\Pr(\mu > x) \le x/2^c$.
+\end{definition}
+
+\subsection{The theorem and the structure of its proof}
+To avoid confusion with our own statements, we write Theorem~D1, Lemma~D2 and Lemma~D3 for Theorem~1, Lemma~2 and
+Lemma~3 of DMV17, and Lemma~$2'$, Lemma~$3'$ and Theorem~$1'$ for the statements that replace them in Section~\ref{sec:repair}.
+\begin{thmD}
+Let $f$ be a random permutation, $\RO$ a random oracle and $K \leftarrow D_K$. For any adversary $A$ with resources as
+above and with $N + M \le 0.1 \cdot 2^c$,
+\begin{align*}
+\Delta_A(\KD^f_K, f \,;\, \IXIF^{\RO}, f) \le{}& \frac{(L+\Omega)N}{2^c} + \frac{2\nu^{2(M-L)}_{r,c}(N+1)}{2^c}
+ + \frac{\binom{L+\Omega+1}{2}}{2^c} \\
+&+ \frac{(M-q-L)q}{2^b-q} + \frac{M(M-L-1)}{2^b} + \frac{(M-q-L)q}{2^{\Hmin(D_K)+\min\{c,\,b-k\}}} \\
+&+ \frac{q_{iv}N}{2^{\Hmin(D_K)}} + \frac{\binom{u}{2}}{2^{\Hcoll(D_K)}} .
+\end{align*}
+\end{thmD}
+For one key drawn uniformly ($u = 1$) we have $\Hmin(D_K) = k$ and the last term vanishes.
+The proof (DMV17, Section~4.3) writes
+$\Delta_A(\KD, f ; \IXIF, f) \le \Delta_B(\KD, f ; \RD, f) + \Delta_D(\RD ; \IXIF)$ and bounds the two terms by two lemmas.
+
+\begin{lemDtwo}
+For any adversary $D$ with resources as above and no access to $f$,
+$\Delta_D(\RD^{\phi,\pi} ; \IXIF^{\RO}) \le \binom{L+\Omega+1}{2}/2^c + M(M-L-1)/2^b$.
+\end{lemDtwo}
+\begin{lemDthree}
+For any adversary $B$ with resources as above, the advantage $\Delta_B(\KD^f_K, f ; \RD^{\phi,\pi}, f)$ is at most the
+bound of Theorem~D1 without the terms $\binom{L+\Omega+1}{2}/2^c$ and $M(M-L-1)/2^b$.
+\end{lemDthree}
+Both lemmas are proven with the H-coefficient technique~\cite{Pat08,CS14}: if every good transcript $\tau$ satisfies
+$\Pr(D_O = \tau)/\Pr(D_P = \tau) \ge 1 - \varepsilon$, then $\Delta(O ; P) \le \varepsilon + \Pr(D_P \in T_{\mathrm{bad}})$,
+where $O$ is the real world and $P$ the ideal one.
+
+\section{Gap 1: the count \texorpdfstring{$S$}{S} in the proof of Lemma~2}\label{sec:gap1}
+
+\subsection{The step}
+In the proof of Lemma~D2 (DMV17, Section~5), the transcript is extended with the states: for each path, the ideal
+world draws $t = \RO(\Path) \| \RO'(\Path)$ with a second random oracle $\RO'$ with $c$-bit outputs, and the inner parts
+are given to the adversary at the end. A transcript is bad if it contains a \emph{$t$-collision} (equal $t$ for
+different paths) or an \emph{$s$-collision} (equal $s = t + \sigma$ for different $(\Path, \sigma)$). For good transcripts the
+ratio of the H-coefficient technique is at least~$1$. The probability of an $s$-collision in the ideal world is then
+bounded as follows (we quote):
+\begin{quote}\small
+``There are $\binom{M}{2}$ occasions for an $s$-collision. Denote by $S$ the size of the subset of these occasions for
+which the adversary can (in the worst case) force the outer part of $s = t + \sigma$ to be a value of its choice. Note that
+$S \le \binom{L+\Omega+1}{2}$. In the worst case, in these $S$ occasions the outer part of $s$ always has the same value
+and $s$-collision probability is $2^{-c}$. For the $\binom{M}{2} - S$ other occasions the $s$-collision probability is
+$2^{-b}$. Thus, the probability of an $s$-collision is upper bound by (using our bound on $S$):
+\[ \frac{\binom{M}{2} - S}{2^b} + \frac{S}{2^c} \;\le\; \frac{\binom{M}{2} - \binom{L+\Omega+1}{2}}{2^b} + \frac{\binom{L+\Omega+1}{2}}{2^c}
+ \;\le\; \frac{\binom{M}{2} - \binom{L+1}{2}}{2^b} + \frac{\binom{L+\Omega+1}{2}}{2^c}\,\text{.''} \]
+\end{quote}
+We call the last expression the \emph{written bound}; it is the largest of the three.
+
+\subsection{What the count misses}
+Call a query \emph{controlled} if its path is repeated or its flag is true (there are at most $L + \Omega$ of them),
+and \emph{free} otherwise. The outer part of the state of a free query is $Z + \outp{\sigma}$ with $Z$ fresh: it is
+uniform, the adversary cannot choose it, but the adversary \emph{sees} it. A controlled query made later can therefore
+take as its outer part the value $\alpha$ that occurs most often among the free queries made so far. If $\mu$ free
+queries share the outer part $\alpha$, the controlled query forms $\mu$ pairs, each of which is an $s$-collision with
+probability $2^{-c}$, because the inner parts are independent and hidden. The count
+$S \le \binom{L+\Omega+1}{2} = \binom{L+\Omega}{2} + (L+\Omega)$ allows one such pair per controlled query. It is correct
+when the outer parts of the free queries are pairwise distinct, and too small otherwise.
+
+\subsection{Exact computation}
+Consider the following adversary $A_1$ against the ideal world of Lemma~D2, with parameters $M_u, \Omega \ge 1$.
+It makes one initialisation and stays on one chain of calls, so all paths are distinct and $L = 0$.
+\begin{enumerate}[leftmargin=*,itemsep=1pt]
+\item $M_u$ calls with $\sigma = 0$ and $\flag = \false$ (the first one being $\mathsf{Init}$), with outputs $Z_1, \dots, Z_{M_u}$;
+the states are $s_i = t_i$, with outer parts $Z_i$.
+\item Let $\alpha$ be the most frequent value among $Z_1, \dots, Z_{M_u}$ (the smallest one in case of a tie). Then $\Omega$ calls
+$\mathsf{Duplexing}(\alpha \| 0^c, \true)$; their states are $(\alpha, \inp{t})$.
+\end{enumerate}
+So $M = M_u + \Omega$. For the loads $m = (m_v)_{v \in \Z_2^r}$ of the outer values among the $M_u$ free queries, let
+$m^* = \max_v m_v$ and $g(n) = \prod_{i=0}^{n-1}(1 - i/2^c)$.
+
+\begin{proposition}\label{prop:f2}
+In the ideal world of Lemma~D2, the transcript of $A_1$ contains an $s$-collision with probability
+\[ p_1(r, c, M_u, \Omega) = 1 - \E\Bigl[\, g(m^* + \Omega) \prod_{v \in \Z_2^r,\; v \ne \alpha} g(m_v) \Bigr], \]
+the expectation being over $M_u$ balls thrown uniformly and independently into $2^r$ bins, with $\alpha$ the
+smallest bin of maximal load $m^* = m_\alpha$.
+\end{proposition}
+\begin{proof}
+All paths are distinct, so the values $t_i$ are independent and uniform on $\Z_2^b$; the adversary's choices depend on
+the outer parts only, so the inner parts are independent of the loads and of $\alpha$. Two states can be equal only if
+they have the same outer part. Given the loads, the bin $\alpha$ receives $m^* + \Omega$ states and every other bin $v$
+receives $m_v$ states, all with independent uniform inner parts; $n$ such inner parts are pairwise distinct with
+probability $g(n)$, independently across bins.
+\end{proof}
+The program \file{f2\_exact.py} evaluates $p_1$ with rational numbers by summing over the partitions of $M_u$.
+Table~\ref{tab:f2} gives the result for $r = 4$, $c = 16$, next to the written bound, which for $L = 0$ is
+$\binom{M}{2}/2^b + \binom{\Omega+1}{2}/2^c$, and to the same computation for a \emph{control} adversary that draws
+$\alpha$ uniformly at random.
+
+\begin{table}[ht]
+\centering
+\caption{Exact probability of an $s$-collision in the ideal world of Lemma~D2, $r = 4$, $c = 16$
+(\file{f2\_exact.py}). ``Written'' is the final bound written in the proof; ``Lemma~$2'$'' is the
+$s$-collision part of the repaired bound of Section~\ref{sec:repair}, that is
+$\binom{L+\Omega+1}{2}/2^c + \bigl[(L+\Omega)\binom{M-L}{2} + \binom{M}{2}\bigr]/2^b$ with $L = 0$ and $M = M_u + \Omega$.}\label{tab:f2}
+\smallskip
+\begin{tabular}{rrcccccc}
+\toprule
+$M_u$ & $\Omega$ & adversary $A_1$ & control & written & $A_1$/written & $\E[m^*]$ & Lemma~$2'$ \\
+\midrule
+ 4 &  8 & $5.974\cdot10^{-4}$ & $4.634\cdot10^{-4}$ & $6.123\cdot10^{-4}$ & $0.976$ & $1.3486$ & $1.116\cdot10^{-3}$ \\
+ 8 &  8 & $7.056\cdot10^{-4}$ & $5.149\cdot10^{-4}$ & $6.638\cdot10^{-4}$ & $\mathbf{1.063}$ & $2.0629$ & $1.579\cdot10^{-3}$ \\
+16 &  1 & $1.614\cdot10^{-4}$ & $1.297\cdot10^{-4}$ & $1.450\cdot10^{-4}$ & $\mathbf{1.113}$ & $3.0782$ & $2.747\cdot10^{-4}$ \\
+16 &  8 & $9.171\cdot10^{-4}$ & $6.636\cdot10^{-4}$ & $8.125\cdot10^{-4}$ & $\mathbf{1.129}$ & $3.0782$ & $2.918\cdot10^{-3}$ \\
+24 & 16 & $3.063\cdot10^{-3}$ & $2.458\cdot10^{-3}$ & $2.819\cdot10^{-3}$ & $\mathbf{1.086}$ & $3.9844$ & $1.472\cdot10^{-2}$ \\
+32 &  4 & $8.591\cdot10^{-4}$ & $6.864\cdot10^{-4}$ & $7.534\cdot10^{-4}$ & $\mathbf{1.140}$ & $4.8304$ & $3.157\cdot10^{-3}$ \\
+40 &  2 & $9.305\cdot10^{-4}$ & $8.351\cdot10^{-4}$ & $8.669\cdot10^{-4}$ & $\mathbf{1.073}$ & $5.6299$ & $2.509\cdot10^{-3}$ \\
+ 2 & 30 & $7.101\cdot10^{-3}$ & $6.674\cdot10^{-3}$ & $7.568\cdot10^{-3}$ & $0.938$ & $1.0625$ & $2.176\cdot10^{-2}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The written bound is exceeded in six of the eight cases, by $6$ to $14\,\%$, and never by the control adversary: the
+excess comes from the adaptive choice of $\alpha$. To first order in $2^{-c}$ (for fixed $r$, $M_u$, $\Omega$),
+$p_1 \approx \bigl[\binom{\Omega}{2} + \Omega\,\E[m^*] + \binom{M_u}{2}/2^r\bigr]/2^c$, whereas the written bound is
+$\bigl[\binom{\Omega}{2} + \Omega + \binom{M_u + \Omega}{2}/2^r\bigr]/2^c$. Since
+$\binom{M_u+\Omega}{2} = \binom{M_u}{2} + M_u\Omega + \binom{\Omega}{2}$, the difference is
+$\Omega\bigl(\E[m^*] - 1 - M_u/2^r\bigr)/2^c - \binom{\Omega}{2}/2^b$.
+
+\begin{example}[checkable by hand]\label{ex:small}
+Take $r = 1$, $M_u = 8$, $\Omega = 1$, so $M = 9$ and $b = c + 1$. The eight outer parts are fair bits; if $x$ of them are $0$,
+the flagged query joins the larger side. With $\varepsilon = 2^{-c}$, Proposition~\ref{prop:f2} gives
+$1 - p_1 = \sum_{x=0}^{8} \binom{8}{x} 2^{-8}\, g(\max(x, 8-x) + 1)\, g(\min(x, 8-x))$, that is
+\[ p_1 = \tfrac{611}{32}\varepsilon - 154\varepsilon^2 + \tfrac{10927}{16}\varepsilon^3 - \tfrac{29029}{16}\varepsilon^4
+ + \tfrac{94199}{32}\varepsilon^5 - \tfrac{45351}{16}\varepsilon^6 + 1473\varepsilon^7 - 315\varepsilon^8 . \]
+The written bound is $\binom{9}{2}/2^{c+1} + 1/2^c = 19\varepsilon = \tfrac{608}{32}\varepsilon$. Since
+$\tfrac{3}{32} > 154\varepsilon$ for $c \ge 11$ and the terms of degree $3$ to $8$ have a positive sum for $\varepsilon \le 2^{-11}$
+(each positive term dominates the next one), $p_1$ exceeds the written bound for every $c \ge 11$. The program confirms
+it exactly for $c = 11, 12, 16, 64$ (ratios $1.0010$, $1.0030$, $1.0048$, $1.0049$) and shows that the written bound is not exceeded for $c = 8$.
+\end{example}
+
+At this point the bound that the proof puts on the bad event is shown to be wrong. This alone does not contradict the
+statement of Lemma~D2, since a bad transcript is only a sufficient condition for a gap between the two
+worlds; note also that the written bound is not the right-hand side of Lemma~D2, which has $M(M-L-1)/2^b$ where the
+written bound has $(\binom{M}{2} - \binom{L+1}{2})/2^b$. Table~\ref{tab:f2} therefore refutes a step of the proof, not the lemma. The next
+section shows that the statement of the lemma fails as well.
+
+\section{A distinguisher exceeding Lemma~2 and Theorem~1}\label{sec:dist}
+
+\subsection{The distinguisher}
+To turn an $s$-collision into a distinguishing event, the adversary must observe it. In $\KD$ and $\RD$ two equal states
+produce equal outputs at the next call, and they stay equal as long as the same blocks are absorbed; in $\IXIF$ the
+outputs on distinct paths are independent. The distinguisher $D = D_{M_u, \Omega, v}$, for integers
+$M_u, \Omega, v \ge 1$, makes no query to $f$ and proceeds as follows. Its construction queries are numbered
+$1, 2, \dots, M$ in order, with outputs $Z_1, \dots, Z_M$.
+\begin{enumerate}[leftmargin=*,itemsep=1pt]
+\item \emph{Phase 1.} Query $1$ is $\mathsf{Init}(0, 0^{b-k}, 0^b, \false)$; queries $2, \dots, M_u + v$ are
+$\mathsf{Duplexing}(0^b, \false)$.
+\item Let $\alpha$ be the most frequent value among $Z_1, \dots, Z_{M_u}$ (the smallest one in case of a tie) and
+$T = \{ i \le M_u : Z_i = \alpha \}$.
+\item \emph{Phase 2.} For $\ell = 1, \dots, \Omega$: query $a_\ell = M_u + v + 1 + (\ell - 1)v$ is
+$\mathsf{Duplexing}(\alpha \| 0^c, \true)$, followed by $v - 1$ queries $\mathsf{Duplexing}(0^b, \false)$.
+Then one last query $\mathsf{Duplexing}(0^b, \false)$.
+\item $D$ outputs $1$ if there are $\ell \in \{1, \dots, \Omega\}$ and $x \in X_\ell = T \cup \{a_1, \dots, a_{\ell-1}\}$ with
+$Z_{x+h} = Z_{a_\ell + h}$ for all $h = 1, \dots, v$; otherwise it outputs $0$.
+\end{enumerate}
+Its resources are $N = 0$, $q = q_{iv} = 1$, $M = M_u + v + v\Omega + 1$, exactly $\Omega$ flagged queries, and $L = 0$
+since all queries lie on one chain and have distinct paths.
+
+\subsection{A lower bound on its advantage}
+Assume $M \le 2^{b-1}$ and $M_u \le 2^r$. Let $\gamma = 2^b/(2^b - M) \le 2$, and define
+\begin{align*}
+\pi_0 &= \prod_{i=1}^{M_u - 1} \frac{2^b - i\,2^c}{2^b - i}, \qquad \bar\mu = 1 + \gamma\binom{M_u}{2}\frac{1}{2^r}, \\
+\rho &= \gamma\frac{\binom{M}{2}}{2^b} + \frac{\gamma}{2^c}\Bigl[\Omega(1 + \bar\mu) + \tbinom{\Omega}{2}
+ + \frac{\gamma}{2^r}\bigl(v\Omega + (v-1)\tbinom{\Omega}{2}\bigr)\Bigr], \\
+\varphi &= \Bigl[\tbinom{\Omega}{2} + \Omega\Bigl(1 + \tbinom{M_u}{2}\frac{1}{2^r}\Bigr)\Bigr]\frac{1}{2^{vr}} .
+\end{align*}
+
+\begin{proposition}\label{prop:dist}
+Let $M_u, \Omega, v \ge 1$ with $M = M_u + v + v\Omega + 1 \le 2^{b-1}$ and $M_u \le 2^r$. Let $W$ be either $(\KD^f_K, f)$ with
+$f$ a random permutation and one $k$-bit key $K$ ($k \le b$, any distribution), or $\RD^{\phi,\pi}$. Then
+\[ \Delta_D(W \,;\, \IXIF^{\RO}) \;\ge\;
+ \frac{\binom{\Omega+1}{2}(1 - \rho) + \Omega\,(1 - \pi_0 - \rho)}{2^c} \;-\; \frac{\Omega M}{2^b} \;-\; \varphi . \]
+\end{proposition}
+\begin{proof}
+\emph{Ideal world.} All paths are distinct, so $Z_1, \dots, Z_M$ are independent and uniform. Fix $\ell$ and $x \in X_\ell$.
+The indices $x + h$ ($1 \le h \le v$) are at most $a_\ell$, and $T$ depends on $Z_1, \dots, Z_{M_u}$ only; hence
+$Z_{a_\ell+1}, \dots, Z_{a_\ell+v}$ are independent of $X_\ell$ and of the values they are compared with, and the $v$
+equalities hold with probability $2^{-vr}$. By the union bound,
+$\Pr[D^{\IXIF} = 1] \le \sum_\ell \E[|T| + \ell - 1]/2^{vr}$, and $\E|T| \le 1 + \binom{M_u}{2}/2^r$ because $|T| - 1$ is at most the
+number of pairs $i < i' \le M_u$ with $Z_i = Z_{i'}$. This gives $\Pr[D^{\IXIF} = 1] \le \varphi$.
+
+\emph{Real worlds: the sampling model.} Let $t_j$ be the state from which $Z_j$ is extracted and $s_j$ the state after the
+injection: $s_j = t_j$ for the queries with $\sigma = 0$ and $s_{a_\ell} = (\alpha, \inp{t}_{a_\ell})$. In $\KD$, $t_1 = f(u_0)$ with
+$u_0 = K \| 0^{b-k}$ and $t_{j+1} = f(s_j)$; in $\RD$, $t_1 = \phi(0, 0^{b-k})$ and $t_{j+1} = \pi(s_j)$. $D$ makes no query to $f$,
+so these are the only evaluations of the primitives, and they are made in the order $j = 1, 2, \dots, M$. $D$ is
+deterministic and its queries are fixed in advance, except for the value $\alpha$, which is a function of
+$Z_1, \dots, Z_{M_u}$. Let $H_j = (K, t_1, \dots, t_j)$ be the history after query $j$ (without $K$ in $\RD$): it determines
+$\alpha$ and $T$ once $j \ge M_u$, the inputs $u_0, s_1, \dots, s_j$, and the outputs $Z_1, \dots, Z_j$. Let $\NR_j$ be the event
+that the inputs $u_0, s_1, \dots, s_{j-1}$ (without $u_0$ in $\RD$) are pairwise distinct; it is determined by $H_{j-1}$.
+
+\emph{Fact~0.} For every $j \ge 1$ and every value $h$ of $H_{j-1}$ in $\NR_j$, the conditional law of $t_j$ given $H_{j-1} = h$ is
+uniform on a set $U_j(h)$ with $2^b - (j-1) \le |U_j(h)| \le 2^b$: in $\KD$, $U_j = \Z_2^b \setminus \{t_1, \dots, t_{j-1}\}$; in $\RD$,
+$U_1 = \Z_2^b$ and $U_j = \Z_2^b \setminus \{t_2, \dots, t_{j-1}\}$ for $j \ge 2$. Indeed, in $\KD$ the history fixes the values of the
+uniformly random permutation $f$ on the $j - 1$ distinct points $u_0, s_1, \dots, s_{j-2}$, with images $t_1, \dots, t_{j-1}$, and
+on $\NR_j$ the point $s_{j-1}$ (or $u_0$ if $j = 1$) is a new one; the image of a new point under a uniformly random
+permutation, given its values on other points, is uniform on the values not yet taken, and $K$ is independent of $f$.
+In $\RD$ the same holds for $\pi$ on the points $s_1, \dots, s_{j-1}$, and $t_1$ is uniform and independent of $\pi$.
+All probabilities below are obtained by conditioning successively on $H_1, H_2, \dots$ and applying Fact~0; we write
+$|U_j| \ge 2^b - M$, so that a set of $n$ values has conditional probability at most $n/(2^b - M) = \gamma n/2^b$.
+We use four facts.
+
+\emph{(a) A collision makes $D$ output $1$.} Suppose $s_{a_\ell} = s_x$ with $x \in X_\ell$. Then $t_{a_\ell+1} = t_{x+1}$.
+Queries $x + 1, \dots, x + v - 1$ and $a_\ell + 1, \dots, a_\ell + v - 1$ all have $\sigma = 0$ and $\flag = \false$ (for $x \in T$
+because phase~1 has $M_u + v$ such queries, for $x = a_{\ell'}$ by construction), so the states remain equal and
+$t_{x+h} = t_{a_\ell+h}$ for $h \le v$. Hence $Z_{x+h} = Z_{a_\ell+h}$ for $h = 1, \dots, v$ and $D$ outputs $1$.
+
+\emph{(b) Probability of a collision at $a_\ell$.} Let $C_\ell = \NR_{a_\ell} \wedge \{ s_{a_\ell} \in \{ s_x : x \in X_\ell \} \}$. The events
+$C_\ell$ are pairwise disjoint, since $C_\ell$ contradicts $\NR_{a_{\ell'}}$ for $\ell' > \ell$. On $\NR_{a_\ell}$ the states $s_x$,
+$x \in X_\ell$, are distinct and all have outer part $\alpha$ (for $x \in T$ because $s_x = t_x$ and $Z_x = \alpha$), so their inner
+parts form a set $V$ of $|T| + \ell - 1$ values, determined by $H_{a_\ell-1}$, and $s_{a_\ell}$ is one of these states if and only if
+$\inp{t}_{a_\ell} \in V$. Exactly $|V|\,2^r$ elements of $\Z_2^b$ have their inner part in $V$, and at most $a_\ell - 1 \le M$ of
+them are outside $U_{a_\ell}$; since $|U_{a_\ell}| \le 2^b$, Fact~0 gives
+$\Pr[C_\ell \mid H_{a_\ell - 1}] \ge \mathbf{1}_{\NR_{a_\ell}}\bigl((|T| + \ell - 1)/2^c - M/2^b\bigr)$.
+
+\emph{(c) Probability that some input is repeated.} Let $\rho^* = \Pr[\neg\NR_M]$ and $I_j = \{u_0, s_1, \dots, s_{j-1}\}$, a set of
+at most $j$ elements determined by $H_{j-1}$. The events $\NR_1 \supseteq \NR_2 \supseteq \dots$ are decreasing and
+$\NR_{j+1} = \NR_j \wedge \{s_j \notin I_j\}$, so, decomposing along the first repetition,
+\[ \rho^* = \sum_{j=1}^{M-1} \Pr[\NR_j \wedge s_j \in I_j] = \sum_{j=1}^{M-1} \E\bigl[\mathbf{1}_{\NR_j} \Pr[s_j \in I_j \mid H_{j-1}]\bigr] . \]
+\emph{Queries with $\sigma = 0$.} Here $s_j = t_j$, and by Fact~0 the conditional probability is at most
+$|I_j|/|U_j| \le \gamma j/2^b$. The sum over these $j$ is at most $\gamma\sum_{j=1}^{M-1} j/2^b = \gamma\binom{M}{2}/2^b$.
+
+\emph{Flagged queries $j = a_\ell$.} Here $s_j = (\alpha, \inp{t}_j)$ with $\alpha$ determined by $H_{j-1}$, so $s_j \in I_j$ if and only
+if $\inp{t}_j$ is the inner part of one of the $n_\ell$ elements of $I_j$ whose outer part is $\alpha$; each inner part
+corresponds to $2^r$ values of $t_j$, so the conditional probability is at most $n_\ell 2^r/(2^b - M) = \gamma n_\ell/2^c$.
+The elements of $I_{a_\ell}$ are $u_0$; the $s_i = t_i$ with $i \le M_u$, of which exactly $|T|$ have outer part $\alpha$;
+the $\ell - 1$ earlier flagged states; and the states $s_{j'} = t_{j'}$ of the queries $j'$ with $M_u < j' < a_\ell$ and
+$\sigma = 0$, of which there are $v + (\ell-1)(v-1)$. Hence $n_\ell \le 1 + |T| + (\ell - 1) + w_\ell$, where $w_\ell$ is the number of
+the latter $j'$ with $\outp{t}_{j'} = \alpha$. For each such $j'$ we have $\NR_{a_\ell} \subseteq \NR_{j'}$, $\alpha$ is determined by
+$H_{j'-1}$ because $j' > M_u$, and by Fact~0 $\Pr[\outp{t}_{j'} = \alpha \mid H_{j'-1}] \le 2^c/(2^b - M) = \gamma/2^r$ on $\NR_{j'}$;
+so $\E[\mathbf{1}_{\NR_{a_\ell}} w_\ell] \le (v + (\ell-1)(v-1))\gamma/2^r$. Next, $|T| - 1$ is at most the number of pairs
+$i < i' \le M_u$ with $Z_i = Z_{i'}$, and for each pair, by Fact~0 on $\NR_{i'}$,
+$\Pr[Z_{i'} = Z_i \mid H_{i'-1}] \le 2^c/(2^b - M) = \gamma/2^r$; since $\NR_{a_\ell} \subseteq \NR_{i'}$,
+$\E[\mathbf{1}_{\NR_{a_\ell}}|T|] \le 1 + \gamma\binom{M_u}{2}/2^r = \bar\mu$. Therefore
+$\E[\mathbf{1}_{\NR_{a_\ell}} n_\ell] \le 1 + \bar\mu + (\ell - 1) + (v + (\ell-1)(v-1))\gamma/2^r$, and the sum over $\ell = 1, \dots, \Omega$ of
+$\gamma/2^c$ times this quantity is $\frac{\gamma}{2^c}\bigl[\Omega(1 + \bar\mu) + \binom{\Omega}{2} + \frac{\gamma}{2^r}(v\Omega + (v-1)\binom{\Omega}{2})\bigr]$.
+Adding the two sums, $\rho^* \le \rho$.
+
+\emph{(d) Probability that $|T| = 1$.} $|T| = 1$ means that $Z_1, \dots, Z_{M_u}$ are pairwise distinct. For $1 \le i < M_u$, on
+$\NR_{i+1}$ and given that $Z_1, \dots, Z_i$ are distinct, $t_{i+1}$ is uniform on $U_{i+1}$ by Fact~0. The elements of
+$\Z_2^b$ whose outer part differs from $Z_1, \dots, Z_i$ number $2^b - i\,2^c \ge 0$ (as $M_u \le 2^r$) and all belong to
+$U_{i+1}$, because the excluded values $t_1, \dots, t_i$ have outer parts $Z_1, \dots, Z_i$; and $|U_{i+1}| \ge 2^b - i$. So the
+conditional probability that $Z_{i+1}$ is a new value is at most $(2^b - i\,2^c)/(2^b - i)$. Multiplying over $i$,
+$\Pr[\NR_{M_u} \wedge |T| = 1] \le \pi_0$.
+
+\emph{Conclusion.} By (a) and the disjointness in (b), $\Pr[D^W = 1] \ge \sum_\ell \Pr[C_\ell]$, and by (b)
+$\Pr[C_\ell] \ge \E[\mathbf{1}_{\NR_{a_\ell}}(|T| + \ell - 1)]/2^c - M/2^b$. Since $|T| \ge 1$,
+\[ \E[\mathbf{1}_{\NR_{a_\ell}}(|T| + \ell - 1)] \ge \ell\,\Pr[\NR_{a_\ell}] + \Pr[\NR_{a_\ell} \wedge |T| \ge 2]
+ \ge \ell(1 - \rho) + (1 - \rho - \pi_0), \]
+using $\Pr[\NR_{a_\ell}] \ge 1 - \rho^*$, (c) and (d). Summing over $\ell = 1, \dots, \Omega$ and subtracting the bound
+$\varphi$ of the ideal world gives the claim.
+\end{proof}
+
+In words: the advantage is about $\bigl[\binom{\Omega+1}{2} + \Omega(1 - \pi_0)\bigr]/2^c$, where
+$1 - \pi_0 \approx 1 - e^{-\binom{M_u}{2}/2^r}$ is the probability that two of the $M_u$ observed outer parts coincide.
+For $N = 0$, $L = 0$, $q = u = 1$, Theorem~D1 claims the bound
+\begin{equation}\label{eq:B}
+ B = \frac{2\nu^{2M}_{r,c}}{2^c} + \frac{\binom{\Omega+1}{2}}{2^c} + \frac{M-1}{2^b-1} + \frac{M(M-1)}{2^b} + \frac{M-1}{2^{k+\min\{c,\,b-k\}}} ,
+\end{equation}
+and Lemma~D2 claims $B_2 = \binom{\Omega+1}{2}/2^c + M(M-1)/2^b$. Comparing with Proposition~\ref{prop:dist}, the
+distinguisher exceeds $B$ when $\Omega(1 - \pi_0)$ is larger than $2\nu^{2M}_{r,c} + M(M-1)/2^r$ plus the small correction terms
+of the proposition and the two terms of \eqref{eq:B} in $M - 1$ (the last of which is small only if $k$ is not much smaller than $r$). In the
+instances below this is obtained with $M_u = 3 \cdot 2^{r/2}$ or a little less, and $48$ or $64$ flagged queries.
+
+\subsection{Instances, in exact arithmetic}
+The program \file{thm1\_bounds.py} evaluates $B$, $B_2$ and the lower bound of Proposition~\ref{prop:dist} with rational
+numbers. In $B$ it replaces $\nu^{2M}_{r,c}$ by the upper bound $\bar\nu$, the smallest $x \ge 1$ with
+$\binom{2M}{x+1}/2^{rx} \le x/2^c$: by the union bound over the $(x+1)$-subsets of balls this $x$ satisfies the
+inequality that defines $\nu$, so $\nu \le \bar\nu$ and the value used for $B$ is at least the bound claimed by the
+theorem. When $M_u > 10^5$ it replaces $\pi_0$ by the upper bound
+$\bigl[(1 - M_u^2/2^b)\sum_{n < 60} x^n/n!\bigr]^{-1}$ with $x = \binom{M_u}{2}/2^r$, which is valid for $M_u^2 < 2^b$:
+$\pi_0 = \prod_i (1 - i/2^r) \cdot \prod_i (1 - i/2^b)^{-1}$, where $\prod_i (1 - i/2^r) \le e^{-x} \le \bigl(\sum_{n<60} x^n/n!\bigr)^{-1}$ and
+$\prod_{i < M_u} (1 - i/2^b) \ge (1 - M_u/2^b)^{M_u} \ge 1 - M_u^2/2^b$ (rows $4$ and $5$ of Table~\ref{tab:inst}; for row~$3$ the two values
+are $0.011113$ and $0.011101$). It also checks the hypotheses $r < b$, $k \le b$ and $N + M \le 0.1 \cdot 2^c$ of Theorem~D1 and
+$M \le 2^{b-1}$, $M_u \le 2^r$ of Proposition~\ref{prop:dist}.
+
+\begin{table}[ht]
+\centering
+\caption{The proven lower bound $\mathit{LB}$ of Proposition~\ref{prop:dist} against the bound $B$ of Theorem~D1
+(with $\nu \le \bar\nu$) and the bound $B_2$ of Lemma~D2, in units of $2^{-c}$ (\file{thm1\_bounds.py}). In all rows
+$\mathit{LB} > B > B_2$ holds as an exact comparison of rational numbers.}\label{tab:inst}
+\smallskip
+\begin{tabular}{rrrrrrrrcccc}
+\toprule
+$b$ & $r$ & $c$ & $k$ & $M_u$ & $\Omega$ & $v$ & $\bar\nu$ & $B_2\cdot2^c$ & $B\cdot2^c$ & $\mathit{LB}\cdot2^c$ & $\mathit{LB}/B$ \\
+\midrule
+ 36 & 16 &  20 &  16 & $640$ & 64 & 2 & 5 & $2089.06$ & $2099.08$ & $2135.09$ & $1.0172$ \\
+ 36 & 16 &  20 &  16 & $768$ & 48 & 2 & 5 & $1187.46$ & $1197.48$ & $1220.81$ & $1.0195$ \\
+ 64 & 24 &  40 &  24 & $3\cdot2^{12}$ & 64 & 3 & 5 & $2089.29$ & $2099.29$ & $2143.24$ & $1.0209$ \\
+ 96 & 32 &  64 &  32 & $3\cdot2^{16}$ & 64 & 3 & 6 & $2089.02$ & $2101.02$ & $2143.29$ & $1.0201$ \\
+320 & 64 & 256 & 128 & $3\cdot2^{32}$ & 64 & 5 & 10 & $2089.00$ & $2109.00$ & $2143.29$ & $1.0163$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{corollary}\label{cor:false}
+For each parameter set of Table~\ref{tab:inst} there is an adversary, with resources satisfying the hypotheses of
+Theorem~D1 and making no query to $f$, whose advantage in distinguishing $(\KD^f_K, f)$ from $(\IXIF^{\RO}, f)$ is
+larger than the bound stated by Theorem~D1; and its advantage in distinguishing $\RD^{\phi,\pi}$ from $\IXIF^{\RO}$
+is larger than the bound stated by Lemma~D2.
+\end{corollary}
+
+\subsection{Simulation}\label{sec:sim}
+Corollary~\ref{cor:false} rests on Proposition~\ref{prop:dist} and on exact arithmetic, not on simulation. As an
+independent check of the proposition, the program \file{thm1\_distinguisher.c} runs $D$ on the two $36$-bit parameter sets,
+in the worlds $\KD$ (one uniform key, $iv = 0$), $\RD$ and $\IXIF$, with $f$ (or $\pi$) a lazily sampled uniform permutation.
+The \emph{control} is the same distinguisher with $\alpha = Z_1$ instead of the most frequent value. Each line of
+Table~\ref{tab:sim} is one run of $n = 4 \cdot 10^8$ independent trials; $\hat p$ is the fraction of trials with output $1$ and
+its standard error is $\sqrt{\hat p(1-\hat p)/n}$. The advantage is $\Pr[D^W = 1] - \Pr[D^{\IXIF} = 1]$, and
+$\Pr[D^{\IXIF} = 1] \le \varphi$ is proven, so $\hat p - \varphi$ estimates a lower bound on the advantage with the same standard
+error; this is the quantity that we compare with the bounds $B$ (worlds $\KD$) and $B_2$ (world $\RD$) of Table~\ref{tab:inst}.
+
+\begin{table}[ht]
+\centering
+\caption{Simulation of $D$ for $b = 36$, $r = 16$, $c = 20$, $k = 16$, $v = 2$; $4 \cdot 10^8$ trials per line
+(\file{thm1\_distinguisher.c}; raw output in \file{results/thm1\_distinguisher.txt}, derived columns by \file{table3.py}).
+In the column $\alpha$, ``max'' is the most frequent value and ``$Z_1$'' is the control. ``Bound'' is $B$ of Theorem~D1 in the world $\KD$ and $B_2$ of Lemma~D2 in the world $\RD$; $\mathit{LB}$ is the lower bound
+of Proposition~\ref{prop:dist}; the last two columns are $(\hat p - \varphi - \text{bound})/\text{s.e.}$ and
+$(\hat p - \varphi - \mathit{LB})/\text{s.e.}$, where s.e.\ is the standard error of $\hat p$. All probabilities are in units of $10^{-3}$.}\label{tab:sim}
+\smallskip
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{rrllrcccrr}
+\toprule
+$M_u$ & $\Omega$ & world & $\alpha$ & seed & $\hat p \pm \text{s.e.}$ & $\hat p - \varphi$ & bound & vs bound & vs $\mathit{LB}$ \\
+\midrule
+640 & 64 & $\KD$ & max & 1 & $2.04271 \pm 0.00226$ & $2.04218$ & $2.00184$ & $+17.8$ & $+2.7$ \\
+640 & 64 & $\KD$ & max & 2 & $2.03726 \pm 0.00225$ & $2.03673$ & $2.00184$ & $+15.5$ & $+0.2$ \\
+640 & 64 & $\RD$ & max & 7 & $2.04442 \pm 0.00226$ & $2.04389$ & $1.99228$ & $+22.8$ & $+3.4$ \\
+640 & 64 & $\KD$ & $Z_1$ & 3 & $1.98502 \pm 0.00223$ & $1.98449$ & $2.00184$ & $-7.8$ & \\
+768 & 48 & $\KD$ & max & 5 & $1.16832 \pm 0.00171$ & $1.16800$ & $1.14201$ & $+15.2$ & $+2.2$ \\
+768 & 48 & $\KD$ & $Z_1$ & 6 & $1.12275 \pm 0.00167$ & $1.12243$ & $1.14201$ & $-11.7$ & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+In the three runs against $\KD$ with the most frequent value, the estimated advantage is $15.2$ to $17.8$ standard errors
+above the bound of Theorem~D1; in the run against $\RD$ it is $22.8$ standard errors above the bound of Lemma~D2. The
+control stays below the bound, which shows that the excess comes from aiming at the multicollision. The measurements
+are also consistent with Proposition~\ref{prop:dist}: they lie above its lower bound, by $0.2$ to $3.4$ standard errors,
+as they should since the lower bound is not tight. For the first parameter set $\varphi = 5.31 \cdot 10^{-7}$, and a run of
+$4 \cdot 10^8$ trials in the world $\IXIF$ (seed $4$) gives $\Pr[D = 1] = (4.93 \pm 0.35) \cdot 10^{-7}$, below $\varphi$ as proven; for the second
+set $\varphi = 3.24 \cdot 10^{-7}$. The two runs with seeds $1$ and $2$ differ by $1.7$ standard errors of their difference.
+A simulation at this size cannot say anything about larger parameters; for those the statement rests on the proof alone.
+
+\section{Gap 2: the forward multiplicity in the proof of Lemma~3}\label{sec:gap2}
+
+\subsection{The step}
+The proof of Lemma~D3 (DMV17, Section~6) defines the \emph{forward multiplicity} of a transcript of construction
+queries as $\mufw = \max_\alpha \#\{ (\Path_j, Z_j, \sigma_j) : Z_j + \outp{\sigma}_j = \alpha \}$, the largest number of \emph{distinct}
+tuples whose state after injection has the same outer part $\outp{s}_j = Z_j + \outp{\sigma}_j$ (as in Section~\ref{sec:prelim}, $\sigma_j$ is
+the value after the adjustment by the flag, and a repeated identical query is not counted again). With $O = (\KD^f_K, f)$ and $P = (\RD^{\phi,\pi}, f)$, equation~(16) of DMV17 is
+\begin{equation}\label{eq:16}
+\begin{split}
+\Delta_B(O ; P) \le{}& \bigl|\Pr[B^O \to 1 \wedge \mufw \le \Tfw] - \Pr[B^P \to 1 \wedge \mufw \le \Tfw]\bigr| \\
+ &+ \max\bigl\{\Pr\nolimits_O(\mufw > \Tfw),\, \Pr\nolimits_P(\mufw > \Tfw)\bigr\},
+\end{split}
+\end{equation}
+followed by: ``the bound we will derive on $\Pr(\mufw > \Tfw)$ in fact applies to both $O$ and $P$''. The first term
+is bounded in a \emph{permutation setup} in which the adversary queries $\phi$ and $\pi$ directly, with at most $\Tfw$
+queries to $\pi$ sharing an outer part; the resulting bound contains $\Tfw N/2^c$. Section~6.4 then sets
+$\Tfw = L + \Omega + \nu^{2(M-L)}_{r,c}$ and states $\Pr(\mufw > \Tfw) \le \nu^{2(M-L)}_{r,c}/2^c$, with the justification that
+``the states are generated from a set of size at least $2^b - M - N$ (for both $O$ and $P$)'', so that each of the at
+most $M - L$ queries ``where the adversary has no control over the outer part'' falls in a given bin with probability
+at most $2 \cdot 2^{-r}$.
+
+The justification assumes that the output $Z_j$ of a query with a new path and $\flag = \false$ is unpredictable to
+the adversary. This is not so in two situations, one in each world.
+
+\subsection{Real world: state recovery through \texorpdfstring{$f$}{f}}
+In $O$ the adversary has access to $f$. If it learns the full state of the construction, it can compute the next
+output $Z$ in advance and choose $\outp{\sigma} = Z + \alpha$: the outer part is forced to $\alpha$ with $\flag = \false$ and a new
+path, that is, by a query that the proof counts among those without control. Consider the adversary
+$R = R_{G, v, F}$, for integers $G, v, F \ge 1$ and a fixed list $x_1, \dots, x_G$ of distinct elements of $\Z_2^c$:
+\begin{enumerate}[leftmargin=*,itemsep=1pt]
+\item $\mathsf{Init}(0, 0^{b-k}, 0^b, \false)$, then $v$ calls $\mathsf{Duplexing}(0^b, \false)$; outputs $Z_0, \dots, Z_v$ (in this
+section the queries are numbered from $0$).
+\item For $g = 1, \dots, G$: let $y_0 = Z_0 \| x_g$ and, for $i = 1, \dots, v$, $y_i = f(y_{i-1})$, stopping this $g$ as soon as
+$\outp{y}_i \ne Z_i$. The first $g$ that passes the $v$ checks is \emph{accepted}, with $\mathit{cur} = y_v$.
+\item If some $g$ was accepted: $F$ times, compute $p = f(\mathit{cur})$, call
+$\mathsf{Duplexing}((\outp{p} + \alpha) \| 0^c, \false)$ for a fixed $\alpha$, and set $\mathit{cur} = (\alpha, \inp{p})$. Otherwise $F$
+calls $\mathsf{Duplexing}(0^b, \false)$.
+\end{enumerate}
+Its resources are $q = 1$, $L = \Omega = 0$, $M = 1 + v + F$ and $N \le vG + F$.
+
+\begin{proposition}\label{prop:f3}
+Let $f$ be a random permutation and $K$ one $k$-bit key ($k \le b$) with any distribution. Let $G, v, F \ge 1$ with
+$G \le 2^c$ and $2v + 1 \le 2^{b-1}$. Then
+\[ \Pr\nolimits_O\bigl[\mufw \ge F\bigr] \;\ge\; \frac{G}{2^c} - G\Bigl(2^{(1-r)v} + \frac{4v^2}{2^b}\Bigr) - \frac{1}{2^r} - \frac{v(v+1)}{2^b} . \]
+\end{proposition}
+\begin{proof}
+Write $u_0 = K \| 0^{b-k}$, $t_0 = f(u_0)$ and $t_i = f(t_{i-1})$, so that $Z_i = \outp{t}_i$ and the state after the $v$-th call is
+$t_v$. Let $x^* = \inp{t}_0$. Since $t_0$ is uniform, $\Pr[x^* \in \{x_1, \dots, x_G\}] = G/2^c$. If $x_g = x^*$ then $y_i = t_i$ for all
+$i$, so $g$ passes the $v$ checks. If $R$ accepts this $g$, then $\mathit{cur} = t_v$ is the state of the construction, and
+by induction each computed $p$ is the value $f(s)$ that the construction computes in the next call, whose state after
+injection is $p + ((\outp{p} + \alpha) \| 0^c) = (\alpha, \inp{p}) = \mathit{cur}$. The $F$ forced queries then all have outer part $\alpha$, and
+$\mufw \ge F$. So $\mufw \ge F$ unless $x^*$ is not in the list or some $g$ with $x_g \ne x^*$ passes the $v$ checks.
+
+Whether a given $g$ passes the $v$ checks is a property of $(K, f)$ alone: it does not depend on what $R$ did with the
+guesses before $g$. We may therefore bound its probability for each $g$ separately, with a sampling order chosen for
+this $g$. Fix $g$ and sample $f$ lazily in the order $u_0, t_0, \dots, t_{v-1}$, then $y_0, \dots, y_{v-1}$: the image of an input
+not met before is uniform among the unused values, of which there are at least $2^b - 2v - 1 \ge 2^{b-1}$. Let $E_c$ be the
+event that $u_0, t_0, \dots, t_{v-1}$ are not pairwise distinct; $\Pr[E_c] \le \sum_{i=0}^{v-1} (i+1)/(2^b - i) \le v(v+1)/2^b$.
+Let $E_0$ be the event $\outp{t}_0 = \outp{u}_0$; $\Pr[E_0] = 2^{-r}$, and $y_0 = u_0$ for some $g$ implies $E_0$. Outside
+$E_c \cup E_0$ and for $x_g \ne x^*$: the input $y_0$ differs from $u_0$ and $t_0$, and equals some $t_i$ with
+$1 \le i \le v-1$ with probability at most $(v-1) \cdot 2/2^b$; each later input $y_{i-1}$ ($2 \le i \le v$) is a fresh
+value and is one of the at most $2v + 1$ earlier inputs with probability at most $(2v+1) \cdot 2/2^b$. If all the
+inputs $y_0, \dots, y_{v-1}$ are new, each check holds with probability at most $2^c/(2^b - 2v - 1) \le 2^{1-r}$ given
+the past, so all $v$ hold with probability at most $2^{(1-r)v}$. Altogether a given $g$ with $x_g \ne x^*$ passes
+with probability at most $2^{(1-r)v} + \bigl[2(v-1) + 2(v-1)(2v+1)\bigr]/2^b = 2^{(1-r)v} + 4(v^2-1)/2^b \le 2^{(1-r)v} + 4v^2/2^b$
+outside $E_c \cup E_0$. The union bound over $g$ ends the proof.
+\end{proof}
+
+Take $F = \nu + 1$ with $\nu = \nu^{2M}_{r,c}$ and $M = 1 + v + F$, so that $\Tfw = \nu$ and the event of
+Proposition~\ref{prop:f3} is $\mufw > \Tfw$, and take $G$ as large as $N + M \le 0.1 \cdot 2^c$ allows, about
+$2^c/(10v)$. With $v > c/(r-1)$ the lower bound is about $1/(10v)$. The program \file{f3\_bound.py} evaluates it
+exactly (with $\nu \le \bar\nu$): for $(b, r, c, v) = (36, 16, 20, 3)$, $(96, 32, 64, 3)$ and $(320, 64, 256, 5)$ it gives
+$\Pr_O(\mufw > \Tfw) \ge 0.0333$, $0.0333$ and $0.0200$, against claimed bounds $\nu/2^c$ of at most
+$1.91 \cdot 10^{-6}$, $1.63 \cdot 10^{-19}$ and $4.32 \cdot 10^{-77}$. This is a statement about a step of the proof under
+the resources that the theorem allows: for $c = 256$ the adversary makes about $2^{252}$ queries to $f$, and nothing here
+is a practical attack.
+
+\paragraph{Simulation.} For small $r$ the proposition is weak, and we simulate instead (\file{f3\_kd.c}), with $b = 16$,
+$r = 4$, $c = 12$, $k = 4$, $v = 2$, $F = 8$, hence $M = 11$, and $\Tfw = \nu^{22}_{4,12} = 7$ computed exactly by
+\file{nu\_exact.py}. The simulated adversary is a \emph{budget-driven variant} of $R$, not $R_{G,v,F}$ with a fixed $G$:
+it draws the guesses in a uniformly random order among all $2^c$ inner values, makes the second check of a guess only
+if the first one holds, and starts a new guess only while the number $N'$ of queries to $f$ made so far satisfies
+$N' + 2 + F \le 398 = 409 - M$, so that $N + M \le 409 < 0.1 \cdot 2^{12}$ in every run (the program stops with an error
+otherwise). A guess costs one query, or two if the first check holds, so this variant tests about $365$ guesses,
+where a fixed $G$ would have to be at most $195$ (and the static adversary is then less successful).
+The adversary reaches $\mufw > 7$ with probability $0.0481 \pm 0.0005$ ($2 \cdot 10^5$ trials), $28$ times the claimed
+$\nu/2^c = 0.0017$; a candidate passes the two checks in $78\,\%$ of the runs, but with $r = 4$ most of these are false
+candidates, which end the search. The control (the same construction queries, no query to $f$) gives about $10^{-5}$. An
+independent implementation of the same variant (\file{f3\_kd\_check.py}, Python with another generator and other seeds,
+$2 \cdot 10^4$ trials) gives $0.0469 \pm 0.0015$ for the same parameters, and $0.0656 \pm 0.0018$ for $c = 10$, where $F = 7$,
+$M = 10$, the budget is $N' + 2 + F \le 92$, $\nu^{20}_{4,10} = 6$ and the claimed bound is $0.0059$.
+
+\subsection{Randomized-duplex world: state repetition}
+This subsection reports an experiment; we do not prove a bound here.
+In $P$ the adversary cannot recover the state through $f$, but the state of $\RD$ can \emph{repeat}: after an
+$s$-collision, $\pi$ is evaluated on an input it has seen before, and the outputs repeat those of an earlier part of
+the transcript. The adversary of \file{f3\_rd.c}, with parameters $\Omega$, $F$, $v$, numbers its queries from $1$ and does
+the following.
+\begin{enumerate}[leftmargin=*,itemsep=1pt]
+\item Query $1$ is $\mathsf{Init}(0, 0^{b-k}, 0^b, \false)$; queries $2, \dots, \Omega + 1$ are $\mathsf{Duplexing}(0^b, \true)$, so that the
+states after these $\Omega$ queries all have outer part $0$. Outputs $Z_1, \dots, Z_{\Omega+1}$.
+\item After query $\Omega + 1$ it looks for the first pair $(j, i)$, in the order $j = 3, 4, \dots$ and, for each $j$,
+$i = 2, \dots, j - 1$, such that $j + v - 1 \le \Omega + 1$ and $Z_{j+h} = Z_{i+h}$ for $h = 0, \dots, v - 1$. If there is one, $p = j - i$.
+\item Queries $n = \Omega + 2, \dots, \Omega + 1 + F$: if a period $p$ was found, $\mathsf{Duplexing}(Z_{n-p} \| 0^c, \false)$, where $Z_{n-p}$
+is the output that the adversary predicts for the query $n$ it is making; otherwise $\mathsf{Duplexing}(0^b, \false)$.
+\end{enumerate}
+Two of the $\Omega$ flagged states collide with probability about $\binom{\Omega}{2}/2^c$, and from then on the outputs are
+periodic. If the period is the right one, each query of step~3 has a new path and no flag, and its state has outer
+part $Z_n + Z_{n-p} = 0$, like the $\Omega$ flagged ones. Its resources are $q = 1$, $L = 0$, $N = 0$, $M = 1 + \Omega + F$ and
+exactly $\Omega$ flagged queries. With $r = 8$, $c = 12$, $\Omega = 30$, $F = 6$, $v = 3$ we have $M = 37$,
+$\nu^{74}_{8,12} = 5$ (\file{nu\_exact.py}) and $\Tfw = 35$.
+The adversary obtains $\mufw > \Tfw$ with probability $0.0819 \pm 0.0001$ ($4 \cdot 10^6$ trials), $67$ times the claimed
+$\nu/2^c = 0.0012$; a state is repeated in $10.1\,\%$ of the runs and a cycle is detected in $8.2\,\%$. The control, which
+makes the same queries of steps~1 and~2 and then $F$ calls $\mathsf{Duplexing}(0^b, \false)$, gives $2.7 \cdot 10^{-5}$. An independent
+implementation (\file{f3\_rd\_check.py}, Python, written from Algorithm~3 of DMV17, $3 \cdot 10^5$ trials) gives $0.0827 \pm 0.0005$.
+
+The probability of the event is of the order of the $s$-collision probability $\binom{L+\Omega+1}{2}/2^c$, which the
+claimed bound $\nu/2^c$ does not contain. The same strategy applies to $O$ with $N = 0$; we did not simulate it there.
+
+\paragraph{Consequence.} The two attacks do not contradict Lemma~D3 or Theorem~D1: the terms
+$\Tfw N/2^c$ and $\binom{L+\Omega+1}{2}/2^c$ of the theorem are larger than their success probabilities. But the
+derivation of Lemma~D3 is incomplete: the term $\max\{\Pr_O, \Pr_P\}(\mufw > \Tfw)$ of \eqref{eq:16} is not bounded by
+$\nu/2^c$, and in the real world it is not small at all.
+
+\section{A repair}\label{sec:repair}
+
+\subsection{Replacing Lemma D2}
+\begin{lemtwop}
+For any adversary $D$ with resources as in Section~\ref{sec:prelim} and no access to $f$,
+\[ \Delta_D(\RD^{\phi,\pi} ; \IXIF^{\RO}) \le \Lambda := \frac{\binom{L+\Omega+1}{2}}{2^c}
+ + \frac{(L+\Omega)\binom{M-L}{2} + \binom{M}{2} + \binom{M-L}{2}}{2^b} . \]
+Moreover, the probability that the extended transcript is bad is at most $\Lambda$ in the ideal world and also in the
+real world $\RD^{\phi,\pi}$.
+\end{lemtwop}
+\begin{proof}
+As in DMV17 we may assume that $D$ is deterministic, and identical queries are counted once: the transcript is a
+set of distinct tuples $(\Path, t, \sigma)$, $\sigma$ being the value after the adjustment by the flag. As in DMV17 we also use
+that $\phi$ is an injection on the pairs $(\delta, iv)$ and that the path determines whether a query is an initialisation
+(its path is $\mathrm{Encode}(\delta) \| iv$) or a duplexing call.
+We keep the transcripts, the bad events and the ratio argument of DMV17 (Section~5): in the real world a good
+transcript fixes $q$ input--output pairs of $\phi$ and $M - q - L$ pairs of $\pi$ with distinct inputs and distinct outputs,
+which has probability $1/((2^b)_q (2^b)_{M-q-L}) \ge 2^{-(M-L)b}$, the probability in the ideal world
+(here $(x)_n = x(x-1)\cdots(x-n+1)$). Hence
+$\Pr(D_O = \tau) \ge \Pr(D_P = \tau)$ for every good $\tau$, which gives $\Delta_D \le \Pr(D_P \in T_{\mathrm{bad}})$ and also
+$\Pr(D_O \in T_{\mathrm{bad}}) = 1 - \Pr(D_O \in T_{\mathrm{good}}) \le 1 - \Pr(D_P \in T_{\mathrm{good}}) = \Pr(D_P \in T_{\mathrm{bad}})$.
+It remains to bound the probability of a bad transcript in the ideal world.
+
+A $t$-collision has probability at most $\binom{M-L}{2}/2^b$, as in DMV17. For $s$-collisions, order the tuples by
+the time of their first query. Two tuples with the same path have the same $t$ and different $\sigma$, hence different
+$s$. The interaction depends on the outer parts only, so the inner parts $\RO'(\Path)$ of distinct paths are
+independent, uniform, and independent of the interaction; two tuples with distinct paths therefore have equal inner
+parts of $s$ with probability exactly $2^{-c}$, given the interaction. Hence the probability of an $s$-collision is
+at most $\E[Y]/2^c$, where $Y$ is the number of pairs of tuples with distinct paths and equal outer parts of $s$.
+
+Call a tuple \emph{free} if, at the query that creates it, its path is new (no earlier tuple has this path) and the
+flag is false, and \emph{controlled} otherwise. A controlled tuple has a repeated path or was created by a flagged
+query, so there are at most $L + \Omega$ of them; free tuples have distinct paths, so there are at most $M - L$. The outer part of a free tuple is $\RO(\Path) + \outp{\sigma}$
+with $\RO(\Path)$ fresh and $\outp{\sigma}$ chosen before: given the past it is uniform. Consider a pair $i < j$.
+If $j$ is free, the outer parts are equal with probability $2^{-r}$ given the past; these pairs contribute at most
+$\binom{M}{2}/2^r$ to $\E[Y]$. If $j$ is controlled, the tuples $i < j$ with the same outer part are at most the
+controlled tuples before $j$ plus $\mu_{\mathrm{free}}$, the largest number of free tuples sharing an outer part; these pairs
+contribute at most $\binom{L+\Omega}{2} + (L+\Omega)\,\E[\mu_{\mathrm{free}}]$. Finally $\mu_{\mathrm{free}} - 1$ is at most the number of
+pairs of free tuples with equal outer parts, so $\E[\mu_{\mathrm{free}}] \le 1 + \binom{M-L}{2}/2^r$. Adding up,
+$\E[Y] \le \binom{L+\Omega+1}{2} + \bigl[(L+\Omega)\binom{M-L}{2} + \binom{M}{2}\bigr]/2^r$.
+\end{proof}
+
+For $L + \Omega = 0$, $\Lambda = M(M-1)/2^b$ is the bound of Lemma~D2. In general the new term is
+$(L+\Omega)\binom{M-L}{2}/2^b$. The distinguisher of Section~\ref{sec:dist} shows that a term of this kind is necessary:
+its advantage is about $\bigl[\binom{\Omega+1}{2} + \Omega(1 - e^{-\binom{M_u}{2}/2^r})\bigr]/2^c$. One can also write the
+bound with $\E[\mu_{\mathrm{free}}] \le \nu^{M-L}_{r,c}\,(1 + (M-L)/2^c)$ (from $\Pr(\mu > \nu) \le \nu/2^c$ and $\mu \le M - L$), which gives a
+term $(L+\Omega)\,\nu\,(1 + (M-L)/2^c)/2^c$, of the same form as the term $(L+\Omega)\nu/2^c$ of~\cite{DM19}.
+
+\subsection{Replacing Lemma D3}
+For an integer $m \ge 1$ let
+\[ \beta_m = \binom{M-L}{m+1}\, 2^{(1-r)m} . \]
+If at most $M - L$ balls are thrown into $2^r$ bins and each ball falls into any given bin with probability at most
+$2^{1-r}$ given the previous ones, then some bin receives more than $m$ balls with probability at most $\beta_m$ (union
+bound over the $(m+1)$-subsets of balls).
+
+\begin{lemthreep}
+Let $M \le 2^{b-1}$ and $m \ge 1$. For any adversary $B$ with resources as in Section~\ref{sec:prelim},
+\begin{align*}
+\Delta_B(\KD^f_K, f ; \RD^{\phi,\pi}, f) \le{}& \frac{(L+\Omega+2m)N}{2^c} + 2\beta_m + \Lambda + \frac{(M-q-L)q}{2^b-q} \\
+ &+ \frac{(M-q-L)q}{2^{\Hmin(D_K)+\min\{c,\,b-k\}}} + \frac{q_{iv}N}{2^{\Hmin(D_K)}} + \frac{\binom{u}{2}}{2^{\Hcoll(D_K)}} .
+\end{align*}
+\end{lemthreep}
+\begin{proof}
+Let $O = (\KD^f_K, f)$, $P = (\RD^{\phi,\pi}, f)$, $\Tfw = L + \Omega + m$ and $\Tbw = m$.
+
+\emph{Step 1: the permutation setup (unchanged).} DMV17 (Sections~6.2--6.3) shows $\KD^f_K = \RD^{I, E}$ for the
+constructions $I^f_{\kappa,K}$ and $E^f_\kappa$ built from $f$ and an inner masking key $\kappa$, and proves that an adversary $C$
+making $N$ queries to $f$, $q'$ to the initialisation oracle and $M'$ to the duplexing oracle, \emph{at most $\Tfw$ of
+which share an outer part}, distinguishes $(I, E, f)$ from $(\phi, \pi, f)$ with advantage at most (their equation~(28))
+\begin{align*}
+ \varepsilon(\Tfw, \Tbw) ={}& \frac{(\Tfw + \Tbw)N}{2^c} + \Pr\nolimits_{(\phi,\pi,f)}(\mubw > \Tbw) + \frac{M'q'}{2^b - q'} \\
+ &+ \frac{M'q'}{2^{\Hmin(D_K)+\min\{c,\,b-k\}}} + \frac{q_{iv}N}{2^{\Hmin(D_K)}} + \frac{\binom{u}{2}}{2^{\Hcoll(D_K)}},
+\end{align*}
+where $\mubw$ is the largest number of answers of $\phi$ and $\pi$ sharing an outer part. We use this result as it is.
+We checked in the text of DMV17 that its derivation (Sections~6.2 and~6.3) holds for any thresholds $\Tfw$, $\Tbw$ and
+uses neither the condition $N + M \le 0.1 \cdot 2^c$ nor Lemmas~4--6, which enter only in Section~6.4, where the thresholds
+are chosen.
+The correspondence between the two setups is the following. $C$ simulates $\RD$ for $B'$: it keeps the state $s$ of
+each tuple, answers an initialisation by one query to the initialisation oracle, and answers a duplexing call
+\emph{made from} a tuple with state $s$ by one query $s$ to the duplexing oracle; identical queries are answered from a
+table. So the queries of $C$ to the duplexing oracle are exactly the states of the tuples that are \emph{followed by a
+further call}; the state of a tuple from which no call is made is never submitted. Consequently, for any adversary
+$B'$ against $(O ; P)$ with the resources of $B$ and such that, in every execution, at most $\Tfw$ of the tuples that are
+followed by a further call share an outer part, the simulator $C$ satisfies the multiplicity constraint, makes the same
+$N$ queries to $f$, $q' \le q$ queries to the initialisation oracle and $M' \le M - q - L$ to the duplexing oracle, and
+$\Delta_{B'}(O ; P) \le \varepsilon(\Tfw, \Tbw)$. The answers of $\phi$ and $\pi$ to distinct queries are at most $M - L$ balls, each
+falling in a given bin with probability at most $2^c/(2^b - M) \le 2^{1-r}$ given the previous ones; hence
+$\Pr(\mubw > m) \le \beta_m$.
+
+\emph{Step 2: truncation instead of the hybrid \eqref{eq:16}.} The quantity $\mufw$ is a function of the outputs, so $B$
+can compute it. Let $B^+$ run $B$ and, as soon as $\mufw > \Tfw$, stop and output $1$; otherwise it outputs what $B$
+outputs. Let $B^-$ do the same but output $0$ when it stops. Consider an execution of $B^\pm$. Before each query, $\mufw \le \Tfw$ holds for the tuples created so far, hence
+for those followed by a further call. If the answer to a query creates a tuple that raises $\mufw$ to $\Tfw + 1$, the
+adversary stops, so no call is made from that tuple. Thus at most $\Tfw$ tuples followed by a further call ever share
+an outer part, the resources of $B^\pm$ are at most those of $B$, and Step~1 applies to $B^+$ and to $B^-$ with
+$\varepsilon = \varepsilon(\Tfw, \Tbw)$. Moreover $B^\pm$ stops exactly when the full execution of $B$ would end with $\mufw > \Tfw$, since
+$\mufw$ never decreases. Therefore
+\begin{align*}
+\Pr[B^O = 1] &\le \Pr[(B^+)^O = 1] \le \Pr[(B^+)^P = 1] + \varepsilon \le \Pr[B^P = 1] + \Pr\nolimits_P(\mufw > \Tfw) + \varepsilon, \\
+\Pr[B^P = 1] &\le \Pr[(B^-)^P = 1] + \Pr\nolimits_P(\mufw > \Tfw) \le \Pr[(B^-)^O = 1] + \varepsilon + \Pr\nolimits_P(\mufw > \Tfw) \\
+ &\le \Pr[B^O = 1] + \varepsilon + \Pr\nolimits_P(\mufw > \Tfw),
+\end{align*}
+that is, $\Delta_B(O ; P) \le \varepsilon(\Tfw, \Tbw) + \Pr_P(\mufw > \Tfw)$. Only the ideal-side probability is needed.
+
+\emph{Step 3: the forward multiplicity in $P$.} In $P$ the oracle $f$ is independent of $\RD$; we fix $f$, so that $B$
+becomes an adversary against $\RD$ alone, and the bounds below hold for every $f$, hence on average. Free and
+controlled tuples are defined as in the proof of Lemma~$2'$; there are at most $L + \Omega$ controlled tuples, so
+$\mufw > L + \Omega + m$ implies that more than $m$ free tuples share an outer part. Let $E$ be the event that the
+transcript has an $s$-collision; $\Pr[E] \le \Lambda$ by the last statement of Lemma~$2'$. As long as no $s$-collision has
+occurred, distinct tuples have distinct states, so the tuple from which a new path starts has a state that was not
+submitted to $\pi$ before, and every free tuple receives a fresh answer of $\phi$ or $\pi$, uniform on at least
+$2^b - M \ge 2^{b-1}$ values given the past; its outer part $Z + \outp{\sigma}$, with $\outp{\sigma}$ chosen before $Z$ is known, then
+equals any given value with probability at most $2^c/(2^b - M) \le 2^{1-r}$. Number the free tuples in order of creation.
+For a fixed set of $m + 1$ indices $i_0 < \dots < i_m$, the probability that the free tuples with these indices exist, that
+no $s$-collision occurs before the creation of the last of them, and that they all have the outer part of the first
+one, is at most $(2^{1-r})^m$, by conditioning successively on the past of the tuples $i_1, \dots, i_m$. There are at most
+$\binom{M-L}{m+1}$ such sets. Hence
+$\Pr_P(\mufw > \Tfw) \le \Pr[E] + \beta_m \le \Lambda + \beta_m$.
+
+Adding $\varepsilon(L + \Omega + m, m)$ with $\Pr(\mubw > m) \le \beta_m$, $q' \le q$, $M' \le M - q - L$, and $\Lambda + \beta_m$
+gives the claim.
+\end{proof}
+
+\subsection{The repaired theorem}
+\begin{thmonep}
+Let $f$ be a random permutation, $\RO$ a random oracle and $K \leftarrow D_K$. For any adversary $A$ with resources as in
+Section~\ref{sec:prelim}, with $M \le 2^{b-1}$, and for any integer $m \ge 1$,
+\begin{align*}
+\Delta_A(\KD^f_K, f \,;\, \IXIF^{\RO}, f) \le{}& \frac{(L+\Omega+2m)N}{2^c} + 2\binom{M-L}{m+1}2^{(1-r)m}
+ + \frac{2\binom{L+\Omega+1}{2}}{2^c} \\
+&+ \frac{2\bigl[(L+\Omega)\binom{M-L}{2} + \binom{M}{2} + \binom{M-L}{2}\bigr]}{2^b} + \frac{(M-q-L)q}{2^b-q} \\
+&+ \frac{(M-q-L)q}{2^{\Hmin(D_K)+\min\{c,\,b-k\}}} + \frac{q_{iv}N}{2^{\Hmin(D_K)}} + \frac{\binom{u}{2}}{2^{\Hcoll(D_K)}} .
+\end{align*}
+\end{thmonep}
+\begin{proof}
+As in DMV17 (Section~4.3), $\Delta_A(\KD, f ; \IXIF, f) \le \Delta_B(\KD, f ; \RD, f) + \Delta_D(\RD ; \IXIF)$, because $f$ is independent of
+$\RD$ and of $\IXIF$. Apply Lemma~$3'$ and Lemma~$2'$.
+\end{proof}
+
+\begin{remark}[Comparison with Theorem~D1]
+The integer $m$ plays the role of $\nu^{2(M-L)}_{r,c}$: the original terms $(L+\Omega)N/2^c + 2\nu(N+1)/2^c$ become
+$(L+\Omega+2m)N/2^c + 2\beta_m$, and one may take for $m$ the smallest value with $\beta_m \le m/2^c$, in analogy with
+the definition of $\nu$. The condition
+$N + M \le 0.1 \cdot 2^c$ is no longer needed, because Lemmas~4--6 of DMV17 are not used. The remaining differences
+are that the two terms of Lemma~D2 are counted twice (once for Lemma~$2'$, once for the forward
+multiplicity), with $\binom{M}{2} + \binom{M-L}{2} = M(M-L-1) + \binom{L+1}{2}$ in place of $M(M-L-1)$, and that
+$2(L+\Omega)\binom{M-L}{2}/2^b$ is added. The repaired bound is therefore larger than the original one. On the five
+instances of Table~\ref{tab:inst} ($N = 0$, $L = 0$, and $m$ the smallest integer with $\beta_m \le m/2^c$, namely $m = 4, 4, 5, 6, 9$),
+it equals $4761.97$, $2932.20$, $4773.33$, $4755.18$ and $4770.66$ times $2^{-c}$, that is $2.27$, $2.45$, $2.27$, $2.26$ and $2.26$
+times the bound $B$ (\file{thm1\_bounds.py}). We do not claim that the factor $2$ on the terms of Lemma~D2 is necessary.
+\end{remark}
+
+\begin{remark}[Consistency checks]
+The exact $s$-collision probabilities of Table~\ref{tab:f2} are below the $s$-collision part of $\Lambda$ in all eight
+cases (last column). The lower bound of Proposition~\ref{prop:dist} and the measured values of Table~\ref{tab:sim} are below the
+bound of Theorem~$1'$ on all instances (\file{thm1\_bounds.py}). These are checks of consistency, not proofs.
+\end{remark}
+
+\section{Discussion}\label{sec:discussion}
+
+\paragraph{Size of the effect.}
+The distinguisher exceeds Theorem~D1 by about $\Omega(1 - \pi_0)/2^c$ minus the slack
+$2\nu/2^c + M(M-1)/2^b$ of the theorem, that is, by a few dozen times $2^{-c}$ on a bound of about $\Omega^2/2^{c+1}$:
+$1.6$ to $2.1\,\%$ on the instances of Table~\ref{tab:inst}. In the other parameter choices that we examined we did not
+obtain a larger relative excess with this distinguisher: a larger multicollision costs more in the term $M(M-1)/2^b$ than it
+brings. This is an observation about one family of distinguishers, not a bound on the gap between Theorem~D1 and
+the truth. What is established is, on one side, the lower bounds of Table~\ref{tab:inst}, and on the other side the upper bound of
+Theorem~$1'$, which on the same instances is about $2.3$ times the bound of Theorem~D1, that is, a little more than one bit
+of security in the terms concerned. For a given application the effect of replacing Theorem~D1 by Theorem~$1'$ has to be
+computed from the resources of that application; we have not done this for any deployed scheme. When $L = \Omega = 0$,
+Lemma~$2'$ and Lemma~D2 coincide and the only change is that the term $M(M-1)/2^b$ is counted twice.
+
+\paragraph{Relation to the bound of Dobraunig and Mennink.}
+The bound of~\cite{DM19}, as restated in \cite[Theorem~2]{Men23}, contains
+$\bigl[\nu^M_{r,c}(L+\Omega) + \tfrac{\nu_{\mathrm{fix}}-1}{2}(L+\Omega)\bigr]/2^c$, where $\nu_{\mathrm{fix}} \le L + \Omega$ is the largest number of calls whose
+outer part was set to one value. With $\nu_{\mathrm{fix}} = \Omega$ and $L = 0$ this is $\bigl[\Omega\,\nu^M_{r,c} + \binom{\Omega}{2}\bigr]/2^c$, to be
+compared with the advantage $\approx \bigl[\binom{\Omega}{2} + \Omega\,\E|T|\bigr]/2^c$ of our distinguisher. The term $\Omega\nu/2^c$ has the form of the term
+whose absence from Theorem~D1 the distinguisher exploits, and for the two $36$-bit instances of Table~\ref{tab:inst} it is larger than
+$\Omega\,\E|T|/2^c$: there $\nu^M_{16,20} \ge 4$, because $\Pr(\mu > 3) > 3/2^{20}$ for $M$ balls in $2^{16}$ bins (a Bonferroni lower
+bound, \file{thm1\_bounds.py}), whereas $\E|T| \le 2 + \binom{M_u}{3}/2^{2r} < 2.02$ for uniform outer parts, and the simulation
+gives $\E|T| = 1.97$ and $2.01$ in $\KD$. We give this as an indication only. That bound is
+proven by a different technique, for a construction with a different phasing of the calls and in a setting with
+leakage; we did not review its proof, and we do not claim that it is a repair of Theorem~D1 in the model of DMV17.
+Theorem~1 of~\cite{Men23} restates the bound of DMV17 for a slightly different phasing of the calls; we expect that it
+inherits the issue, but we did not adapt the distinguisher to that phasing.
+
+\paragraph{Limits of this work.}
+(1) It has not been peer reviewed, and it has not yet been submitted to the authors of~\cite{DMV17}.
+(2) In the repair we rely on the parts of the proof of DMV17 that we do not modify (the identity $\KD = \RD^{I,E}$ and the
+bound~(28) in the permutation setup); we re-read their derivation and found nothing to object, but we do not reprove
+them here.
+(3) Proposition~\ref{prop:dist} is proven; the simulation of Section~\ref{sec:sim} is a check of it on one size, not a
+substitute. Since the proposition contradicts a published theorem, an independent verification of its proof is
+desirable; we wrote it so that each conditional probability refers to Fact~0.
+(4) The failure of the claim of Section~\ref{sec:gap2} in the randomized-duplex world is shown by simulation only (two
+implementations), not by a proof.
+(5) Our search for earlier reports of these points was limited to~\cite{DMV17,DM19,Men23} and to web searches; we do
+not claim that it is exhaustive.
+
+\appendix
+\section{Reproducibility}\label{app:repro}
+The programs below and their raw outputs are in the repository\\
+\url{https://github.com/Spider4Tech/sillage-brume}, directory\\
+\file{prototypes/brume\_q/b1024/dmv17\_verif/papier}. The script \file{run\_all.sh} compiles and runs all of them and writes the files of
+\file{results/}; each number of the paper is in one of these files, next to the command line that produced it.
+Exact programs are deterministic. Monte Carlo programs print the estimate $\hat p$ and its standard error
+$\sqrt{\hat p(1-\hat p)/n}$; their seeds are in the command lines of \file{run\_all.sh}. The program \file{thm1\_distinguisher.c}
+uses one random stream per thread, so its output depends on the number of threads: the reference run used $12$.
+The reference run was made with GCC~16.2.1 (\texttt{-O3 -march=native -fopenmp}), Python~3.15.0 (and Python~3.12.3 with
+NumPy~2.5.4 for \file{f3\_kd\_check.py}), on an AMD Ryzen~5 5600G under Linux~7.2; it takes about one hour. A second complete run, made after the final revision of
+the programs (\file{run\_all.sh}, then \file{f3\_kd\_check.py} separately in the environment that has NumPy), reproduced every
+output of the reference run digit for digit; the files of \file{results/} are those of this second run.
+
+\begin{center}
+\small\begin{tabular}{lp{9.6cm}}
+\toprule
+File & Purpose \\
+\midrule
+\file{f2\_exact.py} & Proposition~\ref{prop:f2}, Table~\ref{tab:f2}, Example~\ref{ex:small} (exact, rational) \\
+\file{thm1\_bounds.py} & $B$, $B_2$, the bound of Proposition~\ref{prop:dist} and the bound of Theorem~$1'$, Table~\ref{tab:inst} (exact) \\
+\file{thm1\_distinguisher.c} & simulation of $D$ in $\KD$, $\RD$ and $\IXIF$ \\
+\file{table3.py} & Table~\ref{tab:sim}, from the output of the simulation and from \file{thm1\_bounds.py} \\
+\file{thm1\_distinguisher\_check.py} & independent implementation of $D$, written from Algorithm~1 of DMV17 \\
+\file{nu\_exact.py} & exact $\nu^M_{r,c}$ for small parameters \\
+\file{f3\_bound.py} & the bound of Proposition~\ref{prop:f3} (exact) \\
+\file{f3\_kd.c}, \file{f3\_kd\_check.py} & gap 2 in the real world, two implementations \\
+\file{f3\_rd.c}, \file{f3\_rd\_check.py} & gap 2 in the randomized-duplex world, two implementations \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Cross-check of the main simulation.} On the small model $r = 8$, $c = 10$, $k = 8$, $M_u = 40$, $\Omega = 12$, $v = 3$
+($M = 80$), in the world $\KD$, the C program and the Python program, which share no code and use different generators,
+give $\Pr[D = 1] = 0.08529 \pm 0.00020$ ($2 \cdot 10^6$ trials) and $0.08508 \pm 0.00051$ ($3 \cdot 10^5$ trials). This validates the
+implementation only: on this small model the bound $B$ of Theorem~D1 is $0.1126$, above the measured value, and no
+violation is claimed there.
+
+\begin{thebibliography}{9}
+\bibitem{BDPV11} G.~Bertoni, J.~Daemen, M.~Peeters, G.~Van Assche. Duplexing the Sponge: Single-Pass Authenticated
+Encryption and Other Applications. SAC 2011, LNCS 7118, pp.~320--337. Springer, 2012.
+\bibitem{CS14} S.~Chen, J.~P.~Steinberger. Tight Security Bounds for Key-Alternating Ciphers. EUROCRYPT 2014,
+LNCS 8441, pp.~327--350. Springer, 2014.
+\bibitem{DMV17} J.~Daemen, B.~Mennink, G.~Van Assche. Full-State Keyed Duplex with Built-In Multi-user Support.
+ASIACRYPT 2017, Part~II, LNCS 10625, pp.~606--637. Springer, 2017. Full version: IACR Cryptology ePrint Archive, Report 2017/498.
+\bibitem{DM19} C.~Dobraunig, B.~Mennink. Leakage Resilience of the Duplex Construction. ASIACRYPT 2019, Part~III,
+LNCS 11923, pp.~225--255. Springer, 2019. Full version: IACR Cryptology ePrint Archive, Report 2019/225.
+\bibitem{Men23} B.~Mennink. Understanding the Duplex and Its Security. IACR Transactions on Symmetric Cryptology,
+2023(2), pp.~1--46. IACR Cryptology ePrint Archive, Report 2022/1340.
+\bibitem{MRV15} B.~Mennink, R.~Reyhanitabar, D.~Viz\'ar. Security of Full-State Keyed Sponge and Duplex: Applications to
+Authenticated Encryption. ASIACRYPT 2015, Part~II, LNCS 9453, pp.~465--489. Springer, 2015.
+\bibitem{Pat08} J.~Patarin. The ``Coefficients H'' Technique. SAC 2008, LNCS 5381, pp.~328--345. Springer, 2008.
+\end{thebibliography}
+\end{document}

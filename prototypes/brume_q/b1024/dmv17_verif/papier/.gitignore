@@ -1,0 +1,10 @@
+build/
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+# duplicates of the .pdf/.txt and of the directory audit_paper_independant/
+contre expertise/*.docx
+contre expertise/*.zip

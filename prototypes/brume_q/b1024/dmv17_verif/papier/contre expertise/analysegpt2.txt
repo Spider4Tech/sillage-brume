@@ -1,0 +1,284 @@
+Rapport d'audit scientifique de paper.tex
+Relecture critique en vue d'une publication sur IACR Cryptology ePrint — 16 novembre 2026
+
+Verdict : le manuscrit contient un résultat mathématique potentiellement important et plusieurs calculs que j'ai pu confirmer indépendamment. En revanche, je déconseille formellement de publier cette version en l'état.
+
+Ce n'est pas un rejet du résultat central. C'est une distinction entre trois choses : une erreur plausible et sérieusement étayée dans une preuve historique, un contre-exemple mathématique dont les calculs sont corrects, et un article scientifique entièrement vérifié et reproductible.
+
+Le troisième niveau n'est pas encore atteint.
+1. Bilan général de l'examen
+J'ai examiné les 765 lignes du manuscrit, confronté ses principales formulations aux travaux de Daemen, Mennink et Van Assche, recalculé les expressions numériques critiques en arithmétique rationnelle, revérifié les petites distributions de multicollisions et testé la compilation LaTeX.
+Élément examiné	Résultat de l'audit
+Reproduction du théorème de DMV17	Conforme aux expressions historiques examinées
+Gap 1 : comptage des collisions	Erreur de comptage solidement étayée
+Calcul exact de \(p_1\)	Confirmé sur les 8 cas
+Exemple polynomial vérifiable à la main	Confirmé
+Distingueur contre le théorème 1	Les 5 comparaisons numériques sont exactes
+Preuve complète du distingueur	Cohérente à l'examen, mais exige encore une validation formelle indépendante
+Gap 2, monde réel	Borne analytique recalculée et cohérente
+Gap 2, monde RD	Résultat expérimental non reproductible avec les fichiers reçus
+Lemme réparé \(2'\)	Plausible, tests numériques satisfaisants
+Lemme réparé \(3'\)	Argument prometteur, dépend encore de résultats réutilisés et de détails de troncature
+Théorème réparé \(1'\)	Formule correctement déduite des lemmes proposés, sous réserve de leur validité
+Reproductibilité expérimentale	Insuffisante
+Compilation du manuscrit original	Échec
+
+Le point central est particulièrement sérieux : le manuscrit ne se contente pas de montrer une étape de preuve incorrecte. Il propose un distingueur dont la borne inférieure d'avantage dépasse la borne supérieure revendiquée par le théorème original.
+
+Si la proposition démontrant cette borne inférieure est validée dans toutes ses hypothèses, ce serait un véritable contre-exemple à l'énoncé numérique de DMV17, pas une simple lacune rédactionnelle.
+
+2. Gap 1 : le comptage \(S\) est-il réellement incorrect ?
+Mon avis : oui, l'objection mathématique est convaincante.
+
+Dans la preuve originale du lemme 2, le nombre de paires susceptibles de provoquer certaines collisions avec une probabilité \(2^{-c}\) est majoré par :
+\[
+S\leq \binom{L+\Omega+1}{2}.
+\]
+
+Le manuscrit met en évidence une distinction importante entre un état dont l'adversaire contrôle directement la partie extérieure et un état dont il observe la partie extérieure avant de choisir ses requêtes suivantes.
+
+L'adversaire peut exploiter une multicollision déjà observée : si plusieurs états libres possèdent la même partie extérieure \(\alpha\), il peut orienter une requête contrôlée vers ce même \(\alpha\).
+
+Cette requête rencontre alors plusieurs candidats à une collision, et non un seul.
+
+C'est bien un problème d'adaptativité, insuffisamment capturé par le comptage historique. J'ai retrouvé le raisonnement concerné dans la preuve originale de DMV17. 
+ir.cwi.nl
+
+Vérification du calcul exact
+Le manuscrit établit :
+\[
+p_1
+=
+1-\mathbb E\left[
+\frac{g(m^*+\Omega)}{g(m^*)}
+\prod_v g(m_v)
+\right],
+\]
+
+où
+\[
+g(n)=\prod_{i=0}^{n-1}(1-i2^{-c}).
+\]
+
+Cette expression est cohérente avec une répartition des parties extérieures en classes, suivie d'un tirage indépendant des parties intérieures.
+
+J'ai recalculé les huit lignes du tableau f2, sans utiliser les programmes annoncés dans le manuscrit.
+Résultats contrôlés — \(r=4,\ c=16\)
+\(M_u,\Omega\)	\(p_1\) recalculé	Borne écrite	Dépassement
+4, 8	0,00059744	0,00061226	Non
+8, 8	0,00070555	0,00066376	Oui
+16, 1	0,00016140	0,00014496	Oui
+16, 8	0,00091707	0,00081253	Oui
+24, 16	0,00306258	0,00281906	Oui
+32, 4	0,00085905	0,00075340	Oui
+40, 2	0,00093052	0,00086689	Oui
+2, 30	0,00710067	0,00756836	Non
+
+
+Les résultats concordent avec le manuscrit : six cas sur huit dépassent la borne écrite dans la preuve.
+
+J'ai également confirmé les coefficients du polynôme de l'exemple \(r=1,\ M_u=8,\ \Omega=1\), y compris le premier coefficient \(611/32\), contre \(608/32\) pour la borne écrite.
+
+Réserve indispensable : dépasser une borne intermédiaire utilisée dans une preuve ne suffit pas, à lui seul, à réfuter le théorème final. Le manuscrit le comprend et présente un distingueur distinct pour franchir cette étape.
+
+C'est précisément la partie la plus importante de l'article.
+
+3. Le distingueur dépasse-t-il vraiment le théorème 1 ?
+Vérification des cinq instances
+J'ai repris la borne inférieure de la proposition prop:dist, la borne originale \(B\), les estimations de \(\nu\), les termes de correction et les paramètres de ressources.
+
+Les résultats obtenus sont les suivants.
+
+Les deux bornes sont exprimées en unités de \(2^{-c}\). \(B\) utilise une majoration de \(\nu\), ce qui rend la comparaison plus exigeante.
+\(b,r,c\)	Borne historique \(B2^c\)	Borne inférieure \(LB2^c\)	\(LB/B\)
+36,16,20 — cas 1	2 099,082	2 135,092	1,0172
+36,16,20 — cas 2	1 197,483	1 220,811	1,0195
+64,24,40	2 099,290	2 143,241	1,0209
+96,32,64	2 101,018	2 143,286	1,0201
+320,64,256	2 109,000	2 143,289	1,0163
+
+Les cinq inégalités \(LB>B\) ont été vérifiées avec des nombres rationnels, et pas simplement des flottants arrondis.
+
+Le manuscrit utilise des ressources particulièrement intéressantes :
+\[
+N=0,\qquad L=0,\qquad q=q_{iv}=1.
+\]
+
+Autrement dit, le distingueur n'interroge même pas directement la permutation publique.
+
+C'est un point fort, car il réduit les complications liées à l'accès de l'adversaire à \(f\).
+Mon examen de la proposition prop:dist
+Les principales étapes sont raisonnables :
+- Dans le monde idéal, les sorties des chemins distincts sont indépendantes ; la majoration par \(2^{-vr}\) est appropriée pour les séquences testées.
+- Dans les mondes réels, l'égalité de deux états après injection entraîne bien l'égalité de leurs continuations lorsqu'elles reçoivent les mêmes blocs.
+- Les événements de première répétition servent à éviter de sommer plusieurs fois les mêmes collisions.
+- Les corrections \(\rho\), \(\pi_0\) et \(\varphi\) tiennent compte de plusieurs sources de dépendance et de faux positifs.
+Je n'ai pas identifié de contradiction immédiate qui annulerait ce raisonnement.
+
+Mais je ne délivrerais pas encore une certification mathématique complète. La preuve repose sur un raisonnement adaptatif avec permutation aléatoire partiellement dévoilée. Pour un papier qui invalide un théorème publié, chaque conditionnement mérite d'être explicitement formalisé.
+
+En particulier, je demanderais une version détaillée du raisonnement par lazy sampling, montrant précisément, à chaque étape, les informations révélées, les entrées déjà visitées et la distribution conditionnelle de l'état suivant. Je demanderais aussi une dérivation ligne par ligne de \(\rho\) sous ces conditionnements.
+
+Cela ne signifie pas que la proposition soit fausse. Cela signifie que son importance justifie un niveau de démonstration supérieur à celui d'un simple contrôle numérique.
+
+4. Gap 2 : récupération d'état et multiplicité
+C'est la deuxième contribution, et elle demande de séparer les résultats théoriques des observations expérimentales.
+Monde réel : une borne analytique solide
+Le manuscrit propose l'adversaire \(R_{G,v,F}\), qui tente de reconstruire un état interne puis de prédire les sorties suivantes en interrogeant \(f\).
+
+J'ai recalculé la borne inférieure :
+\[
+\Pr_O(\mu_{\mathrm{fw}}\ge F)
+\ge
+\frac{G}{2^c}
+-
+G\left(2^{(1-r)v}+\frac{4v^2}{2^b}\right)
+-
+2^{-r}
+-
+\frac{v(v+1)}{2^b}.
+\]
+
+Les trois cas annoncés donnent bien des valeurs approximatives de :
+Paramètres	Borne inférieure recalculée
+\(b=36,\ r=16,\ c=20\)	0,033296
+\(b=96,\ r=32,\ c=64\)	0,033333
+\(b=320,\ r=64,\ c=256\)	0,020000
+
+Ces chiffres sont cohérents avec la proposition formelle.
+
+Attention cependant à la manière de les présenter : pour \(c=256\), la stratégie utilise un nombre de requêtes astronomique. Elle fournit un contre-exemple à une affirmation générale de probabilité sous son budget théorique, pas une attaque pratique contre une implémentation moderne.
+
+Le manuscrit fait globalement cette distinction, mais devrait la rendre encore plus explicite.
+Simulation : divergence qui doit être résolue
+Le papier annonce, pour \(b=16,\ r=4,\ c=12\), un taux de succès de :
+\[
+0{,}0481\pm0{,}0005.
+\]
+
+Or la stratégie formellement définie impose, avec les paramètres annoncés et le budget maximal de 409 requêtes :
+\[
+2G+8+11\le409
+\quad\Rightarrow\quad
+G\le195.
+\]
+
+Dans ma simulation indépendante de cette variante à \(G\) fixe, j'obtiens environ 3,3 %, plutôt que 4,81 %.
+
+En revanche, une variante qui utilise le budget restant de manière dynamique, en arrêtant les candidats dès leur première comparaison échouée, donne des résultats plus proches des statistiques du manuscrit. Elle reproduit également beaucoup mieux son taux annoncé d'environ 78 % d'acceptation d'un candidat.
+
+Cela suggère un problème de spécification de l'expérience.
+
+Je ne conclus pas que les résultats expérimentaux sont erronés : je n'ai pas reçu les sources qui les ont produits. Mais, à ce stade, je ne peux pas les valider.
+
+L'article doit indiquer exactement quel algorithme est simulé, son budget réellement consommé, ses conditions d'arrêt et la façon dont les essais sont comptés. Si l'algorithme expérimental diffère du \(R_{G,v,F}\) formel, cette différence doit être annoncée.
+Monde RD : preuve insuffisante
+Le manuscrit affirme un succès d'environ \(8,19\%\) sur quatre millions d'essais en exploitant la répétition d'états.
+
+Le mécanisme est crédible, mais la preuve présentée est expérimentale uniquement, et son programme f3_rd.c n'a pas été fourni.
+
+Pour soutenir une affirmation aussi importante, je recommande une borne analytique explicite pour l'événement de répétition exploitable, même plus faible que le taux observé. Elle distinguerait clairement une collision interne, l'apparition d'un cycle observable et les fausses détections.
+
+Sans cela, la contribution sur RD reste une hypothèse fortement motivée par des expériences rapportées, non un résultat démontré indépendamment.
+
+5. La réparation proposée est-elle valide ?
+Lemme \(2'\)
+La majoration proposée est :
+\[
+\Lambda =
+\frac{\binom{L+\Omega+1}{2}}{2^c}
++
+\frac{(L+\Omega)\binom{M-L}{2}
++\binom M2+\binom{M-L}2}{2^b}.
+\]
+
+Elle intègre explicitement les collisions possibles entre des requêtes contrôlées et des états libres dont les parties extérieures se répètent.
+
+J'ai confirmé qu'elle couvre les huit exemples calculés du Gap 1.
+
+La logique de la majoration par union des événements est plausible. Pour la version définitive, je demanderais toutefois de formaliser les dépendances entre les requêtes libres et contrôlées, notamment en présence de chemins répétés et de plusieurs clés.
+Lemme \(3'\)
+La proposition de réparation utilise une idée intéressante : remplacer la majoration symétrique des mauvaises multiplicités dans les deux mondes par une procédure de troncature du distingueur.
+
+C'est mathématiquement pertinent. Elle évite de devoir reprendre l'affirmation qui échoue dans le monde réel.
+
+Mais le résultat repose sur deux points à détailler complètement : la réutilisation de l'équation (28) de DMV17 et la garantie que les adversaires tronqués respectent effectivement la contrainte sur la multiplicité avant chaque appel concerné.
+
+Il faut également traiter sans ambiguïté les ressources consommées par le simulateur, les sorties à la frontière du seuil et les paramètres éventuellement déterminés à partir du transcript.
+
+Je qualifierais donc le lemme \(3'\) de prometteur mais pas encore suffisamment autonome pour une publication de cette portée.
+Théorème \(1'\) : la réparation coûte plus que ce que suggère le texte
+J'ai recalculé la borne réparée sur les mêmes cinq paramètres que ceux du contre-exemple, en choisissant \(m\) de manière à rendre le terme \(\beta_m\) négligeable.
+Instance	Borne réparée / borne historique
+\(b=36,\ M_u=640\)	×2,27
+\(b=36,\ M_u=768\)	×2,44
+\(b=64\)	×2,27
+\(b=96\)	×2,26
+\(b=320\)	×2,25
+
+La majoration réparée est donc environ 2,25 à 2,44 fois plus grande sur ces instances, ce qui représente environ 1,17 à 1,29 bit de différence si l'on exprime les deux bornes comme un exposant de sécurité.
+
+Cela ne prouve aucune perte de sécurité réelle de cette amplitude. Une borne de preuve plus large n'est pas une attaque plus efficace.
+
+Mais cela signifie que l'affirmation du manuscrit selon laquelle les niveaux de sécurité dérivés ne changent pas significativement doit être démontrée sur des cas d'utilisation concrets. Elle ne découle pas des cinq contre-exemples.
+
+6. Problèmes de reproductibilité et de présentation
+Ces problèmes sont indépendants de la validité des mathématiques : ils suffisent à empêcher une soumission sérieuse de la version actuelle.
+
+Le document annonce des résultats Monte-Carlo, deux implémentations indépendantes, des graines de génération et des fichiers de résultats. Or un seul fichier m'a été fourni : paper.tex.
+
+De plus, les marqueurs suivants restent dans le manuscrit :
+SIMROWS
+SIMTEXT
+
+
+Ils se trouvent dans la section expérimentale. Une compilation directe avec pdflatex échoue à cet endroit. Après substitution temporaire de ces marqueurs uniquement pour le diagnostic, le document se compile en 14 pages, avec quelques débordements typographiques.
+
+L'absence des sources des expériences et des résultats bruts est plus grave que ces défauts LaTeX : elle empêche tout rapporteur de vérifier les affirmations statistiques, notamment les 17 écarts-types annoncés dans le résumé.
+
+Le manuscrit affirme également n'avoir trouvé aucune publication antérieure rapportant les mêmes points. C'est une formulation acceptable comme compte rendu d'une recherche limitée, mais non une garantie d'originalité. La discussion de Mennink en 2023 et les travaux plus récents sur la sécurité des modes Ascon doivent figurer dans une recherche bibliographique documentée. 
+ResearchGate+1
+
+
+7. Corrections obligatoires avant ePrint
+Je classerais les actions dans cet ordre :
+
+1. Verrouiller la proposition prop:dist. Produire une version formalisée du raisonnement probabiliste, avec les distributions conditionnelles, le comptage des répétitions et la justification détaillée de la borne inférieure. Faire examiner cette seule proposition par un cryptographe indépendant.
+
+2. Fournir toutes les expériences. Publier les sources C et Python, run_all.sh, les graines, versions d'outils, résultats bruts et commandes de reproduction. Lever impérativement l'ambiguïté entre \(G\) fixe et budget dynamique dans le Gap 2.
+
+3. Consolider la réparation. Développer les preuves des lemmes \(2'\) et \(3'\), en expliquant chaque résultat importé de DMV17. Ne pas présenter le théorème \(1'\) comme complètement autonome si ses fondations externes ne sont pas démontrées ou précisément citées.
+
+4. Séparer formel et expérimental. Dans le résumé et les contributions, distinguer les propositions prouvées, les résultats calculés et les observations Monte-Carlo. En particulier, ne pas attribuer au monde RD une preuve analytique qui n'existe pas encore dans le fichier.
+
+5. Revoir les conclusions quantitatives. Remplacer les affirmations générales sur une violation limitée à environ 2 % et sur un effet négligeable par des résultats précisément circonscrits. L'absence d'un contre-exemple plus fort n'est pas une borne sur tous les contre-exemples possibles.
+
+6. Finaliser l'article. Supprimer les marqueurs temporaires, intégrer les tableaux, renseigner les auteurs, améliorer la bibliographie, corriger les avertissements de compilation et joindre un dépôt de reproduction versionné et archivé.
+
+8. Recalculs indépendants
+J'ai regroupé les scripts Python utilisés pour contrôler les expressions numériques critiques.
+
+Archive des vérifications indépendantes
+
+5 scripts Python et un README — polynôme, collisions, contre-exemples, fonction \(\nu\), Gap 2 et réparation.
+
+Télécharger l'archive ZIP
+
+
+Ces scripts sont mes propres recalculs. Ils ne remplacent pas ceux que les auteurs affirment avoir utilisés, et ils ne constituent pas une certification des preuves.
+Conclusion du rapporteur
+À ce stade, je donnerais au manuscrit le jugement suivant :
+
+Résultat central : suffisamment sérieux pour justifier une investigation scientifique approfondie.
+
+Calculs : très encourageants, car les principales valeurs numériques sont reproductibles indépendamment.
+
+Démonstration : convaincante sur plusieurs points, mais pas encore certifiée au degré requis pour affirmer définitivement qu'un théorème cryptographique publié est faux.
+
+Réparation : intéressante, mais encore trop dépendante de justifications abrégées.
+
+État éditorial et expérimental : non publiable en l'état.
+
+La décision que je prendrais comme rapporteur serait révision majeure, avec priorité absolue à la preuve du distingueur. Si cette preuve résiste à un examen formel indépendant, elle constitue le cœur d'un article qui mérite réellement d'être diffusé sur IACR ePrint.
+
+Et une dernière distinction est essentielle : ePrint est une archive de prépublications, pas une validation par les pairs. Il est donc parfaitement possible d'y publier une correction d'un résultat historique, mais il faut que les affirmations soient proportionnées à ce qui est effectivement démontré.

@@ -1,0 +1,17 @@
+r=4 c=16
+Mu= 4 Om= 8 : adversary 5.974422e-04 | control 4.633948e-04 (below final: True) | final written bound 6.122589e-04 | adversary/final 0.9758 | exceeds: False | first written bound 5.779266e-04 | E[load] 1.3486 = 1381/1024 | Lemma 2' 1.115799e-03 | holds: True
+Mu= 8 Om= 8 : adversary 7.055512e-04 | control 5.148683e-04 (below final: True) | final written bound 6.637573e-04 | adversary/final 1.0630 | exceeds: True | first written bound 6.294250e-04 | E[load] 2.0629 = 69219991/33554432 | Lemma 2' 1.579285e-03 | holds: True
+Mu=16 Om= 1 : adversary 1.613995e-04 | control 1.296920e-04 (below final: True) | final written bound 1.449585e-04 | adversary/final 1.1134 | exceeds: True | first written bound 1.440048e-04 | E[load] 3.0782 = 221811058069429981/72057594037927936 | Lemma 2' 2.746582e-04 | holds: True
+Mu=16 Om= 8 : adversary 9.170679e-04 | control 6.635553e-04 (below final: True) | final written bound 8.125305e-04 | adversary/final 1.1287 | exceeds: True | first written bound 7.781982e-04 | E[load] 3.0782 = 221811058069429981/72057594037927936 | Lemma 2' 2.918243e-03 | holds: True
+Mu=24 Om=16 : adversary 3.062578e-03 | control 2.457608e-03 (below final: True) | final written bound 2.819061e-03 | adversary/final 1.0864 | exceeds: True | first written bound 2.689362e-03 | E[load] 3.9844 = 2466218698051182329413140303/618970019642690137449562112 | Lemma 2' 1.472092e-02 | holds: True
+Mu=32 Om= 4 : adversary 8.590502e-04 | control 6.864182e-04 (below final: True) | final written bound 7.534027e-04 | adversary/final 1.1402 | exceeds: True | first written bound 7.438660e-04 | E[load] 4.8304 = 3210361610309472709419436342306270951/664613997892457936451903530140172288 | Lemma 2' 3.156662e-03 | holds: True
+Mu= 2 Om=30 : adversary 7.100672e-03 | control 6.674371e-03 (below final: True) | final written bound 7.568359e-03 | adversary/final 0.9382 | exceeds: False | first written bound 7.124901e-03 | E[load] 1.0625 = 17/16 | Lemma 2' 2.175903e-02 | holds: True
+Mu=40 Om= 2 : adversary 9.305189e-04 | control 8.350808e-04 (below final: True) | final written bound 8.668900e-04 | adversary/final 1.0734 | exceeds: True | first written bound 8.640289e-04 | E[load] 5.6299 = 64282482124740312824137990018061058878266184855/11417981541647679048466287755595961091061972992 | Lemma 2' 2.509117e-03 | holds: True
+Lemma 2' (s-collision part) holds in all cases: True
+r=1 Mu=8 Om=1: Pr[s-collision] as a polynomial in eps = 2^-c, coefficients of eps^0, eps^1, ... : ['0', '611/32', '-154', '10927/16', '-29029/16', '94199/32', '-45351/16', '1473', '-315', '0']
+final written bound: C(9,2)/2^(c+1) + 1/2^c = 19 * eps ; first written bound: (C(9,2) - 1)/2^(c+1) + 1/2^c = 37/2 * eps
+c=8: exact 7.227539e-02  final written bound 7.421875e-02  ratio 0.973816  exceeds: False
+c=11: exact 9.286483e-03  final written bound 9.277344e-03  ratio 1.000985  exceeds: True
+c=12: exact 4.652391e-03  final written bound 4.638672e-03  ratio 1.002958  exceeds: True
+c=16: exact 2.913117e-04  final written bound 2.899170e-04  ratio 1.004811  exceeds: True
+c=64: exact 1.035074e-18  final written bound 1.029992e-18  ratio 1.004934  exceeds: True

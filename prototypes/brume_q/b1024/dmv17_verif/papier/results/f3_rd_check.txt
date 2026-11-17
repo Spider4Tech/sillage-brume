@@ -1,0 +1,1 @@
+r=8 c=12 Omega=30 F=6 v=3 T_fw=35 trials=300000 seed=9 : Pr_P(mu_fw > T_fw) = 0.08273 +- 0.00050

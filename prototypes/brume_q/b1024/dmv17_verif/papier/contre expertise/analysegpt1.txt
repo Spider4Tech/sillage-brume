@@ -1,0 +1,252 @@
+Verdict général
+Le résultat central de ton manuscrit est sérieux et mérite d’être soumis à discussion scientifique. En revanche, je ne déposerais pas cette version sur ePrint en l’état.
+
+J’ai contrôlé la structure de l’argument, les formules principales, les comparaisons numériques et les passages correspondants du papier original. Je n’ai pas trouvé, lors de cette première vérification approfondie, d’erreur arithmétique qui invaliderait le distingueur principal. Les cinq instances du tableau sont cohérentes avec les expressions du manuscrit.
+
+Il faut toutefois distinguer deux choses : les résultats mathématiques centraux sont convaincants à ce stade, mais le dossier transmis ne permet pas encore de reproduire les expériences annoncées ni de considérer la preuve de réparation comme définitivement validée.
+1. Le problème dans la preuve de Lemma 2
+C’est le premier point important, et ton analyse vise la bonne étape.
+
+Dans le papier original, les auteurs introduisent \(S\), le nombre de paires pour lesquelles l’adversaire peut imposer la partie externe de l’état, puis utilisent :
+\[
+S\leq \binom{L+\Omega+1}{2}.
+\]
+
+Ils s’en servent pour distinguer les collisions de probabilité \(2^{-c}\) de celles de probabilité \(2^{-b}\). C’est bien cette majoration qui apparaît dans la preuve originale. 
+
+eprint.iacr.org
+
+Ton objection est pertinente : une sortie libre n’est pas contrôlée avant son apparition, mais elle devient observable après la requête. L’adversaire peut donc choisir la partie externe d’une requête contrôlée ultérieure en fonction des sorties libres précédentes. Il ne s’agit plus seulement de compter les paires entre requêtes contrôlées.
+Vérification de ton premier contre-exemple
+J’ai recalculé la probabilité exacte de collision de ton adversaire \(A_1\), à partir de la formule de la proposition et avec des fractions exactes.
+
+Les valeurs du tableau correspondent aux résultats du calcul. Les six dépassements annoncés sont bien présents, avec des rapports allant approximativement de 1,063 à 1,140.
+
+Mais il faut conserver une distinction essentielle, que tu fais correctement dans le texte :
+- Ce calcul montre que la majoration utilisée dans la preuve est insuffisante.
+- Il ne démontre pas, à lui seul, que l’énoncé de Lemma 2 est faux.
+En effet, le dernier majorant écrit dans la preuve n’est pas le membre de droite de l’énoncé de Lemma 2. Pour \(L=0\), l’énoncé utilise le terme \(M(M-1)/2^b\), alors que le dernier majorant de la preuve utilise \(\binom M2/2^b\), soit la moitié de ce terme. Le manuscrit respecte cette distinction dans la suite. 
+
+eprint.iacr.org
+
+Conclusion sur ce point : le diagnostic du défaut dans le raisonnement est convaincant. Il ne faut surtout pas présenter le tableau de \(A_1\) comme la preuve directe que Lemma 2 est faux. La preuve directe vient du distingueur de la section suivante.
+2. Le distingueur qui dépasse réellement Lemma 2 et Theorem 1
+C’est la contribution la plus importante du manuscrit.
+
+La construction est intéressante parce qu’elle ne repose sur aucun appel externe à la permutation :
+\[
+N=0.
+\]
+
+Elle exploite trois éléments :
+1. L’adversaire observe les sorties de \(M_u\) appels ordinaires.
+2. Il sélectionne la partie externe \(\alpha\) la plus fréquente.
+3. Il utilise les appels avec écrasement pour provoquer des collisions d’états, puis teste leur propagation au moyen de séquences de sorties.
+Le mécanisme est cohérent avec les interfaces de la construction.
+Vérification de la proposition
+J’ai repris les éléments importants du calcul :
+- La borne des faux positifs dans le monde idéal.
+- La construction des événements \(C_\ell\).
+- Leur disjonction.
+- La probabilité de collision avec les états précédents.
+- La majoration \(\rho\) des répétitions d’entrées.
+- La majoration \(\pi_0\) de l’événement où les sorties externes initiales sont toutes distinctes.
+- La soustraction de la probabilité de faux positif.
+Je n’ai pas identifié de contradiction interne dans ces étapes lors de cette vérification.
+
+J’ai également recalculé les comparaisons numériques du tableau. Dans les cinq configurations présentées, les comparaisons indiquées sont cohérentes :
+\[
+\boxed{\mathit{LB}>B>B_2}
+\]
+
+Cela vaut également pour l’instance de 320 bits. Les valeurs de \(B\) utilisent une majoration de \(\nu\), donc une valeur supérieure ou égale au membre de droite réellement annoncé par le théorème. Le dépassement n’est donc pas dû à un arrondi favorable dans le tableau.
+
+Les hypothèses de ressources des cinq instances sont également compatibles avec les expressions présentées, notamment la contrainte :
+\[
+N+M\leq 0.1\cdot 2^c.
+\]
+
+C’est le point qui rend le résultat particulièrement important : si la proposition est correcte, le distingueur fournit bien un contre-exemple à l’énoncé de Theorem 1, et pas seulement à une étape de sa preuve.
+
+Il faut néanmoins rester précis dans la formulation : cela ne constitue pas une attaque contre Ascon ou contre une implémentation déployée. Le résultat vise la borne générique annoncée pour le modèle considéré.
+3. Le contexte bibliographique de 2023
+Il y a un point de nouveauté scientifique à traiter avec soin.
+
+Dans Understanding the Duplex and Its Security (2023), Bart Mennink relève déjà que l’étape concernant \(S\) dans la preuve de DMV17 est un « lossy bounding ». Mais son analyse se place dans le cas particulier d’Ascon-PRF : les sorties intermédiaires ne sont pas communiquées à l’adversaire, ce qui lui permet d’utiliser une borne plus serrée, avec \(S=0\). 
+
+researchgate.net
+
+Ton manuscrit le reconnaît dans son introduction. C’est une bonne chose et il faut conserver cette référence.
+
+La contribution que tu peux défendre est plus précise :
+- Mennink avait identifié le caractère potentiellement non serré de ce comptage dans un contexte applicatif où les sorties intermédiaires ne sont pas observées.
+- Ton analyse étudie le modèle général où les sorties sont visibles.
+- Tu construis un adversaire adaptatif qui exploite cette visibilité.
+- Tu vas plus loin en donnant un distingueur dont l’avantage dépasse effectivement les bornes annoncées.
+Ne présente donc pas la découverte de la faiblesse du comptage \(S\) comme entièrement nouvelle. Présente plutôt le contre-exemple dans le modèle général comme le résultat nouveau. C’est plus exact et plus solide.
+4. Le second problème : la multiplicité avant
+La section sur Lemma 3 traite un problème distinct.
+
+Tu attaques ici l’affirmation selon laquelle :
+\[
+\Pr(\mu_{\mathrm{fw}}>T_{\mathrm{fw}})\leq \frac{\nu}{2^c}
+\]
+
+serait valable dans les deux mondes.
+Monde réel
+La récupération de l’état à partir de la permutation publique est une idée pertinente. Une fois l’état retrouvé, l’adversaire peut calculer la sortie suivante et choisir son absorption pour imposer une partie externe donnée, même avec un nouveau chemin et sans indicateur d’écrasement.
+
+La proposition donne une borne inférieure sur la probabilité de dépasser le seuil. Les valeurs numériques annoncées sont cohérentes avec les expressions et les paramètres du texte.
+
+Le résultat est particulièrement parlant pour l’instance \(b=320\) : la borne inférieure annoncée est de l’ordre de \(0,02\), contre une borne de l’ordre de \(10^{-77}\) dans l’argument original.
+Monde randomized-duplex
+Ici, le niveau de preuve est différent. Tu présentes une simulation d’une stratégie qui exploite les répétitions d’états et les cycles. Tu indiques explicitement que ce point n’est pas démontré par une proposition analytique.
+
+C’est acceptable dans un travail préliminaire, à condition de ne pas laisser croire que les deux résultats ont le même statut.
+Conséquence
+Tu fais bien de préciser que ce second défaut ne démontre pas, à lui seul, que Theorem 1 est faux. Les autres termes de la borne peuvent absorber les probabilités concernées.
+
+C’est une distinction importante pour la crédibilité du papier.
+5. La réparation proposée
+J’ai également examiné les deux lemmes de remplacement et la composition du nouveau théorème.
+Lemma \(2'\)
+La structure de la réparation est cohérente.
+
+Elle repose sur un comptage plus large des paires de collisions :
+\[
+\Lambda =
+\frac{\binom{L+\Omega+1}{2}}{2^c}
++
+\frac{
+(L+\Omega)\binom{M-L}{2}
++\binom M2
++\binom{M-L}{2}
+}{2^b}.
+\]
+
+Le terme supplémentaire prend en compte le fait qu’une requête contrôlée peut viser une classe externe déjà chargée par les sorties libres.
+
+Le raisonnement par espérance du nombre de paires est adapté à ce problème. Je n’ai pas identifié d’erreur évidente dans ce comptage.
+Lemma \(3'\)
+La stratégie de preuve est également cohérente dans son principe :
+- réutiliser la borne du permutation setup ;
+- tronquer l’adversaire lorsqu’il dépasse le seuil ;
+- ne majorer que la probabilité côté idéal pour cette étape ;
+- contrôler ensuite la multiplicité avant par le risque de collision et une borne d’union.
+C’est une partie particulièrement délicate du papier. Il faut absolument conserver une correspondance formelle entre les tuples du transcript et les requêtes de l’oracle \(\pi\) dans le permutation setup. Tous les états post-absorption ne sont pas nécessairement utilisés par un appel ultérieur : la formulation « tuples followed by a further call » est donc importante et ne doit pas être raccourcie.
+
+Je ne vois pas, à ce stade, de contradiction manifeste dans cette réparation. Mais je ne la qualifierais pas de définitivement vérifiée sans une seconde relecture formelle, indépendante, de cette correspondance et des conditions d’application de l’équation (28) de DMV17. Cette équation est reprise explicitement dans le manuscrit et n’est pas redémontrée. 
+
+eprint.iacr.org
+
+6. Corrections mathématiques et rédactionnelles à faire
+J’ai relevé deux corrections précises.
+A. Développement asymptotique incomplet — ligne 295
+Tu écris :
+\[
+B_{\mathrm{written}}\approx
+\frac{
+\binom{\Omega}{2}+\Omega+\binom{M_u}{2}/2^r
+}{2^c}.
+\]
+
+Ce développement omet les termes issus de :
+\[
+\binom{M_u+\Omega}{2}
+=
+\binom{M_u}{2}+M_u\Omega+\binom{\Omega}{2}.
+\]
+
+La bonne expression au premier ordre en \(2^{-c}\), pour \(r,M_u,\Omega\) fixés, est :
+\[
+B_{\mathrm{written}}\approx
+\frac{
+\binom{\Omega}{2}+\Omega+
+\binom{M_u+\Omega}{2}/2^r
+}{2^c}.
+\]
+
+Ton équation suivante, celle qui donne la différence entre \(p_1\) et le majorant écrit, tient déjà compte des termes manquants. C’est donc une incohérence locale de rédaction et de calcul asymptotique, pas une invalidation de la proposition.
+B. Comparaison avec Dobraunig–Mennink — lignes 703 à 709
+Tu écris que le terme de leur borne est supérieur à l’avantage approximatif du distingueur parce que :
+\[
+\mathbb E|T|\leq \nu^M_{r,c}
+\left(1+\frac{M}{2^c}\right).
+\]
+
+Cette inégalité ne suffit pas à établir :
+\[
+\mathbb E|T|\leq \nu^M_{r,c}.
+\]
+
+Or cette dernière comparaison est nécessaire pour conclure directement à la domination que tu annonces après simplification des termes communs.
+
+Il faut soit démontrer une borne plus forte dans les paramètres concernés, soit effectuer une comparaison numérique explicite, soit reformuler ce passage comme une observation indicative plutôt que comme une conséquence mathématique établie.
+
+Autre précaution : Dobraunig–Mennink travaillent dans un modèle de résilience aux fuites, avec des hypothèses et une organisation du duplex qui ne se confondent pas simplement avec le modèle de boîte noire de DMV17. Leur article présente explicitement ce cadre de fuite non adaptative. 
+
+iacr.org
+ La comparaison est utile, mais ne doit pas laisser entendre que leur résultat constitue automatiquement une réparation formelle de Theorem 1 dans ton modèle.
+7. Blocage immédiat : le fichier n’est pas publiable techniquement
+C’est le problème le plus simple à corriger, mais il empêche actuellement de déposer ce fichier.
+
+Le paper.tex transmis contient encore :
+- SIMROWS dans le tableau des simulations ;
+- SIMTEXT dans le texte de la section correspondante ;
+- un auteur fictif : [author name and affiliation to be completed].
+J’ai essayé de compiler le fichier original. La compilation échoue à la ligne 460, au niveau de \bottomrule, parce que le contenu du tableau n’a pas été remplacé.
+
+Une copie temporaire dans laquelle les marqueurs ont été remplacés par du contenu de test compile correctement. Cela indique que le problème immédiat est bien le contenu incomplet, et non une erreur générale de structure LaTeX.
+
+Il faut donc absolument :
+1. Insérer les vraies lignes du tableau de simulation.
+2. Ajouter le texte qui remplace SIMTEXT.
+3. Compléter les informations auteur et affiliation.
+4. Compiler deux fois et contrôler toutes les références.
+5. Ajouter les pages de la publication ASIACRYPT 2017 dans la bibliographie de DMV17 (606–637).
+8. La reproductibilité n’est pas encore démontrée
+Le README annonce un ensemble de scripts, notamment :
+- thm1_bounds.py
+- thm1_distinguisher.c
+- thm1_distinguisher_check.py
+- f3_bound.py
+- f3_kd.c
+- f3_kd_check.py
+- f3_rd.c
+- run_all.sh
+Mais ces fichiers ne sont pas présents dans les pièces jointes de cette conversation. Le README seul ne permet pas de les vérifier ni de reproduire les résultats.
+
+J’ai retrouvé dans le dépôt public des programmes apparentés, notamment f2_exact.py, f3_independant.py, f3_lemme3.c et nu_exact.py. Cela confirme qu’il existe un travail expérimental autour de ces résultats, mais je n’ai pas pu établir que ces versions constituent exactement le paquet annoncé pour ce manuscrit.
+
+Il reste donc impossible de vérifier ici :
+- les 400 millions d’essais annoncés pour la simulation principale ;
+- les graines et les résultats par ligne du tableau manquant ;
+- l’indépendance effective des deux implémentations ;
+- la simulation du monde RD de Gap 2 ;
+- l’exécution complète de run_all.sh.
+Je ne considère pas cela comme une faiblesse mathématique du résultat. En revanche, pour un papier qui insiste sur la reproductibilité, c’est un problème sérieux.
+
+Le dépôt doit contenir la version exacte des scripts utilisée pour produire les tableaux, les sorties brutes, les graines, les dépendances, les versions des compilateurs et un identifiant de commit. Le tableau de simulation doit permettre de relier chaque chiffre à une commande et à un résultat précis.
+
+Bilan de l’audit
+Élément	Mon évaluation
+Défaut du comptage \(S\)	Convaincant
+Calcul exact de \(A_1\)	Recalculé
+Distingueur contre Theorem 1	Résultat central solide
+Comparaisons numériques des cinq instances	Cohérentes
+Gap 2, monde réel	Argument convaincant
+Gap 2, monde RD	Simulation uniquement
+Réparation Lemma \(2'\)	Cohérente à première lecture
+Réparation Lemma \(3'\)	À faire vérifier indépendamment
+Comparaison DM19	Argument à corriger
+Compilation LaTeX	Échec en l’état
+Reproductibilité complète	Non vérifiable avec les fichiers transmis
+
+Mon avis final
+Je ne rejetterais pas ce travail. Au contraire, le contre-exemple principal est suffisamment intéressant pour justifier une véritable publication en prépublication, sous réserve de verrouiller la preuve et les éléments de reproduction.
+
+Le point le plus fort est le passage d'une faiblesse dans une étape de majoration à un distingueur concret qui dépasse la borne annoncée. C’est beaucoup plus intéressant scientifiquement qu’une simple remarque sur un comptage trop optimiste ou trop pessimiste.
+
+Mais je ne déposerais pas le fichier actuel. Il reste des corrections faciles, un argument de comparaison à reprendre et surtout une question de reproductibilité. Je recommande également d’envoyer le manuscrit aux auteurs de DMV17 avant le dépôt, pour leur permettre de réagir au contre-exemple. Cela ne remplace pas une évaluation indépendante, mais c’est une démarche scientifique utile.
+
+La priorité absolue est maintenant de faire une revue formelle indépendante de la proposition du distingueur et de Lemma \(3'\), puis de publier avec le paquet de vérification exact.

@@ -1,0 +1,1 @@
+real r=8 c=10 k=8 Mu=40 Omega=12 v=3 M=80 trials=300000 seed=77 : Pr[D=1] = 8.508333e-02 +- 5.1e-04

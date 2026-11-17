@@ -1,0 +1,7 @@
+nu^{22}_{4,12} = 7
+nu^{20}_{4,10} = 6
+nu^{74}_{8,12} = 5
+adversary trials=200000 : Pr_O(mu_fw > 7) = 0.04806 +- 0.00048 (candidate found: 0.7844) ; claimed nu/2^c = 0.00171 ; ratio 28.1
+control trials=200000 : Pr_O(mu_fw > 7) = 0.00001 +- 0.00000 (candidate found: 0.0000) ; claimed nu/2^c = 0.00171 ; ratio 0.0
+adversary r=8 c=12 Omega=30 F=6 v=3 M=37 T_fw=35 trials=4000000 : Pr_P(mu_fw > T_fw) = 0.081862 +- 0.000137 ; state repeated 0.100582 ; cycle detected 0.081878 ; claimed nu/2^c = 0.001221 ; ratio 67.1
+control r=8 c=12 Omega=30 F=6 v=3 M=37 T_fw=35 trials=4000000 : Pr_P(mu_fw > T_fw) = 0.000027 +- 0.000003 ; state repeated 0.100865 ; cycle detected 0.082212 ; claimed nu/2^c = 0.001221 ; ratio 0.0
