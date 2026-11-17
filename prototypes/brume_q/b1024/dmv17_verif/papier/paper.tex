@@ -443,7 +443,7 @@ $\varphi$ of the ideal world gives the claim.
 
 In words: the advantage is about $\bigl[\binom{\Omega+1}{2} + \Omega(1 - \pi_0)\bigr]/2^c$, where
 $1 - \pi_0 \approx 1 - e^{-\binom{M_u}{2}/2^r}$ is the probability that two of the $M_u$ observed outer parts coincide.
-For $N = 0$, $L = 0$, $q = u = 1$, Theorem~D1 claims the bound
+For $N = 0$, $L = 0$, $q = u = 1$ and a uniformly random key (so that $\Hmin(D_K) = k$), Theorem~D1 claims the bound
 \begin{equation}\label{eq:B}
  B = \frac{2\nu^{2M}_{r,c}}{2^c} + \frac{\binom{\Omega+1}{2}}{2^c} + \frac{M-1}{2^b-1} + \frac{M(M-1)}{2^b} + \frac{M-1}{2^{k+\min\{c,\,b-k\}}} ,
 \end{equation}
@@ -485,7 +485,7 @@ $b$ & $r$ & $c$ & $k$ & $M_u$ & $\Omega$ & $v$ & $\bar\nu$ & $B_2\cdot2^c$ & $B\
 
 \begin{corollary}\label{cor:false}
 For each parameter set of Table~\ref{tab:inst} there is an adversary, with resources satisfying the hypotheses of
-Theorem~D1 and making no query to $f$, whose advantage in distinguishing $(\KD^f_K, f)$ from $(\IXIF^{\RO}, f)$ is
+Theorem~D1 (one uniformly random $k$-bit key) and making no query to $f$, whose advantage in distinguishing $(\KD^f_K, f)$ from $(\IXIF^{\RO}, f)$ is
 larger than the bound stated by Theorem~D1; and its advantage in distinguishing $\RD^{\phi,\pi}$ from $\IXIF^{\RO}$
 is larger than the bound stated by Lemma~D2.
 \end{corollary}
