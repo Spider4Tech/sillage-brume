@@ -63,7 +63,7 @@ A reduced-round distinguisher at r rounds becomes a full-round attack only if th
 | Boomerang | 3 (2^−19.4); < 2^−32 at 4 | measured | ROADMAP § 3 |
 | Impossible differentials, zero correlation | 5 | structural | ROADMAP § 3 |
 | Differential-linear | 7–8 within 2^128 data, 8–9 within 2^192 (model, and model × 2^11 after the gap measured at 4 rounds); measured \|ε\| < 2^−11.4 at 5 and 6 | model + measured | `DIFF_LIN.md` |
-| Collision of the sponge (rebound type) | ≥ 3 at about 2^92 (model, validated on groups of up to 6 nibbles) | model + measured | `REBOND.md` (search running) |
+| Collision of the sponge (rebound type) | 3 at about 2^92 (optimal in the model, validated on groups of up to 6 nibbles); 4 to 6 not found below 2^192, not excluded (lower bounds 88–140 bits) | model + measured | `REBOND.md` |
 | Direct algebraic (CICO, SAT) | running | measured | `ALGEBRIQUE.md` |
 | Characteristics (any differential or linear trail) | none beyond 2^−448 / 2^−224 over 32 rounds (224 active S-boxes) | certified, Markov | README § 3 |
 

@@ -81,6 +81,40 @@ margin 32 − R_coll.
 - Only round 0 is paid by the message. Controlling later rounds through the values (classical message modification,
   several blocks, larger structures) could buy more rounds; it is not modelled.
 
-## Results
+## Results (17 November 2026)
 
-(To be filled in after the search.)
+HyperCompute job 08648878 (10 units, 4 threads, 2 hours each); every unit ended with code 0; every path reported was
+re-costed by rank outside the solver (`cout_rang_bits` = `cout_modele_bits` in every unit). Outputs:
+`resultats/hypercompute/rebond-collision/`.
+
+| R | m | best path found (bits) | solver's lower bound (bits) | status | realisable over GF(16) |
+|---|---|---|---|---|---|
+| 2 | 0, 1 | **12** | 12 | OPTIMAL | yes |
+| 3 | 0 | **92** | 92 | OPTIMAL (552 s) | yes |
+| 3 | 1 | 92 | 24 | time limit | yes |
+| 4 | 0 | 276 | 108 | time limit | yes |
+| 4 | 1 | 272 | 88 | time limit | yes |
+| 5 | 0, 1 | 384 | 140, 92 | time limit | yes |
+| 6 | 0 | 384 | 136 | time limit | yes |
+| 6 | 1 | 384 | 108 | time limit | **no** (the last path was not cut before the limit; not counted) |
+
+- **R = 2 and 3:** the baseline is optimal in the model: 12 bits (3 capacity nibbles to cancel) and 92 bits (23 nibbles).
+  The free round 0 (m = 1) gives nothing better: the cheapest paths start from a single active nibble anyway.
+- **R = 4:** nothing better than the baseline's 272 bits (above 192) was found; with m = 0 the search did not even
+  reach it (276) in 2 hours. The lower bounds (88 to 108 bits) are far below 192, so **the model does not exclude a
+  4-round collision below 2^192**; it is not settled.
+- **R = 5 and 6:** only paths that cancel the whole capacity (96 nibbles, 384 bits) were found, which is no better than
+  a random match of the capacity. The lower bounds (92 to 140 bits) are weak.
+
+**Measurement on the real permutation** (`rebond_verif.c`, before the grid). R = 3, start 133, 2^30 pairs: the
+frequency of a zero difference on groups of 1 to 6 capacity nibbles is 1.00, 0.98, 0.97, 0.97, 0.93 and 0.83 times
+the model's 2^{−4g}; the witness outside the active set gives 1. R = 2, start 57: 2.37 times the model for the group
+of 3 nibbles (about 1.33 per nibble), an effect of the DDT, which the model treats as uniform. Both are below the alarm
+threshold of 2 per nibble.
+
+**Verdict.** The alarm criterion is not met: no path below 192 bits at R ≥ 6, and no measured cancellation more than
+twice as likely as the model. **R_coll = 3** (collision of the 3-round sponge at about 2^92 in the model, against
+2^192), so a margin of 29 rounds. The search is weak beyond R = 3: the lower bounds stay below 192 bits up to R = 6,
+so "no path below 192 at R = 4 to 6" is a search result, not a proof. Closing that gap needs a better model (the
+cancellations as GF(16) constraints inside the solver, or a dedicated search by rounds), noted for the level-3
+campaign (`NIVEAU3.md` § 5, item 1).
