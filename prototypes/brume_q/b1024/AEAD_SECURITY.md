@@ -446,6 +446,23 @@ Done on the evening of 13 November 2026, on the text of DMV17 (pp. 617–634), t
 night**. The re-check withdrew one finding (F1), confirmed F2 and F3 by simulation on reduced models, and found a gap in our
 own repair, now closed. **Status: our check, not a peer review.**
 
+**Update of 16 November 2026: written up as a paper, with stronger results** (`dmv17_verif/papier/paper.tex`, programs and
+results in the same directory; not peer reviewed, not sent to the authors).
+- **F2 leads to a distinguisher that exceeds the bound of Theorem 1 itself** (no query to f, Ω overwriting calls aimed at a
+  collision of observed outer parts): proven lower bound on its advantage, larger than the bound of Theorem 1 in exact
+  arithmetic for b = 36 to b = 320 (about 2 % above), and confirmed by simulation on a 36-bit model. The statement of
+  Theorem 1 is therefore false as written when L + Ω > 0, by a small term of the kind (L+Ω)·ν/2^c that DM19 has.
+- **Correction to the table of the second pass below:** the ratios 1.03–1.18 compare the exact collision probability with
+  the *first* bound written in the proof; against the *final* (weaker) written bound the ratios are 0.94–1.14, exceeded
+  in 6 of the 8 cases (paper, Table 1).
+- **F3 also fails in the RD world** (state repetition, simulation: 0.082 against a claimed 0.0012), and in the real
+  world it is now a proven statement (Proposition 3 of the paper).
+- **The repair is simpler and tighter than Theorem 1′ below** (paper, Theorem 1′): truncated adversaries replace the
+  hybrid (16), only the probability in the RD world is needed, and the bound is 2Λ + 2β_m + (L+Ω+2m)N/2^c + the
+  unchanged terms, with Λ = C(L+Ω+1,2)/2^c + [(L+Ω)C(M−L,2) + C(M,2) + C(M−L,2)]/2^b and β_m = C(M−L, m+1)·2^{(1−r)m}.
+  The bound of this section (Theorem 1′ below) was obtained by a longer route and is kept as it is; for our parameters
+  both are dominated by the same term in N/2^384, and the paper's constant is smaller.
+
 The parameters are:
 - b = 1 024, r = 640, c = 384, k = 512 (k + c = 896 ≤ b − 1);
 - keys uniform, independent (H_min = H_coll = 512) or without replacement;
@@ -572,7 +589,8 @@ For our parameters Lemma 2′ and Lemma 2″ differ only by negligible terms.
 
 **F2, the statement of Lemma 2.** It is not shown false. To detect a collision, a distinguisher needs further calls on both
 sessions, and those calls enlarge the M(M−L−1)/2^b term of the statement. We did not find a configuration in which the
-advantage provably exceeds it. **Open.**
+advantage provably exceeds it. **Open.** *(Superseded on 16 November: the paper's distinguisher exceeds the bound of
+Lemma 2 and of Theorem 1; see the update above.)*
 
 **F3, independent reimplementation and prediction** (`dmv17_verif/f3_independant.py`: Python, numpy PCG64, other seeds).
 The prediction is the probability of finding the true state before a false candidate, which passes both checks with
@@ -653,7 +671,8 @@ the proposition does NOT give", for its consequences for our mode.
 - **F3:** a real flaw of the DMV17 proof (×28 in simulation). The same unconditional writing appears in DM19 (18c), but
   there the repair is free. Not pointed out in the four texts read.
 - **Theorem 1 of DMV17** is not shown false. A correct bound of the same kind exists independently: DM19, as restated by
-  Mennink 2023, Theorem 2.
+  Mennink 2023, Theorem 2. *(Superseded on 16 November: Theorem 1 is exceeded by about 2 % when L + Ω > 0; see the
+  update above.)*
 - **Novelty** of F2 and F3 is established only with respect to these four texts.
 - Telling the authors is an author decision. A human review should come first.
 

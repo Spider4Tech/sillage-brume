@@ -81,10 +81,23 @@ functions. S-box only (M = I, RC = 0): 704. Real round 0: **0**.
 
 **Alarm criterion.** Any non-zero kernel for a real round, or for all rounds at once.
 
-## Results (15 November, 22 h 40; campaign still running)
+## Summary (17 November)
 
-Files: `resultats/hypercompute/etude-groupe-structure-{c,cpsat}/unit-*/out/`. Nothing below has triggered an alarm
-criterion so far. Each line says what is exact, what is a search, and what is not finished.
+**No alarm criterion was triggered.** The campaign is finished.
+- **A, clustering:** the largest factor between an exact differential (or hull) and its best trail is 1.25 at 3 rounds,
+  against the alarm threshold 2^4. At the 4-round ends computed, the sum is a single trail. The factor does not grow
+  from 2 to 4 rounds. Not finished: the "restricted" 4-round ends (4-hour limit).
+- **B1, truncated differentials:** none better than random beyond the 4 free rounds was found. Backward, absence is
+  proved at 2 and 3 rounds. Forward, the decision runs at 5, 6 and 7 rounds ended UNKNOWN, so absence is **not** proved
+  there. The empirical scans of the real permutation at 5, 6 and 7 rounds are conforming.
+- **B2, local quadratic invariants:** none, for any of the 32 rounds or for all of them at once.
+- **What this does not cover:** wider trail shapes, aggregation over 32 rounds, truncated patterns with probabilities
+  below about 2^−26 that the model cannot decide, degree-3 invariants, and functions spanning more than one edge.
+
+## Results (15–17 November)
+
+Files: `resultats/hypercompute/etude-groupe-structure-{c,cpsat}/unit-*/out/` and
+`resultats/hypercompute/etude-tronquees-decision/unit-*/out/`. Nothing below has triggered an alarm criterion. Each line says what is exact, what is a search, and what is not finished.
 
 ### A. Clustering
 
@@ -118,7 +131,11 @@ criterion so far. Each line says what is exact, what is a search, and what is no
   under σ (i ↦ i + 1 in each half) and τ (i ↦ −i, halves swapped), a group that is transitive on the 256 nibbles; the tool
   checks this before using it. INFEASIBLE would prove absence in the model. Checks 7/7: at 2 rounds with budget 0,
   advantage 876 is feasible and 880 is INFEASIBLE, as the safe balls require; a support without the symmetry is refused.
-  The checks were rerun on the worker (proxmox): 7/7. Campaign running at 5, 6 and 7 rounds (3 h 53 each).
+  The checks were rerun on the worker (proxmox): 7/7. **Campaign (proxmox, 14 000 s per unit, job 6ee28b50): UNKNOWN at
+  5, 6 and 7 rounds.** The solver found no pattern and proved no absence. So the model gives no result beyond 4 rounds
+  in the forward direction; only the empirical scan below, which is conforming up to 7 rounds, covers it. The copy of the
+  7-round unit on the laptop (ab89adcd) was lost to the HyperCompute zombie-session defect of 16 November; it was not
+  needed, since the proxmox unit ran to its time limit.
 - **Empirical scan** (real permutation). At 5 rounds from one nibble, 2^30 pairs for each of 64 inputs, 16 384 cells: the
   largest deviation is z = 4.39 (input 116, output 103, frequency 0.06253 against 0.0625), the Bonferroni threshold is
   5.42. No significant cell and no output that is always zero: **conforming**. A maximum near 4.3 is what 16 384 normal
