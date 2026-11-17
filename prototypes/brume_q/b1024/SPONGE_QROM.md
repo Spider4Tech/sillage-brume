@@ -186,7 +186,10 @@ thresholds are in swap queries too.
   16 November 2026 arXiv lists a single version (v1, 23 September 2026), with no comment, erratum or withdrawal.
 - **What we did not re-prove:** the compressed permutation oracle and its soundness ([CM] § 4), Lemma 5.1, Lemma 5.2
   and Theorem 5.3. They are used as stated. We checked only that our properties meet their hypotheses (increasing,
-  empty database excluded, transcript of at most L pairs, 3T − 1 ≤ N).
+  empty database excluded, transcript of at most L pairs, 3T − 1 ≤ N). Since then, `CM_VERIFICATION.md` (16–17
+  November) goes through that chain statement by statement: re-derivations, exact checks from the definitions for
+  N ≤ 6 and for N = 7 up to level 3, and the representation formulas up to N = 22. No error affecting a statement was
+  found; what stays unproven by us for all N is listed there.
 - **Not tight in constants.** The gap to 2^128 comes from the constants (384, the factor 3, T = q + 2L), not from an
   attack.
 - **Not covered:** indifferentiability (still about 2^42.7 proved, `README.md` § 5); multi-target preimages; the keyed

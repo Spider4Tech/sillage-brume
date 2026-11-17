@@ -1,0 +1,43 @@
+# cpo_exact.py 6 6, 17 nov. 2026. Seules les 40 dernières lignes ont été rapatriées
+# (la tâche n'avait pas --output) ; « TOUT PASSE » n'est imprimé que si toutes les vérifications du run ont réussi.
+unité 0 : cpo_exact.py 6 6, bea36b1 + cm26_verif non commité (17 nov.)
+  [info] t = 2 : (11) 0.6048 <= 30.00 ; (12) 0.7473 (inverse 0.7473) <= 33.00 ; (29) 0.3328 <= 300.0 : hypothese non
+  [info] t = 3 : (11) 0.6048 <= 34.64 ; (12) 0.9139 (inverse 0.9139) <= inf ; (29) 0.3081 <= 400.0 : hypothese non
+    t = 4 : omis (taille)
+    t = 5 : omis (taille)
+  [ok] (30) ||(V~ - V) Pi_s|| <= s/(2(N - 2s + 1))
+  [ok] theoreme 4.2 : F V = V Inv, F V~ = V~ Inv
+  [ok] lemme 5.1 (82), q = 0 : ||(M - Q) L_<=q|| = 0.4082 (valeur exacte attendue 0.4082) <= 0.5774
+  [ok] lemme 5.1 (82), q = 1 : ||(M - Q) L_<=q|| = 0.5528 (valeur exacte attendue 0.5528) <= 0.6325
+  [ok] lemme 5.1 (82), q = 2 : ||(M - Q) L_<=q|| = 0.6000 (valeur exacte attendue 0.6000) <= 0.7071
+  [ok] lemme 5.1 (82), q = 3 : ||(M - Q) L_<=q|| = 0.6614 (valeur exacte attendue 0.6614) <= 0.8165
+  [ok] lemme 5.1 (82), q = 4 : ||(M - Q) L_<=q|| = 0.7454 (valeur exacte attendue 0.7454) <= 1.0000
+  [ok] lemme 5.1 (82), q = 5 : ||(M - Q) L_<=q|| = 1.0000 (valeur exacte attendue 1.0000) <= 1.4142
+  [ok] lemme 5.2, propriete « preimage de 0 » : ||B cpO (I - B) L_<=t|| <= 2 sqrt(2 s_t/(N - t)), t < 6, tout x, avant et inverse : pire rapport 0.349
+  [ok] lemme 5.2, propriete « collision de y // 2 » : ||B cpO (I - B) L_<=t|| <= 2 sqrt(2 s_t/(N - t)), t < 6, tout x, avant et inverse : pire rapport 0.346
+  [ok] lemme 5.2, propriete « point fixe » : ||B cpO (I - B) L_<=t|| <= 2 sqrt(2 s_t/(N - t)), t < 6, tout x, avant et inverse : pire rapport 0.701
+  duree 8133 s
+TOUT PASSE
+	Command being timed: "python3 cpo_exact.py 6 6"
+	User time (seconds): 41036.99
+	System time (seconds): 109.80
+	Percent of CPU this job got: 505%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 2:15:33
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 3631644
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 6255522
+	Voluntary context switches: 1562
+	Involuntary context switches: 4748043
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 16
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

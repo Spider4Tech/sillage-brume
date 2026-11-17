@@ -1,0 +1,131 @@
+N = 5, niveaux 0..5
+  dim P = 120, dim L(<= 5) = 1546
+  [ok] lemme 4.9 : <pi|E E^+|sigma> = C(accord, r)/m!
+  [ok] lemme 4.9 (36) : spectre de E_r E_r^+ = C(N,r) f^{lam/(m)}/f^lam, multiplicites (f^lam)^2 : ecart max 9.8e-15
+  [ok] H_<=r emboites ; H_r = blocs lam_1 = N - r (dimensions)
+  [ok] lemme 4.9 (33) : spectre de G_r = produit des (1 + mu'_c/(m - c + 1)) : ecart max 9.3e-15
+  [ok] (34) : lambda_min(G_r) = N/(N - r)
+  [ok] (35) : ||G_r|| <= exp(r/(N - 2r + 1)) pour r <= (N - 1)/2 : r=0: 1.0000 <= 1.0000 ; r=1: 1.2500 <= 1.2840 ; r=2: 2.0000 <= 2.7183
+  [ok] lemme 4.10 (37) : Gamma V = I, V^+V = G^-1, ||V|| <= 1 : 2.9e-15
+  [ok] lemme 4.10 (38) : V~ isometrie, V~ V~^+ = Pi_K, E V~ = G^1/2 : 2.3e-14
+  [ok] lemme 4.10 (39) : E_r a = Gamma_r a dans H_r pour a dans K_r : 1.8e-14
+  [ok] lemme 4.10 (40) : E V = I_H, Pi_K = V Gamma : 1.8e-14
+  [ok] lemme 4.10 (41) : POVM sur H_r : 5.0e-15
+  [ok] theoreme 4.2 (10) : V~|S_N> = |vide>
+  [ok] (39) : sommes nulles (domaine et image) sur K_r, r = 1..RMAX : 2.5e-14
+  [ok] lemme 4.11, j = 1 : (46) exacte, spectre = (47), (44) d^+d >= 0.800(I - Pi_K), noyau = K_j : (46) 2.8e-16, (47) 6.7e-16, lambda_min -2.16e-15, dim noyau 16 = dim K 16
+  [ok] lemme 4.11, j = 2 : (46) exacte, spectre = (47), (44) d^+d >= 0.500(I - Pi_K), noyau = K_j : (46) 0.0e+00, (47) 9.3e-15, lambda_min -2.38e-15, dim noyau 61 = dim K 61
+  [ok] C_x unitaire et autoadjoint ; M_perp + sum M_y = I (definition 3.6)
+  [ok] preuve de la prop. 4.8 : M_perp V = 0 (harmonicite), donc sum_y D_y = 0 (28) : 5.9e-15
+  [ok] lemme 4.5 : Q_y H_r dans H_{r-1} + H_r + H_{r+1} : 3.6e-15
+  [ok] lemme 4.6 (17) : sum_j E_j L_j M_y a = Q_y E_r a sur K_r : 3.9e-15
+  niveau par niveau (x = 0 ; y parcourt [N]) :
+  [ok] r = 0 (m = 5) : identites (26), deux premieres lignes : 4.7e-16
+  [ok] r = 0 : lemme 4.14 (69), (77) : 2.8e-17, 0.0e+00
+  [ok] r = 0 : lemme 4.13 Col(Theta)^2 = 0.800/m <= 8/m : hypothese oui
+  [ok] r = 0 : lemme 4.13 Row(Theta)^2 = 0.200/m <= 22/m : hypothese oui
+  [ok] r = 0 : (23) Col(z)^2 = 0.800/m <= 64/m : hypothese oui
+  [ok] r = 0 : (23) Row(z)^2 = 0.200/m <= 64/m : hypothese oui
+  [ok] r = 0 : (24) Col(h0)^2 = 0.000/m <= 32/m : hypothese oui
+  [ok] r = 0 : (24) Row(h0)^2 = 0.000/m <= 32/m : hypothese oui
+  [ok] r = 0 : (25) Col(h-)^2 = 0.000/m <= 24/m : hypothese oui
+  [ok] r = 0 : (25) Row(h-)^2 = 0.000/m <= 24/m : hypothese oui
+  [ok] r = 0 : formules (48)-(51) des composantes de M_y a : 2.8e-17
+  [ok] r = 0 : lemme 4.15, sum_y H00 <= G (1.0000 <= 1) ; Col(C)^2 = 1.000/m <= e/m ; Row(C)^2 = 1.000/m <= e^2/m : hypothese oui
+  [ok] r = 1 (m = 4) : identites (26), deux premieres lignes : 1.3e-15
+  [ok] r = 1 : lemme 4.12 (b^- dans K_r-1) et (26), troisieme ligne : 4.4e-16, 9.4e-16 ; hypothese 3r + 2 <= N oui
+  [ok] r = 1 : lemme 4.14 (69), (77) : 3.6e-16, 8.2e-16
+  [ok] r = 1 : lemme 4.13 Col(Theta)^2 = 1.415/m <= 8/m : hypothese oui
+  [ok] r = 1 : lemme 4.13 Row(Theta)^2 = 0.709/m <= 22/m : hypothese oui
+  [ok] r = 1 : (23) Col(z)^2 = 0.968/m <= 64/m : hypothese oui
+  [ok] r = 1 : (23) Row(z)^2 = 0.520/m <= 64/m : hypothese oui
+  [ok] r = 1 : (24) Col(h0)^2 = 0.120/m <= 32/m : hypothese oui
+  [ok] r = 1 : (24) Row(h0)^2 = 0.120/m <= 32/m : hypothese oui
+  [ok] r = 1 : (25) Col(h-)^2 = 0.032/m <= 24/m : hypothese oui
+  [ok] r = 1 : (25) Row(h-)^2 = 0.128/m <= 24/m : hypothese oui
+  [ok] r = 1 : formules (48)-(51) des composantes de M_y a : 2.5e-16
+  [ok] r = 1 : lemme 4.15, sum_y H00 <= G (1.0000 <= 1) ; Col(C)^2 = 0.950/m <= e/m ; Row(C)^2 = 0.950/m <= e^2/m : hypothese oui
+  [ok] r = 1 : (76) ||A - H11 G^-1|| = 1.067/m <= 2/m ; H00 <= G/m : hypothese oui
+  [ok] r = 2 (m = 3) : identites (26), deux premieres lignes : 4.9e-15
+  [info] r = 2 : lemme 4.12 (b^- dans K_r-1) et (26), troisieme ligne : 7.0e-16, 1.7e-15 ; hypothese 3r + 2 <= N non
+  [ok] r = 2 : lemme 4.14 (69), (77) : 5.9e-16, 6.9e-16
+  [ok] r = 2 : lemme 4.13 Col(Theta)^2 = 1.426/m <= 8/m : hypothese oui
+  [ok] r = 2 : lemme 4.13 Row(Theta)^2 = 0.685/m <= 22/m : hypothese oui
+  [info] r = 2 : (23) Col(z)^2 = 0.736/m <= 64/m : hypothese non
+  [info] r = 2 : (23) Row(z)^2 = 0.370/m <= 64/m : hypothese non
+  [info] r = 2 : (24) Col(h0)^2 = 0.142/m <= 32/m : hypothese non
+  [info] r = 2 : (24) Row(h0)^2 = 0.139/m <= 32/m : hypothese non
+  [info] r = 2 : (25) Col(h-)^2 = 0.090/m <= 24/m : hypothese non
+  [info] r = 2 : (25) Row(h-)^2 = 0.173/m <= 24/m : hypothese non
+  [ok] r = 2 : formules (48)-(51) des composantes de M_y a : 5.4e-16
+  [info] r = 2 : lemme 4.15, sum_y H00 <= G (1.0000 <= 1) ; Col(C)^2 = 0.867/m <= e/m ; Row(C)^2 = 0.867/m <= e^2/m : hypothese non
+  [info] r = 2 : (76) ||A - H11 G^-1|| = 1.500/m <= 2/m ; H00 <= G/m : hypothese non
+  [ok] r = 3 (m = 2) : identites (26), deux premieres lignes : 1.8e-15
+  [info] r = 3 : lemme 4.12 (b^- dans K_r-1) et (26), troisieme ligne : 2.3e-15, 3.3e-15 ; hypothese 3r + 2 <= N non
+  [ok] r = 3 : lemme 4.14 (69), (77) : 3.5e-15, 3.1e-15
+  [info] r = 3 : lemme 4.13 Col(Theta)^2 = 2.125/m <= 8/m : hypothese non
+  [info] r = 3 : lemme 4.13 Row(Theta)^2 = 0.875/m <= 22/m : hypothese non
+  [info] r = 3 : (23) Col(z)^2 = 0.440/m <= 64/m : hypothese non
+  [info] r = 3 : (23) Row(z)^2 = 0.200/m <= 64/m : hypothese non
+  [info] r = 3 : (24) Col(h0)^2 = 0.120/m <= 32/m : hypothese non
+  [info] r = 3 : (24) Row(h0)^2 = 0.120/m <= 32/m : hypothese non
+  [info] r = 3 : (25) Col(h-)^2 = 0.163/m <= 24/m : hypothese non
+  [info] r = 3 : (25) Row(h-)^2 = 0.172/m <= 24/m : hypothese non
+  [ok] r = 3 : formules (48)-(51) des composantes de M_y a : 3.0e-15
+  [info] r = 3 : lemme 4.15, sum_y H00 <= G (1.0000 <= 1) ; Col(C)^2 = 0.700/m <= e/m ; Row(C)^2 = 0.700/m <= e^2/m : hypothese non
+  [info] r = 3 : (76) ||A - H11 G^-1|| = 1.600/m <= 2/m ; H00 <= G/m : hypothese non
+  [ok] r = 4 (m = 1) : identites (26), deux premieres lignes : 5.2e-17
+  [info] r = 4 : lemme 4.12 (b^- dans K_r-1) et (26), troisieme ligne : 8.6e-16, 8.6e-16 ; hypothese 3r + 2 <= N non
+  [ok] r = 4 : lemme 4.14 (69), (77) : 8.3e-17, 8.5e-16
+  [info] r = 4 : lemme 4.13 Col(Theta)^2 = 0.900/m <= 8/m : hypothese non
+  [info] r = 4 : lemme 4.13 Row(Theta)^2 = 0.225/m <= 22/m : hypothese non
+  [info] r = 4 : (23) Col(z)^2 = 0.080/m <= 64/m : hypothese non
+  [info] r = 4 : (23) Row(z)^2 = 0.020/m <= 64/m : hypothese non
+  [info] r = 4 : (24) Col(h0)^2 = 0.000/m <= 32/m : hypothese non
+  [info] r = 4 : (24) Row(h0)^2 = 0.000/m <= 32/m : hypothese non
+  [info] r = 4 : (25) Col(h-)^2 = 0.080/m <= 24/m : hypothese non
+  [info] r = 4 : (25) Row(h-)^2 = 0.020/m <= 24/m : hypothese non
+  [ok] r = 4 : formules (48)-(51) des composantes de M_y a : 1.2e-16
+  [info] r = 4 : lemme 4.15, sum_y H00 <= G (0.2000 <= 1) ; Col(C)^2 = 0.008/m <= e/m ; Row(C)^2 = 0.008/m <= e^2/m : hypothese non
+  [info] r = 4 : (76) ||A - H11 G^-1|| = 0.040/m <= 2/m ; H00 <= G/m : hypothese non
+  une requete (Prop. 4.8, theoreme 4.2) :
+  [ok] t = 0 : (11) 0.4382 <= 26.83 ; (12) 0.4502 (inverse 0.4502) <= 27.08 ; (29) 0.1920 <= 240.0 : hypothese oui
+  [ok] t = 1 : (11) 0.6387 <= 30.00 ; (12) 0.7043 (inverse 0.7043) <= 31.00 ; (29) 0.3729 <= 300.0 : hypothese oui
+  [info] t = 2 : (11) 0.6387 <= 34.64 ; (12) 0.8699 (inverse 0.8699) <= inf ; (29) 0.3562 <= 400.0 : hypothese non
+  [info] t = 3 : (11) 0.6387 <= 42.43 ; (12) 0.9812 (inverse 0.9812) <= inf ; (29) 0.3729 <= 600.0 : hypothese non
+  [info] t = 4 : (11) 0.6387 <= 60.00 ; (12) 1.0251 (inverse 1.0251) <= inf ; (29) 0.1920 <= 1200.0 : hypothese non
+  [ok] (30) ||(V~ - V) Pi_s|| <= s/(2(N - 2s + 1))
+  [ok] theoreme 4.2 : F V = V Inv, F V~ = V~ Inv
+  [ok] lemme 5.1 (82), q = 0 : ||(M - Q) L_<=q|| = 0.4472 (valeur exacte attendue 0.4472) <= 0.6325
+  [ok] lemme 5.1 (82), q = 1 : ||(M - Q) L_<=q|| = 0.6000 (valeur exacte attendue 0.6000) <= 0.7071
+  [ok] lemme 5.1 (82), q = 2 : ||(M - Q) L_<=q|| = 0.6614 (valeur exacte attendue 0.6614) <= 0.8165
+  [ok] lemme 5.1 (82), q = 3 : ||(M - Q) L_<=q|| = 0.7454 (valeur exacte attendue 0.7454) <= 1.0000
+  [ok] lemme 5.1 (82), q = 4 : ||(M - Q) L_<=q|| = 1.0000 (valeur exacte attendue 1.0000) <= 1.4142
+  [ok] lemme 5.2, propriete « preimage de 0 » : ||B cpO (I - B) L_<=t|| <= 2 sqrt(2 s_t/(N - t)), t < 5, tout x, avant et inverse : pire rapport 0.346
+  [ok] lemme 5.2, propriete « collision de y // 2 » : ||B cpO (I - B) L_<=t|| <= 2 sqrt(2 s_t/(N - t)), t < 5, tout x, avant et inverse : pire rapport 0.342
+  [ok] lemme 5.2, propriete « point fixe » : ||B cpO (I - B) L_<=t|| <= 2 sqrt(2 s_t/(N - t)), t < 5, tout x, avant et inverse : pire rapport 0.658
+  duree 17 s
+TOUT PASSE
+	Command being timed: "python3 cpo_exact.py 5 5"
+	User time (seconds): 188.31
+	System time (seconds): 1.29
+	Percent of CPU this job got: 1098%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:17.26
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 195248
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 3
+	Minor (reclaiming a frame) page faults: 411766
+	Voluntary context switches: 360
+	Involuntary context switches: 22357
+	Swaps: 0
+	File system inputs: 8312
+	File system outputs: 24
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
