@@ -82,6 +82,34 @@ counting the linear-structure round.
   covered.
 - The time limit (1 hour, one core) is a budget, not a security level: the result is a reach and a growth rate.
 
-## Results
+## Results (17 November 2026)
 
-(To be filled in after the campaign.)
+HyperCompute jobs 20b5fc77 (R = 1 to 4, 32 ladders) and c9d4906c (R = 5, 8 ladders); every unit ended with code 0,
+no alert. **Every solution found (SAT) was checked on P_R by the reference module**, and the two solvers never
+disagreed on an instance both solved. Outputs: `resultats/hypercompute/algebrique-cico*/`.
+
+Largest v solved within 1 hour by at least one solver (4 seeds per cell; the time is that of the faster solver, the
+largest over the seeds), and the v at which both solvers failed:
+
+| R | ball | spread | stop (ball / spread) |
+|---|---|---|---|
+| 1 | 256 (all seeds, < 1 s) | 256 | none: the whole rate |
+| 2 | 64 (all seeds; up to 33 min) | 96 (all seeds; up to 29 min) | 96 / 128 |
+| 3 | 32 (all seeds; up to 10 min) | **64 (all seeds; up to 16 min)** | 48 / 96 |
+| 4 | 24 (3 of 4 seeds) | 24 (all seeds; up to 50 min) | 24 or 32 / 32 |
+| 5 | 24 (3 of 4 seeds, CaDiCaL only) | 16 | 24 or 32 / 24 |
+
+- **Algebraic advantage (v ≥ 64 solved): up to R = 3**, on the spread shape. At R = 4 and 5 the solvers stop at
+  v = 16 to 24, where brute force costs only 2^16 to 2^24: no advantage.
+- **R_alg = 3.** With the linear-structure round, an attacker reaches 4 rounds: **margin 32 − 4 = 28 rounds.** The
+  alarm criterion (an advantage at 6 rounds or more) is not met.
+- **The spread shape is easier than the ball,** against the plan's guess ("the best case for the attacker"). With the
+  free nibbles far apart, each one touches different S-boxes in round 1 and the system splits into weakly linked
+  parts; the ball concentrates them. Recorded as an observation, not explained further.
+- **The stopping rule, and R = 6.** The rule "add rows until every ladder of a row stops at its first v" was not
+  reached at R = 5 (v = 16 still solved). A row R = 6 was started, then **stopped at the author's request**: at v = 16
+  a solver can always enumerate the 2^16 candidates within the hour, so the rule only measures how long one
+  evaluation of P_R takes inside the solver, not an algebraic property. The rule was badly chosen; the reach R_alg
+  above does not depend on it.
+- **Not measured,** as planned: Gröbner bases (no tool installed), dedicated structures (polynomial methods,
+  meet-in-the-middle). The degree argument of the plan stands as written.

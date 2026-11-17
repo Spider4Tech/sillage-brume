@@ -52,7 +52,7 @@ A reduced-round distinguisher at r rounds becomes a full-round attack only if th
 - **Inside-out.** For O1, a property can be built from the middle in both directions; the reach is the sum of the
   forward and backward reaches (the exact division property gives 22 or 23 rounds that way, below).
 
-## 4. Reaches measured so far (to be updated when the running studies end)
+## 4. Reaches measured so far (updated on 17 November, after the algebraic, rebound and differential-linear studies)
 
 | Family | Reach (rounds) | Kind | Where |
 |---|---|---|---|
@@ -64,7 +64,7 @@ A reduced-round distinguisher at r rounds becomes a full-round attack only if th
 | Impossible differentials, zero correlation | 5 | structural | ROADMAP § 3 |
 | Differential-linear | 7–8 within 2^128 data, 8–9 within 2^192 (model, and model × 2^11 after the gap measured at 4 rounds); measured \|ε\| < 2^−11.4 at 5 and 6 | model + measured | `DIFF_LIN.md` |
 | Collision of the sponge (rebound type) | 3 at about 2^92 (optimal in the model, validated on groups of up to 6 nibbles); 4 to 6 not found below 2^192, not excluded (lower bounds 88–140 bits) | model + measured | `REBOND.md` |
-| Direct algebraic (CICO, SAT) | running | measured | `ALGEBRIQUE.md` |
+| Direct algebraic (CICO, SAT) | 3 with an advantage over brute force (4 with the linear-structure round) | measured | `ALGEBRIQUE.md` |
 | Characteristics (any differential or linear trail) | none beyond 2^−448 / 2^−224 over 32 rounds (224 active S-boxes) | certified, Markov | README § 3 |
 
 **Margin.** The largest reach is the inside-out zero-sum of the division property, 22 or 23 rounds, that is 9 or 10
@@ -92,3 +92,8 @@ Each item states the oracle, the goal, and the cost to beat.
 **Decision for now.** None of the items above is computed until the running studies (algebraic, rebound,
 differential-linear) give their reaches: they set the starting points. Items 1 and 2 are the first to run then, since
 they have the largest reach today.
+
+**17 November: the three studies are done** (table of § 4). Starting points: rebound 3 rounds, with 4 to 6 not settled
+by the search; differential-linear 7 to 9 rounds; algebraic 3 to 4; division property 22 to 23 (structural). None of
+them comes near 32 rounds below 2^192. Items 1 and 2 are not started: they are research campaigns, and the next work
+chosen is the implementation of the v0.6 modes, which does not depend on them.
