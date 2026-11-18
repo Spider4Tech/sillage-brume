@@ -547,6 +547,7 @@ The status of each claim matters. The repository distinguishes exact structural 
 ### AEAD and hashing
 
 - The sequential AEAD, the parallel AEAD and TE are proved in the ideal-permutation model, nonce-respecting, without release of unverified plaintext (PROOFS § 4.3–4.6). The classical proof rests on our repaired form of DMV17 Theorem 1. Model Q1 (quantum queries to the permutation) is proved by us at about 127 bits for σ ≤ 2^64; superposition queries to the mode (Q2) are not claimed beyond two partial results. **None of these proofs has been reviewed by a third party.**
+- NIST categories, from a gate model of the attacks ([`docs/NIST_CATEGORIES.md`](docs/NIST_CATEGORIES.md), ours, not reviewed): profile 256 in category 3 (KEM-256 and hash preimages; VOLE-256 reaches 5 only with the revised JNRV 2020 thresholds), profile 128 in none (Sillage-128 is 4.8 bits under category 1 classically); the AEAD is in category 5 against the known attacks.
 - The hash's 128-bit quantum level for collisions rests on the generic attack cost (BHT on c = 384); our adaptation of Carolan–Majenz proves about 2^123.8 queries (preprint, ours, not reviewed). Indifferentiability is proved only at about 2^42.7.
 - The TE parity data is not authenticated. Only the AEAD tag protects against adversarial modification.
 

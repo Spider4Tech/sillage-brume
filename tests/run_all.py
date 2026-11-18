@@ -40,6 +40,7 @@ TESTS = [
     ("test_vole_kz", "vole_kz", "Sillage-SIG v0.5 (VOLE)"),
     ("test_isd_parametres", "isd_parametres", "Paramètres"),
     ("test_bornes_preuves", "bornes_preuves", "Paramètres"),
+    ("test_modele_portes", "modele_portes", "Paramètres"),
     ("test_robustesse", "robustesse", "Robustesse"),
     ("test_erreurs_api", "erreurs_api", "Robustesse"),
     ("test_c_impl", "c_impl", "Implémentation C"),

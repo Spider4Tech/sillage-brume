@@ -1407,7 +1407,8 @@ depth 48; a seed oracle of one Keccak; total depth limited to MAXDEPTH via N·g�
 - **KEM.** It does not reach 128 / 256 quantum bits in queries. The low end
   assumes free QRAM and takes the whole quasi-cyclic credit (log₂ n), which
   overstates the attack: Grover only gets ½·log₂ n from it. Placing it in the NIST categories
-  would require a gate model specific to its sizes, not done.
+  would require a gate model specific to its sizes. Done on 18 November 2026 for the whole suite
+  ([`NIST_CATEGORIES.md`](NIST_CATEGORIES.md)): the KEM is limited by classical ISD, not by quantum ISD.
 - **Hashing.** With c = 256, generic resistance to quantum
   collisions is about 2^{85}. It is 2^{128} classically.
 
