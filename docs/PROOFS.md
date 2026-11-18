@@ -1107,13 +1107,13 @@ This bounds single characteristics, not differentials or hulls (aggregation, § 
 | Truncated differentials | nothing beyond free diffusion to 4 rounds; decision runs UNKNOWN at 5–7; real permutation conforming to 7 | model + measured | `ETUDE_GROUPE_STRUCTURE.md` § B |
 | Impossible differentials, zero correlations | 5 | structural | `README.md` § 6 |
 | Boomerang | 3 rounds (2^−19.4); below 2^−32 at 4 | measured (GPU) | `README.md` § 4 |
-| Differential-linear | model: 7 rounds within 2^128 pairs, 8 within 2^192 (8 and 9 if the gap measured at 4 rounds, about 2^11, holds at every round); measured \|ε\| < 2^−11.4 at 5 and 6 | model + measured | `DIFF_LIN.md` |
+| Differential-linear | 5 rounds measured (2^−7.1, dense output mask); model corrected for the edge of diffusion: 9 rounds within 2^128 pairs, 10 within 2^192 | model + measured (the permutation follows its Markov model at 4 and 5) | `DIFF_LIN.md` |
 | Sponge collision, rebound type | 3 rounds at 2^92 (optimal in the model); 4–6 not found below 2^192, not excluded by the solver's bounds | model + measured | `REBOND.md` |
 | Direct algebraic (CICO by SAT) | advantage over brute force up to 3 rounds (4 with a linearised first round) | measured | `ALGEBRIQUE.md` |
 | Invariants, Frobenius, invariant subspaces, local quadratic invariants | none, for any round or all rounds at once (families searched) | exact computation | `tests/test_b1024_structure.py` |
 
 **Margins.** Among families that give an attack or a distinguisher below the claimed level (2^192 classical, 2^128
-quantum), the largest reach is 8 or 9 rounds (differential-linear): a margin of at least 23 rounds. The largest
+quantum), the largest reach is 9 or 10 rounds (differential-linear, corrected model): a margin of at least 22 rounds. The largest
 structural property is the inside-out zero sum of the division property, 22 or 23 rounds at about 2^1023 evaluations,
 which is not a break (`NIVEAU3.md` § 2): a margin of 9 or 10 rounds on that criterion. Attack models for the full
 32 rounds: `NIVEAU3.md`. Missing: third-party cryptanalysis.
@@ -1447,7 +1447,8 @@ depth 48; a seed oracle of one Keccak; total depth limited to MAXDEPTH via N·g�
 - BRUME-1024q, aggregation beyond 2 rounds: exact sums at chosen ends (factor ≤ 1.25), not a bound over all ends.
   Division property: 11 rounds per direction proved, 12 forward undecided; 22 or 23 inside-out is a structural property
   (about 2^1023), not an attack. Rebound collisions beyond 3 rounds: not found below 2^192, not excluded. Differential-linear:
-  the model is off by about 2^11 at 4 rounds; it is not a bound (§ 4.2).
+  the corrected model is a heuristic, checked at 4 and 5 rounds (`DIFF_LIN.md`); the active S-box counts bound
+  characteristics, not the sums over characteristics that it estimates.
 - QROM: reductions instantiated in § 5 bis; the KEM's implicit rejection is covered (BHH+19, Theorems 3 and 5); collapsing of `H_c` and
   quantum proof of knowledge of the signature not established. They prove markedly less than the levels of known attacks (≈ 60 / 105 bits
   for the KEM, ≈ 32 / 68 bits for the signature), which are themselves below the nominal levels.

@@ -311,11 +311,11 @@ All of it is our own analysis (no third-party cryptanalysis yet). Reaches in rou
 | Truncated differentials | free diffusion to 4; nothing found at 5–7 | model + real permutation |
 | Impossible differentials, zero correlations | 5 | structural |
 | Boomerang | 3 rounds (2^−19.4); below 2^−32 at 4 | measured on GPU |
-| Differential-linear | 7–8 rounds within 2^128 pairs, 8–9 within 2^192 | model (off by ≈ 2^11 at 4 rounds); measured \|ε\| < 2^−11.4 at 5 and 6 |
+| Differential-linear | 5 rounds measured (2^−7.1, about 2^14 pairs, dense output mask); model: 9 rounds within 2^128 pairs, 10 within 2^192 | measured at 4 and 5 (the real permutation follows its Markov model there); model corrected for the edge of diffusion and checked at 4 and 5 |
 | Sponge collision, rebound type | 3 rounds at ≈ 2^92 | optimal in the nibble model; 4–6 not found below 2^192, not excluded |
 | Direct algebraic attacks (CICO by SAT) | advantage over brute force up to 3 rounds | 4 with a linearised first round |
 
-Largest reach of an attack or distinguisher below the claimed level: 8 or 9 rounds, a margin of at least 23 rounds.
+Largest reach of an attack or distinguisher below the claimed level: 9 or 10 rounds (differential-linear, model), a margin of at least 22 rounds.
 
 ---
 
@@ -532,7 +532,7 @@ The status of each claim matters. The repository distinguishes exact structural 
 ### BRUME-1024q
 
 - The S-box properties, branch number and diffusion supports are checked exhaustively; C3 ≥ 21 and C4 ≥ 28 are certified by SAT with LRAT proofs checked by two checkers. The 224-active-S-box bound over 32 rounds is structural; the probabilities derived from it use the independent-round Markov model.
-- Aggregated differentials and hulls are computed exactly only at 2 rounds and at chosen ends of 3 and 4 rounds; no general aggregation bound is claimed. The differential-linear model is not a bound (off by about 2^11 at 4 rounds).
+- Aggregated differentials and hulls are computed exactly only at 2 rounds and at chosen ends of 3 and 4 rounds; no general aggregation bound is claimed. The active S-box counts bound characteristics only: a differential-linear correlation sums over characteristics, and in the first four rounds the S-boxes outside the ball of the difference cost nothing. The corrected differential-linear model is a heuristic, checked against the measurement at 4 and 5 rounds (`docs/brume1024/DIFF_LIN.md`).
 - The mode proofs model BRUME-1024q as an ideal permutation. They do not prove that the concrete 32-round permutation is ideal or pseudorandom.
 - The permutation is new; all its cryptanalysis is ours. Third-party cryptanalysis is the main missing item.
 

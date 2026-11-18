@@ -800,3 +800,22 @@ the classical ISD cost of Sillage-128 is 2^138.2 against the 2^143 gates of cate
   `h1p_fourier`, `kem_distributions`, `rsd_attaques`, the night campaign and the benchmarks are dropped.
 - **Documents.** README, SPEC (§§ 3.1 and 4 bis.1, known answers), `NIST_CATEGORIES.md`; `PROOFS.md` keeps the 128-bit
   instances as the record of their analysis, with a note. The SIG v0.4 reference (`Sillage-SIG-128/256`) is unchanged.
+
+## Errata of 2026-11-18 (differential-linear model at the edge of diffusion)
+
+The differential-linear model of `docs/brume1024/DIFF_LIN.md` (17 November) gave 2^−18 at 4 rounds where the measurement
+gave 2^−6.6. The study of that gap (`DIFF_LIN.md`, § "Edge of diffusion"; `prototypes/brume_q/b1024/dl_bord.c`,
+`bord_diffusion.py`; `resultats/dl_bord.json`) finds:
+- **The Markov assumption holds there.** The same measurement with round constants drawn at random for every pair and
+  every round, where the differences form a Markov chain exactly, gives the same correlations as the permutation, to the
+  noise. That holds on 2 × 3 360 cells at 4 rounds (mean z² of the difference 0.998 to 1.040) and on the 5-round masks.
+- **The formula was wrong.** It priced the differential part as one characteristic (2^−2A(r0)), although a DL
+  distinguisher sums over all middle differences. It also charged every active S-box of the linear trail, although
+  those outside the ball of the input difference (ball sizes 1, 7, 37, 127, 224 after 0 to 4 rounds) cost nothing. The
+  certified counts C3 and C4, and the characteristic bounds derived from them, are not affected.
+- **What the § "Results" recorded as "nothing at r = 5" holds only for one-nibble masks.** A dense output mask that sees
+  one S-box of round 5 was predicted from the 4-round data at 2^−7.06 and measured at 2^−7.06 on two inputs
+  (2^28 and 2^30 pairs). So 5 rounds are distinguished with about 2^14 pairs; the model said 2^64.
+- **Corrected reach.** 9 rounds within 2^128 pairs and 10 within 2^192, against 7–8 and 8–9. The largest reach below the
+  claimed level becomes 9 or 10 rounds, a margin of 22 rounds instead of 23 (README, PROOFS, NIVEAU3 updated).
+
