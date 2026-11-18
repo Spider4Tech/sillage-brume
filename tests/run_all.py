@@ -48,6 +48,7 @@ TESTS = [
     ("test_c_kem_valgrind", "c_kem_valgrind", "Implémentation C"),
     ("test_c_vole_valgrind", "c_vole_valgrind", "Implémentation C"),
     ("test_c_brume1024_valgrind", "c_brume1024_valgrind", "Implémentation C"),
+    ("test_c_gadget_ssb", "c_gadget_ssb", "Implémentation C"),
     ("test_api_c", "api_c", "Implémentation C"),
     ("test_c_limites", "c_limites", "Implémentation C"),
     ("c:revue_c", "revue_c", "Implémentation C"),

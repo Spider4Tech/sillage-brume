@@ -1,6 +1,6 @@
 # Empreintes SHA-256 — SILLAGE v0.6
 
-Batterie : 616/616 contrôles, 44 tests.
+Batterie : 627/627 contrôles, 45 tests.
 Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 
 ## KAT
@@ -51,7 +51,7 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 | `tests/bench_c.py` | `2cf46f5e432628e58e9149d7f804cf746cc98863e1fefb9f78d2273d26e98cf9` |
 | `tests/c/Makefile` | `b1ecccd5fab9c0f7539fb04bfb68b9e5de45f841ba88346eb6e2be5fe6344b8f` |
 | `tests/c/brume1024.c` | `abcfa562aec6955c0ef5eb151c13d243344e4d02a47ee0569481577b42f0319f` |
-| `tests/c/brume1024_api.c` | `ac03016ab77a738bde8a3ae49951ea7b75642973f7b7fa5d9100328d1cab2cdf` |
+| `tests/c/brume1024_api.c` | `f7b78c13130b94c753cb12021d5f2014eb7088e9dd5f9a84754f5f8e9c44e1db` |
 | `tests/c/compression_kem.c` | `768bd0e181c7db82feb087a6354e90d7a62c11075153e5bf760efb306f0ba201` |
 | `tests/c/compression_sig.c` | `b97477e549d98c8262bcc702539ebb72cf9a97472241369a50d1aaadd7eef0e4` |
 | `tests/c/ct1024.c` | `9d46ae566c48f045a0420ac7e50948c28a5cdefccf13abc76edae5300e411cfb` |
@@ -82,8 +82,9 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 | `tests/commun.py` | `4c42c8e3bb8ff345006777c6ffa1fe08a8cc78ec45181be2d5c044f3edef968e` |
 | `tests/couverture.py` | `817ad7c0cb8689f1cd90d346bc7469da0680dd5941e448d75cda263a6bb67aa4` |
 | `tests/empreintes.py` | `afe5affe6567042d7d6441b02df06f065a70d306f2c2a3bbeb259c07a263a2da` |
+| `tests/gadget_ssb.py` | `5d6728f91e44568d5076d8a5d925efb115418fcaddc86a1b13c4ad153ab81fe4` |
 | `tests/noyau_c.py` | `bbab194f6687532783bb3e1a7149a3cbb5c3a70aceab656c810b2435abe7ca66` |
-| `tests/run_all.py` | `a2671c89216a9c7ab660c07e6e20d77cec4b5b96d375de4f45b31093ddec5934` |
+| `tests/run_all.py` | `eb40156c367cda10f2082c094d238ae74da5615bb5995f89ff3b9709b1fc6b88` |
 | `tests/test_api_c.py` | `3e1e97a752ce95e5b7636e45874d26e0b25aafe93f94a968a2c8ff9260f9399e` |
 | `tests/test_b1024_certificats.py` | `6670b125eb8aec9af6395918bf9c360ef947e99b3249a55d640575e6f550d69d` |
 | `tests/test_b1024_etudes.py` | `2744c8c228823203a7814d0c3609a23156771cf3947ebe3e5880c7f283546829` |
@@ -94,6 +95,7 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 | `tests/test_bornes_preuves.py` | `04ed4b93b36cb8a7ba323b1bd8dff1a2df8e57c0746fce7045a45b43cc31cfb9` |
 | `tests/test_c_brume1024_valgrind.py` | `35d2f402da39dbaa3cf61a5bb69a0007a8edc1284ccc74e08a10f2b6d6edffcb` |
 | `tests/test_c_fuzz.py` | `4fd95935c0f7be173c6b4defa8597a8b33f926f9cc325e2061b649be6c75c352` |
+| `tests/test_c_gadget_ssb.py` | `9370a80bf2ef8403bfe9ebaa10d0a2d2b245f86ae6cb51844121a343e37716ea` |
 | `tests/test_c_impl.py` | `f9129131785886b6c163c7a0c17fd65c4b5676b613bdfbc0ec6b5dd68436789d` |
 | `tests/test_c_kem_bruit.py` | `886ae7c06a634728bb73136ea20157d4a6255033d791fed0dadfd083eb26711b` |
 | `tests/test_c_kem_valgrind.py` | `13e1e0757b40f9e78d6ee29a8c178ab195ec9d0c38ddc2a3d9572fcf5fcf6ed8` |
@@ -114,6 +116,7 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 | `tests/test_sig_modele.py` | `db283b3a25e019fcc5a78bded7761efe1c8be6b3b86ff452c31f6272b8154880` |
 | `tests/test_vole.py` | `65908ba8c5b82dabbba4ba3377c15919b32393755af63d8691a6faca57090006` |
 | `tests/test_vole_kz.py` | `e0e832d24ebfec12fc254120ef45c3a6605a7a97e3e0bed1e0bad312cf81c4f8` |
+| `tests/verifier_controles.py` | `abf7fabd005005810a579417fb8ae8c5996337d6c800ff697840023396337367` |
 
 ## Outils de recherche BRUME-1024q (hors bibliothèque)
 
@@ -193,58 +196,59 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 
 | Fichier | SHA-256 |
 |---|---|
-| `resultats/SYNTHESE.md` | `4d73d38e58ca6f458572b760f738b6249d9b3430409a6a38b0f5dc96201a2b14` |
+| `resultats/SYNTHESE.md` | `1208f80642202516be03d62accaa5255fff83c8087ccda1f8fd9bbca2ff1d158` |
 | `resultats/api_c.json` | `afc46d6be37c2fe7c7d62e18fb2daecf450a77dec3a7a51400921e6d4ab11383` |
 | `resultats/b1024_certificats.json` | `d9fef4bf1cb83ee0d806ba580d8fa1093f37c5d35e5d1fe4e71e8cf58571be82` |
-| `resultats/b1024_etudes.json` | `0c2390b1f8b4624fa97eef3161aca20ac1dde6a71694dfbd060a6951b39a38d5` |
-| `resultats/b1024_preuves.json` | `d02c5014c1ce91394cfcdcca8ef7f1d43ac79c0f245773fe1228964ce80e3643` |
-| `resultats/b1024_seconde_implementation.json` | `eaa7158f90ea9e37cfdedc0e61a91e14022dbdc58af2bf150daabf1fd45e9f6c` |
-| `resultats/b1024_statistiques.json` | `9a6d87a57b5ef9d529c4480a610e6d57a5b55197f89584d75211bc74c75e1a67` |
-| `resultats/b1024_structure.json` | `8ab5544588719f541fac02fd4de103df0380faaaad67803f15551d6dec4225c8` |
+| `resultats/b1024_etudes.json` | `73067816531e1979759e8af2dcb5496d5cc28008bbe15f4d094b58df5140ce18` |
+| `resultats/b1024_preuves.json` | `b1fdbd43a5fe6014778e6852cb5349e36250143d00621c3d6013f867b640ea7d` |
+| `resultats/b1024_seconde_implementation.json` | `f12626143583aa319729911cd553fd19adc27f6049fce71dc8fdaebddb8dda31` |
+| `resultats/b1024_statistiques.json` | `0b877baf567a22fbae1bc5d892a861d6e1718e31c7bc55af52441c24b77988ac` |
+| `resultats/b1024_structure.json` | `918bcbc2b3948393d5ad827e14be73c1662ec49dd0882498c60d1bf4159dbece` |
 | `resultats/bornes_preuves.json` | `e310918b21cd343fe8858bccc793b1379baa41a7cb2a4e0d36998de5931f1717` |
-| `resultats/brume1024.json` | `f82d43d07676e8a748fda685bb3260405bd048331d363b3e08f7386cb22cfb8c` |
-| `resultats/brume1024_api.json` | `01bdfb431b62adedb6abf01f59647635a32710f165d95d8b8a8530bfff5eb5a1` |
-| `resultats/brume1024_api_portable.json` | `ffc5410542286f3cc73bc983e36e43b74f794bedc752b592a7bb67cd64f5788b` |
+| `resultats/brume1024.json` | `186a96736162b04bffe9e8045524ba9712c202bb32c19b5ae67f1b145310f4d5` |
+| `resultats/brume1024_api.json` | `10f78e61f61d6600d54bd9c7bbb174a6def2c6aa58a335e501abe4952fc1d40b` |
+| `resultats/brume1024_api_portable.json` | `73c38fdf67f44e0969ce44e9817d10cdb3a8fbedb68ccf3474a5cb790a808c8a` |
 | `resultats/c_brume1024_valgrind.json` | `ed900e06ed5ea84771c22488011d532edc4632fdb24c58a414a5cae320b3c098` |
 | `resultats/c_fuzz.json` | `b7cc01078bb7a5fa767c413d0fa5607d2f7da72df4b35b39845d1914a391c1f8` |
-| `resultats/c_impl.json` | `1d16d3ec6fcc240d827d22bbe3a38cc99272e2c8eb22ac66fd8905319a3928a9` |
-| `resultats/c_kem_bruit.json` | `01cc24274eba61b26d6b464cfc7a87a699be667e54661846760039d3c934b142` |
+| `resultats/c_gadget_ssb.json` | `536973da1fcf2df5949421d77117525945faa1d82beffa06e369f76b3d293b71` |
+| `resultats/c_impl.json` | `e0193d3c136b369e290690ecbbec5c39e75fa74ef930e1c09072074ef1354318` |
+| `resultats/c_kem_bruit.json` | `9ee827ebf4099aab8848a7cd6b73529f0443a93801593297a80c04ae01eee0f2` |
 | `resultats/c_kem_valgrind.json` | `b9ec1bc5a3fd0c71bf23539ebf54afb120c26a4207456ab7e3718301fa07cb0f` |
-| `resultats/c_limites.json` | `ca964c6bdf37bb47bf93fc11925620f0a455934e5904013a1eea1d1217a630c6` |
+| `resultats/c_limites.json` | `c0f313ca11732972196aa2ada97710f9d8f6c79d1cdb0e337f2b6b6966ebf808` |
 | `resultats/c_sig_valgrind.json` | `0bc530416f6d361f1e523c8f22d70982e4ddaa1c6f2d67f88f9edb43357837b3` |
-| `resultats/c_temps.json` | `919c7c23e512d21711f36b5d2b9187822b1873edb3ad182149d7b2ea68ec0874` |
-| `resultats/c_vole_temps.json` | `cd57fe2ea649a6656b0605da4e8d4c183a8641e89b1abea4c38a1f228e40a5f5` |
+| `resultats/c_temps.json` | `de3b45021c1f668d31c7c50bd8b97dd92522a534ddb38b0f19060351d2976bcc` |
+| `resultats/c_vole_temps.json` | `c35917f7d27b7b4e0ccda26d018e98151b42eb320315eb114f88df98e46412f4` |
 | `resultats/c_vole_valgrind.json` | `3b933f5c95f881d81af0b2ecf92840adab33a566c6d69384ceb62e499003ebb3` |
 | `resultats/compression_sig.json` | `feee314a3c2e1aec4d1bfd5adb84f8a737c1de0e224c436a0b93e176e38c6bf8` |
 | `resultats/erreurs_api.json` | `32c31a6b348394f33eab114e9fcde4b6a6dacbb3cc4eb8cee93c8d6068158a72` |
 | `resultats/fonctionnel.json` | `26e250e706d58117dc42046a6e88098905a624106189f7c98c8d3e30d7f5b954` |
 | `resultats/h1p_fourier.json` | `0dec37c4f7dcb819f05149ec119af45fccbbedef48ac9bc748174f4d55e3c7a0` |
 | `resultats/isd_comparaison.json` | `cbf2bd2e5de2cb5385abbe0bb2e1dc3c455f20e90738816e16b6a5f66f104d4e` |
-| `resultats/isd_parametres.json` | `c303d6fae5743adb01ce5e26acfe07d6d1fa9f7035c6b0cf1a082a0cdabdf742` |
+| `resultats/isd_parametres.json` | `b8ab7ee1f47b48851042d99bf6dc139444edfdcaade7c62ca5f9f1bf6dd68157` |
 | `resultats/isd_reel.json` | `ff79972f5125fd007c12cc27e1155d424384db95478ea00c87fce73a44e7f339` |
-| `resultats/kem.json` | `6f8fa6d1f5bae58d189752d8e2c0073582df56026dde835feeaad54cd303afc4` |
-| `resultats/kem_distributions.json` | `8742fedb5f2d904ea720b56ff0cd1b6399e96a24bc6d482a5fb8e755ab69de4c` |
-| `resultats/kem_lemme3.json` | `258c6094965b2f4971b09f4cde88638ccb322d6282b9c376cb589ace5c56eb17` |
-| `resultats/kem_rejet.json` | `9d1fe243afc79cbb4dbfc0f91c8a53f26bada9380ad00ed7dab9b9f23db64e57` |
-| `resultats/kem_theta.json` | `26bac377000e02e3de61d49cf57fc756118e482692d4fcff1df2805d91b0d511` |
+| `resultats/kem.json` | `7bbdb680f1e53511fffb21e5d561d32d78d7a860511837795bd46b2dcc0dbca6` |
+| `resultats/kem_distributions.json` | `7c17ebcfb612a8b283c2f929286d82ed883cc04bdca36a6e2559265624508992` |
+| `resultats/kem_lemme3.json` | `03d0d1f6eead26a0e2ed94c3068caf3e45b7922d438095277b0adbe7784ae69a` |
+| `resultats/kem_rejet.json` | `b8c658c61e3bc4b6f5ca9796d4959eb25b6463a31c485c0280d0ce25270aff1c` |
+| `resultats/kem_theta.json` | `99f396ef4942c4d2754f299a740890161c65a92947dd9b320d37bf18fd8ab877` |
 | `resultats/revue_c.json` | `4ba04534bbc9821d8b1184407d492669946877f654f9271b024298a5bf78debf` |
-| `resultats/robustesse.json` | `a278c2ab57cae674af6ebd0e42fcbf29b8d1aaae718f90bee2f4f20a13421e07` |
+| `resultats/robustesse.json` | `da1773d9045e121fdb51b242773cb14ecef7b78b62092db9fc3322a49a4807d3` |
 | `resultats/sig.json` | `31fb13accae55ea1665ea2f617c1b9e0db1666a7fc7a89592da4b89ec8af2416` |
-| `resultats/sig_flux.json` | `455390b89e79417ec2bdf7f75b94de95c062883eaf20f07d6f748f6fd2dfe5bb` |
-| `resultats/sig_hvzk.json` | `a846ba8e8591f97076296133107ba4b3d45505902ff3081fa5817c2050eecf0f` |
+| `resultats/sig_flux.json` | `aa81d832374d60ba5e3e0076e607caea6198bfe5c1bcf312c7557844c7a32176` |
+| `resultats/sig_hvzk.json` | `4c90496070c0e082e5aa6ee15e71166f4c5d7f5a0893ed7a4c8e4756514b6cb7` |
 | `resultats/sig_kz.json` | `f46ab751ab9461b5690f01042698bd4acc185e6563173e3e880c3072b976b3a8` |
-| `resultats/sig_modele.json` | `37a7f7c296af48dc161a927c7062f9933b3ce8431508c207d319d5389e0feb8f` |
-| `resultats/temps1024.json` | `3c1c4eaf0a557be94fc1b3cc3c3f2b8a78ef336291bfc17fead6a0e720f8c519` |
+| `resultats/sig_modele.json` | `9ff2c2cddf1e15484da70cc008c76d5d940e5534b110fb1dbd13ca3c2300b9dc` |
+| `resultats/temps1024.json` | `2b2dcaf4ed0342cda90891aa2f6622e047abd0b78967c5d5a008a6c051ecd26c` |
 | `resultats/vole.json` | `3cd4e052a16612b55e6ef3b8ab167bea16e99e3621944d5ab4a5c08f290ac1e4` |
-| `resultats/vole_kz.json` | `313609643ad888a6b2c7cdfb3da2c4fc52407a70543c35b3d8359cfb219d5f59` |
-| `resultats/vole_proto.json` | `b9ee9d430a8c385754e97fbd7a36eed0d43aeba3986b6af587579ce911ff821c` |
+| `resultats/vole_kz.json` | `069b09ef322e08901354e3d97ed88e243116738386288448656bccc14efa137e` |
+| `resultats/vole_proto.json` | `205c0b3183731264c413b33d37b7a3354db75f0784279667b844e36c418ecf8d` |
 
 ## Spécification, preuves et rapports
 
 | Fichier | SHA-256 |
 |---|---|
 | `docs/AUDIT_EXTERNE.md` | `15181ffed3a873c321f66b349144a0030f07e45f021e088b030613a554ca0a31` |
-| `docs/AUDIT_REPORT.md` | `1cee9b5b23dc9dfdaff1e588f15d310f94277b1e38f24c484cd53d31e6676450` |
+| `docs/AUDIT_REPORT.md` | `80b3257eded6ecbf0c1eef8c97bd72e204b38a7375048aca60302ccaa593616a` |
 | `docs/CAMPAIGN_24H.md` | `e2773b4e8aae053d0a6eea15c59050409f1950e9b0f4031b54c939344caa11d4` |
 | `docs/DESIGN_NOTE.md` | `ade0afa112999029530930f6312ffe3df5cd65f9b6a827357326ff7bf560c29e` |
 | `docs/GPU_CRYPTANALYSIS_PLAN.md` | `58ffa7a0da65ec8186eb16f8278d6a7030a1d6f23f6cee58780977489631db7a` |

@@ -743,8 +743,40 @@ Battery v0.6, first run (17 November 2026): **615/617**, the only failing test b
   harness, 8 of 12 runs over four function/loop alignments exceed the threshold (up to |t| = 17.5); with `pp_perm`
   marked **`noinline`**, 0 of 12 (|t| ≤ 2.9).
 - **Fix:** `pp_perm` is no longer inlinable (`sillage/c/brume1024_portable.h`): its machine code no longer depends on
-  the caller. Outputs unchanged; one function call per permutation. The microarchitectural mechanism is not identified
-  (as for the AEAD alignment effect of 2 November); what triggers it is identified and removed.
+  the caller. Outputs unchanged; one function call per permutation.
+- **Mechanism (identified on 18 November, after the release): Speculative Store Bypass (Spectre v4).** Inlined into the
+  harness, the kernel was compiled with one stack slot used both for the round-constant pointer and for a secret S-box
+  intermediate: the slot receives the secret word, then the pointer is stored back, reloaded and dereferenced
+  (`xor 0x18(%rdi)`, `xor 0x58(%rdi)`). When the reload is allowed to pass the store that restores the pointer, it
+  receives the secret word by store-to-load forwarding, and the core speculatively accesses an address derived from it
+  before detecting the ordering violation. The architectural result is correct (hence ctgrind is clean), but the time
+  depends on the data. Evidence (Zen 3, the harness binaries left byte-for-byte unchanged, inputs controlled through an
+  `LD_PRELOAD` interposer on `getrandom`): the sign of t follows the value of the fixed input (four inputs, with and
+  without ASLR); an A/A test with the same fixed value in both classes is clean; the order of the classes does not
+  matter; and **with SSBD enabled for the process (`prctl(PR_SET_SPECULATION_CTRL, PR_SPEC_STORE_BYPASS,
+  PR_SPEC_DISABLE)`), 12 of 12 runs are clean (|t| ≤ 1.3), against 12 of 12 over the threshold (|t| from 7.7 to 64)
+  without it**, same binaries, same inputs. A static check (a stack slot that receives a value computed by logical
+  operations and is also reloaded and used as a base address) finds that slot in the leaking binaries, nothing in the
+  non-inlined `pp_perm`, and nothing in the library itself built by GCC 13.3 (AVX2 and portable) and GCC 16.2 (O2, O3,
+  x86-64-v3, portable). The exact cost of the speculative access as a function of the value is not established.
+  Consequences: the `noinline` fix removes this gadget for this compiler, but nothing guarantees that another compiler
+  will not create one; a process that handles secrets can turn the bypass off (SSBD, by `prctl` or seccomp), which Linux
+  does not do by default. Whether the AEAD alignment effect of 2 November has the same cause was not tested.
+- **Battery check (18 November): `test_c_gadget_ssb`**, also run by the CI. The detector (`tests/gadget_ssb.py`) flags a
+  stack slot in the order that makes the bypass possible: a store of a value computed by logical operations, then a
+  store of a pointer, then, within 128 instructions, a reload of that pointer used as a base address (listing order,
+  no control flow). It flags the two leaking harness binaries at exactly the measured triple, and nothing in the
+  non-inlined `pp_perm` nor in the instrumented binaries that did not leak; its witnesses (`tests/c/temoin_ssb.S`) are
+  flagged and not flagged as expected. The check compiles the whole library (`commun`, `brume1024`, `kem`, `sig`,
+  `vole`, `isd`) in four settings (battery flags, portable without AVX2, `-O2`, `x86-64-v3`) and the dudect harness of
+  BRUME-1024q: no slot flagged. While it was being written, a looser first version flagged slots in `sig.c` and
+  `vole.c`; each was read and found to be an artefact of the detector (a reload followed by an unconditional jump, then
+  padding; a loop index mistaken for data because 32-bit register names were not mapped to their 64-bit registers).
+  It is a heuristic: a clean result does not rule out every speculative leak.
+- **CI failure of 18 November (commit 87f4626):** the CI step of the BRUME-1024q checks looked for `: false` anywhere in
+  the result files, and the portable API check records the measure `noyau_avx2: false`, which is expected without AVX2;
+  all of its checks passed. The measure is now `noyau: "portable" | "avx2"`, and the CI reads only the `controles`
+  section (`tests/verifier_controles.py`).
 
 Second run (18 November 2026, final sources): **615/616**, the only failure being a control of the rebound study tool
 (`rebond1024.py controle`, R = 3, m = 1): its first CP-SAT call used the whole wall-clock budget, leaving no time to cut an

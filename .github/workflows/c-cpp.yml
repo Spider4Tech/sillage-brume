@@ -42,7 +42,11 @@ jobs:
         OMP_NUM_THREADS=2 tests/c/build/brume1024
         tests/c/build/brume1024_api
         tests/c/build/brume1024_api_portable
-        if grep -H ': false' resultats/brume1024.json resultats/brume1024_api.json resultats/brume1024_api_portable.json; then exit 1; fi
+        python3 -m tests.verifier_controles resultats/brume1024.json resultats/brume1024_api.json resultats/brume1024_api_portable.json
+    - name: No Speculative Store Bypass stack-slot gadget in the library (tests/gadget_ssb.py, with witnesses)
+      run: |
+        python3 -m tests.test_c_gadget_ssb > /dev/null
+        python3 -m tests.verifier_controles resultats/c_gadget_ssb.json
     - name: Quick tests (KATs, TE mode, C and Python conformance, second implementation, proof checks)
       run: |
         python3 -m tests.test_fonctionnel
@@ -53,8 +57,8 @@ jobs:
     - name: Fail if any quick-test check failed
       run: |
         # the tests record their checks in resultats/<name>.json and always exit 0
-        if grep -H ': false' resultats/fonctionnel.json resultats/c_impl.json resultats/b1024_seconde_implementation.json \
-             resultats/b1024_certificats.json resultats/bornes_preuves.json; then exit 1; fi
+        python3 -m tests.verifier_controles resultats/fonctionnel.json resultats/c_impl.json resultats/b1024_seconde_implementation.json \
+             resultats/b1024_certificats.json resultats/bornes_preuves.json
     - name: Quantum bound of the hash (docs/brume1024/SPONGE_QROM.md), exhaustive on small models, with a failing witness
       run: |
         V=prototypes/brume_q/b1024/cm26_verif

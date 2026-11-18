@@ -52,7 +52,8 @@ int main(void)
 #else
     int avx2 = 0;
 #endif
-    res_mesure(&res, "noyau_avx2", "%s", avx2 ? "true" : "false");
+    /* une chaîne et non un booléen : la valeur « false » est normale en version portable (CI du 18 nov. 2026) */
+    res_mesure(&res, "noyau", "\"%s\"", avx2 ? "avx2" : "portable");
 #ifdef B1024_API_PORTABLE
     res_controle(&res, "compile_sans_avx2", !avx2);
 #endif

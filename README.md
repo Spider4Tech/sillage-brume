@@ -439,7 +439,7 @@ Tree leaves, parallel-AEAD leaves and multi-message batches are distributed acro
 
 ### Side-channel testing
 
-dudect-style timing experiments (`tests/c/temps1024.c` for BRUME-1024q: AVX2 and portable kernels, AEAD with key and plaintext secret, verified decryption on the accept and reject paths; `tests/c/temps.c` for the KEM and SIG) and Valgrind/ctgrind checks (`tests/test_c_brume1024_valgrind.py`, `tests/test_c_kem_valgrind.py`, `tests/test_c_sig_valgrind.py`), each with a witness that must be detected. These are empirical checks, not a proof of constant-time execution; results depend on compiler, flags, CPU, operating system and methodology. The Python reference implementation of the KEM is not constant-time. Timing on ARM is not measured.
+dudect-style timing experiments (`tests/c/temps1024.c` for BRUME-1024q: AVX2 and portable kernels, AEAD with key and plaintext secret, verified decryption on the accept and reject paths; `tests/c/temps.c` for the KEM and SIG) and Valgrind/ctgrind checks (`tests/test_c_brume1024_valgrind.py`, `tests/test_c_kem_valgrind.py`, `tests/test_c_sig_valgrind.py`), each with a witness that must be detected, and a static check for Speculative Store Bypass stack-slot gadgets (`tests/test_c_gadget_ssb.py`, which ctgrind cannot see). These are empirical checks, not a proof of constant-time execution; results depend on compiler, flags, CPU, operating system and methodology. The Python reference implementation of the KEM is not constant-time. Timing on ARM is not measured.
 
 ---
 
@@ -479,15 +479,15 @@ Individual test modules and C programs contain the precise parameters and assert
 | Cryptanalysis tools | Algebraic (CICO by SAT), rebound and differential-linear tools, each against its witness | `test_b1024_etudes` |
 | KEM assumptions and estimators | Error distributions, δ-bound experiments, reduced-instance ISD, estimator consistency, parity and correlation checks | `test_isd_parametres`, `test_c_kem_bruit`, `isd_reel`, `isd_comparaison`, `kem_distributions` |
 | Signature protocol | Reduced-model checks, Kales–Zaverucha attacks against the C verifier, challenge distribution, malformed signatures | `test_sig_modele`, `sig_kz`, `sig_flux`, `test_vole_kz` |
-| C implementation | Conformance, API interoperability, fuzzing, guard pages, UBSan, Valgrind/ctgrind and dudect timing tests | `test_c_impl`, `test_api_c`, `test_c_fuzz`, `test_c_brume1024_valgrind`, `test_c_kem_valgrind`, `test_c_sig_valgrind`, `temps1024`, `test_c_temps` |
+| C implementation | Conformance, API interoperability, fuzzing, guard pages, UBSan, Valgrind/ctgrind and dudect timing tests | `test_c_impl`, `test_api_c`, `test_c_fuzz`, `test_c_brume1024_valgrind`, `test_c_kem_valgrind`, `test_c_sig_valgrind`, `test_c_gadget_ssb`, `temps1024`, `test_c_temps` |
 
 The tests of BRUME-512 (v0.5) are archived in `tests/historique_v05/` and no longer run.
 
 ### Latest committed test summary
 
-The committed [`resultats/SYNTHESE.md`](resultats/SYNTHESE.md) reports the v0.6 run of 18 November 2026: **616 of 616 controls passed, 44 tests**, 36 minutes, one test rerun (marked "relancé").
+The committed [`resultats/SYNTHESE.md`](resultats/SYNTHESE.md) reports the v0.6 run of 18 November 2026: **627 of 627 controls passed, 45 tests**, 40 minutes.
 
-Two findings of the v0.6 runs were fixed before this one ([`docs/AUDIT_REPORT.md`](docs/AUDIT_REPORT.md), changes of 2026-11-17). The dudect test flagged the portable BRUME-1024q kernel (|t| up to 22) when GCC 13.3 inlined it into the timing harness on a Zen 3 machine; the signal followed the code layout (not the frequency, not the alignment of the state; ctgrind clean), and disappears on every layout tried once the kernel is not inlined (`noinline`, outputs unchanged). A control of the rebound study tool depended on the solver's wall-clock time; it now uses the solver's deterministic time. This is a snapshot of one run on one machine; passing it does not prove the hardness assumptions or the security of the full permutation.
+Two findings of the v0.6 runs were fixed before this one ([`docs/AUDIT_REPORT.md`](docs/AUDIT_REPORT.md), changes of 2026-11-17). The dudect test flagged the portable BRUME-1024q kernel (|t| up to 22) when GCC 13.3 inlined it into the timing harness on a Zen 3 machine; the signal followed the code layout (not the frequency, not the alignment of the state; ctgrind clean), and disappears on every layout tried once the kernel is not inlined (`noinline`, outputs unchanged). Its cause was then identified as a Speculative Store Bypass: inlined, the kernel shared one stack slot between the round-constant pointer and a secret intermediate, and a speculative reload of the pointer used the secret as an address (proved by turning the bypass off with SSBD: 12 of 12 runs clean against 12 of 12 flagged). A static check of the library for this pattern, `test_c_gadget_ssb`, now runs in the battery and in the CI. A control of the rebound study tool depended on the solver's wall-clock time; it now uses the solver's deterministic time. This is a snapshot of one run on one machine; passing it does not prove the hardness assumptions or the security of the full permutation.
 
 ---
 
