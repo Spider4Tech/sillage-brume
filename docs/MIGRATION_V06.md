@@ -3,7 +3,7 @@
 Written on 13 November 2026, after the author's decision: **in v0.6, BRUME-1024q replaces the classical BRUME-512** in the
 suite. This document lists what the change touches, the decisions it needs, and the order of work.
 
-> **v0.6.0 prepared on 17 November 2026, release held** (one open timing finding, § 5) at the author's request ("officiel sortie version v0.6"), with three
+> **v0.6.0 prepared on 17–18 November 2026** at the author's request ("officiel sortie version v0.6"), with three
 > choices made that day: the BRUME-512 tests are archived outside the battery (`tests/historique_v05/`); the
 > specification, proofs and studies of BRUME-1024q are moved to `docs/brume1024/`, the tools staying in
 > `prototypes/brume_q/b1024/`; the work is done on a branch, merged and tagged once the full battery passes. What was
@@ -95,5 +95,5 @@ D7 stays the gate for v0.6. The table below keeps the options as they were prese
 - **Documents**: `docs/SPEC.md` § 2 and `docs/PROOFS.md` § 4 rewritten for BRUME-1024q (the v0.5 texts are in
   `tests/historique_v05/`); `docs/brume1024/` created; README, CI, citation updated.
 - **Gate D7**: SPEC written and checked by a second implementation — yes; AE step of the AEAD proof — yes; PROOFS § 4
-  rewritten — yes; battery ported and complete — 615/617 on 17 November, the open point being the dudect signal of the portable kernel built with `-march=native` on Zen 3 (`AUDIT_REPORT.md`), which holds the release; human review — still open, as for v0.5.
+  rewritten — yes; battery ported and complete — 616/616 on 18 November, after fixing a layout-dependent dudect signal of the portable kernel and a time-dependent control (`AUDIT_REPORT.md`); human review — still open, as for v0.5.
 

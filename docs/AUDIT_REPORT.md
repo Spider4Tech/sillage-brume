@@ -732,10 +732,23 @@ differential-linear tool did not come out as its plan said (real 4-round correla
 model says 2^−18, `docs/brume1024/DIFF_LIN.md`); the stopping rule of the algebraic study was badly chosen and its
 6-round row was stopped (`docs/brume1024/ALGEBRIQUE.md`).
 
-Battery v0.6: full battery of 17 November 2026, **615/617 controls, 44 tests** (`resultats/SYNTHESE.md`). The only failing test is
-`temps1024`: dudect flags the **portable** kernel (|t| = 9.7, then 4 to 20 over repeated runs of 2·10⁶ measurements) when
-it is compiled with `-march=native` on the Zen 3 machine of the run; the same code compiled for `x86-64-v3` is clean on
-that machine (|t| ≤ 1.2) and on two Zen 2 machines (|t| ≤ 1.4), ctgrind is clean, and the A/A test and the AVX2 kernel
-are clean at the same scale. No instruction with data-dependent latency appears in the generated code. Cause not
-identified; **the release is held** until it is (author's decision of 17 November 2026). Tests that ran before a header
-guard was added to `brume1024_tables.h` during the run (outputs unchanged) were rerun on the final sources and pass.
+Battery v0.6, first run (17 November 2026): **615/617**, the only failing test being `temps1024`: dudect flagged the
+**portable** kernel (|t| = 9.7, then 4 to 22 over repeated runs of 2·10⁶ measurements). Investigation (17–18 November):
+- the signal appears only with the battery's compiler (GCC 13.3, `-O3 -march=native`) on the Zen 3 machine; the same
+  source built by GCC 16.2, for `x86-64-v3`, at `-O2`, or without the SLP vectoriser is clean, and so are two Zen 2
+  machines; the A/A test and the AVX2 kernel are clean at the same scale; ctgrind is clean;
+- it is not a frequency effect (still present with turbo disabled) and not the alignment of the state (still present
+  with the kernel's buffers aligned on 64 bytes);
+- it follows the code layout: adding one unrelated line to the harness removes it; with `pp_perm` inlined into the
+  harness, 8 of 12 runs over four function/loop alignments exceed the threshold (up to |t| = 17.5); with `pp_perm`
+  marked **`noinline`**, 0 of 12 (|t| ≤ 2.9).
+- **Fix:** `pp_perm` is no longer inlinable (`sillage/c/brume1024_portable.h`): its machine code no longer depends on
+  the caller. Outputs unchanged; one function call per permutation. The microarchitectural mechanism is not identified
+  (as for the AEAD alignment effect of 2 November); what triggers it is identified and removed.
+
+Second run (18 November 2026, final sources): **615/616**, the only failure being a control of the rebound study tool
+(`rebond1024.py controle`, R = 3, m = 1): its first CP-SAT call used the whole wall-clock budget, leaving no time to cut an
+unrealisable path; the tool reported it honestly as not realisable. The control now runs on the solver's deterministic
+time (one worker, fixed seed: the same result on every run); `b1024_etudes` was rerun alone, 4/4. Final summary:
+**616/616** (`resultats/SYNTHESE.md`). Tests that ran before a header guard was added to `brume1024_tables.h` during the
+first run (outputs unchanged) were rerun on the final sources and pass.

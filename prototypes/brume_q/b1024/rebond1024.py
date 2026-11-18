@@ -140,7 +140,9 @@ def valide(motifs):
     return True
 
 
-def cherche(R, m, secondes=7200, fils=4, depart=None):
+def cherche(R, m, secondes=7200, fils=4, depart=None, deterministe=False):
+    """deterministe : budget en temps déterministe de CP-SAT (même résultat d'une exécution à l'autre, quelle que soit
+    la charge de la machine), pour les contrôles ; sinon, temps réel (campagnes)."""
     from ortools.sat.python import cp_model
     md = cp_model.CpModel()
     x = [[md.NewBoolVar("") for _ in range(N)] for _ in range(R + 1)]
@@ -179,8 +181,13 @@ def cherche(R, m, secondes=7200, fils=4, depart=None):
         # boucle de coupes paresseuses : un tour non réalisable sur GF(16) (noyau nul, coordonnée ou sortie active
         # forcée à zéro) est interdit tel quel, et le modèle relancé, dans le budget de temps total
         s = cp_model.CpSolver()
-        s.parameters.max_time_in_seconds = max(1.0, secondes - (time.time() - t0))
-        s.parameters.num_workers = fils
+        if deterministe:
+            s.parameters.max_deterministic_time = secondes
+            s.parameters.num_workers = 1
+            s.parameters.random_seed = 0
+        else:
+            s.parameters.max_time_in_seconds = max(1.0, secondes - (time.time() - t0))
+            s.parameters.num_workers = fils
         st = s.Solve(md)
         res = {"R": R, "m": m, "statut": s.StatusName(st), "s": round(time.time() - t0, 1),
                "borne_basse_bits": round(s.BestObjectiveBound(), 1), "coupes": coupes}
@@ -188,7 +195,7 @@ def cherche(R, m, secondes=7200, fils=4, depart=None):
             return res
         motifs = [[int(s.Value(v)) for v in x[t]] for t in range(R + 1)]
         mauvais = [t for t in range(R) if not realisable_tour(motifs[t], motifs[t + 1])]
-        if mauvais and time.time() - t0 < secondes - 5:
+        if mauvais and (deterministe and coupes < 200 or not deterministe and time.time() - t0 < secondes - 5):
             for t in mauvais:
                 lits = [x[t][i] if motifs[t][i] else x[t][i].Not() for i in range(N)] + \
                        [x[t + 1][i] if motifs[t + 1][i] else x[t + 1][i].Not() for i in range(N)]
@@ -260,7 +267,7 @@ def controle():
     out2[jc] = 0
     verdict("réalisable : deux entrées, une sortie commune annulée", realisable_tour(ent2, out2))
     # la sonde du 17 nov. : m = 1 sans contrôle donnait 97 actifs → 1 actif ; avec le contrôle, chemin réalisable
-    r31 = cherche(3, 1, 120, 4)
+    r31 = cherche(3, 1, 60, deterministe=True)   # temps déterministe : le contrôle ne dépend pas de la charge (18 nov.)
     verdict("R = 3, m = 1 : le chemin rendu est réalisable sur GF(16)", r31.get("realisable"),
             f"{r31['statut']} coût {r31.get('cout_modele_bits')}, {r31['coupes']} coupes, actifs {r31.get('actifs')}")
     print("tous les contrôles passent" if ok else "ÉCHEC d'au moins un contrôle", flush=True)

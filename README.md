@@ -485,11 +485,9 @@ The tests of BRUME-512 (v0.5) are archived in `tests/historique_v05/` and no lon
 
 ### Latest committed test summary
 
-The committed [`resultats/SYNTHESE.md`](resultats/SYNTHESE.md) reports the v0.6 run of 17 November 2026: **615 of 617 controls passed, 44 tests**, 37 minutes (21:23–21:59).
+The committed [`resultats/SYNTHESE.md`](resultats/SYNTHESE.md) reports the v0.6 run of 18 November 2026: **616 of 616 controls passed, 44 tests**, 36 minutes, one test rerun (marked "relancé").
 
-**The two failures are one finding, still open.** The dudect test of the BRUME-1024q *portable* kernel (`temps1024`, `permutation_portable_sans_fuite_detectee`, and the exit code that follows from it) gave |t| = 9.7 at the first measurement; repeated runs of the same build give |t| between 4 and 20 at 2·10⁶ measurements. The same source compiled for `x86-64-v3` is clean on the same machine (|t| ≤ 1.2), and clean on two other machines (|t| ≤ 1.4); ctgrind finds no secret-dependent branch or memory access in that kernel; the AVX2 kernels and the AEAD are clean everywhere. The portable kernel is only used where AVX2 is absent. The cause is not identified, and **v0.6.0 is not released until it is** (the work stays on the `v0.6` branch). Details: [`docs/AUDIT_REPORT.md`](docs/AUDIT_REPORT.md), changes of 2026-11-17.
-
-The tests that ran before a header guard was added to `sillage/c/brume1024_tables.h` during the run (no change of outputs) were rerun on the final sources: all pass. This is a snapshot of one run on one machine; passing it does not prove the hardness assumptions or the security of the full permutation.
+Two findings of the v0.6 runs were fixed before this one ([`docs/AUDIT_REPORT.md`](docs/AUDIT_REPORT.md), changes of 2026-11-17). The dudect test flagged the portable BRUME-1024q kernel (|t| up to 22) when GCC 13.3 inlined it into the timing harness on a Zen 3 machine; the signal followed the code layout (not the frequency, not the alignment of the state; ctgrind clean), and disappears on every layout tried once the kernel is not inlined (`noinline`, outputs unchanged). A control of the rebound study tool depended on the solver's wall-clock time; it now uses the solver's deterministic time. This is a snapshot of one run on one machine; passing it does not prove the hardness assumptions or the security of the full permutation.
 
 ---
 

@@ -177,8 +177,11 @@ static void pp_emballer(const pp_plans x, uint8_t w[128])
 }
 
 /* la permutation à R tours (R ≤ B1_RT) sur l'état emballé (deux nibbles par octet, position paire en bas) ; pp_init()
- * doit avoir réussi */
-static __attribute__((unused)) void pp_perm(uint8_t w[128], int R)
+ * doit avoir réussi. NON INLINABLE (18 novembre 2026, docs/AUDIT_REPORT.md) : inliné dans le banc dudect par GCC 13.3
+ * en -O3 -march=native, le noyau donnait sur Zen 3 un signal |t| de 4 à 20 qui suivait la disposition du code (pas la
+ * fréquence, pas l'alignement de l'état ; ctgrind propre) ; non inliné, son code machine ne dépend plus de l'appelant
+ * et le signal disparaît sur toutes les dispositions essayées. Sorties inchangées. */
+static __attribute__((unused, noinline)) void pp_perm(uint8_t w[128], int R)
 {
     pp_plans x;
     pp_deballer(w, x);

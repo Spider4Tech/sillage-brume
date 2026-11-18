@@ -1197,9 +1197,9 @@ remains the only integrity guarantee. Implemented in v0.6 (`sl_te_*`), checked b
 ### 4.7 Implementation
 
 Constant time is measured, not proved: dudect (`tests/c/temps1024.c`, `tests/c/temps.c`) and Valgrind/ctgrind
-(`tests/test_c_brume1024_valgrind.py`) on the AVX2 kernels, the portable kernel and the AEAD (accept and reject paths). **Open (17 November 2026):** dudect flags the portable
-kernel when it is compiled with `-march=native` on a Zen 3 machine, not when it is compiled for `x86-64-v3` nor on two
-Zen 2 machines; ctgrind is clean (`AUDIT_REPORT.md`, changes of 2026-11-17).
+(`tests/test_c_brume1024_valgrind.py`) on the AVX2 kernels, the portable kernel and the AEAD (accept and reject paths). A layout-dependent dudect signal of the portable kernel, seen
+when GCC 13.3 inlined it into the timing harness on Zen 3, is removed by making the kernel non-inlinable
+(`AUDIT_REPORT.md`, changes of 2026-11-17).
 No table indexed by secret data: S is a register shuffle (AVX2) or a 17-gate circuit (portable, bitsliced). The
 library's outputs are those of SPEC § 4, recomputed by a second implementation written from the specification alone
 (`tests/test_b1024_seconde_implementation.py`).

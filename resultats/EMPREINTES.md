@@ -1,6 +1,6 @@
 # Empreintes SHA-256 — SILLAGE v0.6
 
-Batterie : 615/617 contrôles, 44 tests.
+Batterie : 616/616 contrôles, 44 tests.
 Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 
 ## KAT
@@ -33,7 +33,7 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 | `sillage/c/brume1024.c` | `dd5861eee3ab6bc2e3f08ef1f7367c1eee5cd40e3dddede3e28d28d03ac004be` |
 | `sillage/c/brume1024_bs.h` | `9d04e6e4d707144d16ccb7a463af9f840a9ace0966256c5ac169daea7db45a30` |
 | `sillage/c/brume1024_lot.h` | `d169caa6b3f191cf8407bead92a6c830cbaf1aed54aa4d699c0e9de80f6f1f80` |
-| `sillage/c/brume1024_portable.h` | `26fd97d391f3b6c33b37e17572cd068bb4aa5b0323785329040bf7423bf782b3` |
+| `sillage/c/brume1024_portable.h` | `f602ea34cbed0279cd094378eaf418ee1ec1adfb034320d12bed22d4881bd192` |
 | `sillage/c/brume1024_tables.h` | `ce89885c6626affbfdad4f2a07de9dd5385f3ec2835d1d329326912fe0a09c4a` |
 | `sillage/c/commun.c` | `6494c3479457aaa65b8ecfc40465ddc09e566ec99909d06c5b891099aff36909` |
 | `sillage/c/isd.c` | `b2885305a022218073c77181275d1d9cae3c327abe3025c4f0da0452d59eed50` |
@@ -143,7 +143,7 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 | `prototypes/brume_q/b1024/invariants_quad1024.c` | `0f111dc1987c34e3fe8f330b580e8c99a170ac2298cc8dce98d2f83d29a5fd1e` |
 | `prototypes/brume_q/b1024/kat_b1024.h` | `647bd80e29cea2c3870221436e9eca8e77de3eb9754ef40f24abfe8362eea612` |
 | `prototypes/brume_q/b1024/mutants.c` | `c3a805f3a31ba89204b12292fbd38f88b46b2512c2bcf6936387d17804d64e11` |
-| `prototypes/brume_q/b1024/rebond1024.py` | `4e73b59621eface487df4498b81ce8a831544a0e6682b70784ce21c163498818` |
+| `prototypes/brume_q/b1024/rebond1024.py` | `91b742b998c0a387787e444d9cd621ee7f4aca990c3a24f1df1bb3794707febc` |
 | `prototypes/brume_q/b1024/rebond_verif.c` | `ba46fae5a0e5516f3a51b1eb39b3b483a9ee2343a97e273c5958bcbd33cf7ac8` |
 | `prototypes/brume_q/b1024/spec_ref.c` | `df89c0eef6417710801ac4807e67478ff7cda5824f3bd60ad931cd35f110d17e` |
 | `prototypes/brume_q/b1024/stats1024.c` | `35b87106df339860d558a7da243d1514d0985746b698099b4fff3c585a0fadd2` |
@@ -193,64 +193,64 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 
 | Fichier | SHA-256 |
 |---|---|
-| `resultats/SYNTHESE.md` | `2facef762fe1c028edc0ed1b973fbb499e69e2ac9cde539ec737d0183e4ba96d` |
+| `resultats/SYNTHESE.md` | `4d73d38e58ca6f458572b760f738b6249d9b3430409a6a38b0f5dc96201a2b14` |
 | `resultats/api_c.json` | `afc46d6be37c2fe7c7d62e18fb2daecf450a77dec3a7a51400921e6d4ab11383` |
 | `resultats/b1024_certificats.json` | `d9fef4bf1cb83ee0d806ba580d8fa1093f37c5d35e5d1fe4e71e8cf58571be82` |
-| `resultats/b1024_etudes.json` | `c7c19912e1851b338d727df7413f0b809939a1354d8425588d2eb262506195ee` |
-| `resultats/b1024_preuves.json` | `04fdf6f117b318071da5432897df4553ff210501501f5944485b808e45b5fc63` |
-| `resultats/b1024_seconde_implementation.json` | `8d183cd49b81c6bd616a069dfa44819adee862ca671c0e2fdcf5b484dcb303f4` |
-| `resultats/b1024_statistiques.json` | `0b877baf567a22fbae1bc5d892a861d6e1718e31c7bc55af52441c24b77988ac` |
-| `resultats/b1024_structure.json` | `17c912a885bfa635dbb7c909073a8c6f9c26c180c71c3acfb6055fe47ad66972` |
+| `resultats/b1024_etudes.json` | `0c2390b1f8b4624fa97eef3161aca20ac1dde6a71694dfbd060a6951b39a38d5` |
+| `resultats/b1024_preuves.json` | `d02c5014c1ce91394cfcdcca8ef7f1d43ac79c0f245773fe1228964ce80e3643` |
+| `resultats/b1024_seconde_implementation.json` | `eaa7158f90ea9e37cfdedc0e61a91e14022dbdc58af2bf150daabf1fd45e9f6c` |
+| `resultats/b1024_statistiques.json` | `9a6d87a57b5ef9d529c4480a610e6d57a5b55197f89584d75211bc74c75e1a67` |
+| `resultats/b1024_structure.json` | `8ab5544588719f541fac02fd4de103df0380faaaad67803f15551d6dec4225c8` |
 | `resultats/bornes_preuves.json` | `e310918b21cd343fe8858bccc793b1379baa41a7cb2a4e0d36998de5931f1717` |
-| `resultats/brume1024.json` | `a00fdea56568d6cd49e9ab0c13844a22602844c54d87546022151581462ad735` |
+| `resultats/brume1024.json` | `f82d43d07676e8a748fda685bb3260405bd048331d363b3e08f7386cb22cfb8c` |
 | `resultats/brume1024_api.json` | `01bdfb431b62adedb6abf01f59647635a32710f165d95d8b8a8530bfff5eb5a1` |
 | `resultats/brume1024_api_portable.json` | `ffc5410542286f3cc73bc983e36e43b74f794bedc752b592a7bb67cd64f5788b` |
 | `resultats/c_brume1024_valgrind.json` | `ed900e06ed5ea84771c22488011d532edc4632fdb24c58a414a5cae320b3c098` |
 | `resultats/c_fuzz.json` | `b7cc01078bb7a5fa767c413d0fa5607d2f7da72df4b35b39845d1914a391c1f8` |
-| `resultats/c_impl.json` | `98385ccd3fd2bf3d08930cebdb382ee44447ac9e55bbcc594ddbcbfd9a5bb8bd` |
-| `resultats/c_kem_bruit.json` | `1274bcc83ba9d75998079df8a4127cb9b5218bb335da26b34d16acbcc1ce1b8a` |
+| `resultats/c_impl.json` | `1d16d3ec6fcc240d827d22bbe3a38cc99272e2c8eb22ac66fd8905319a3928a9` |
+| `resultats/c_kem_bruit.json` | `01cc24274eba61b26d6b464cfc7a87a699be667e54661846760039d3c934b142` |
 | `resultats/c_kem_valgrind.json` | `b9ec1bc5a3fd0c71bf23539ebf54afb120c26a4207456ab7e3718301fa07cb0f` |
 | `resultats/c_limites.json` | `ca964c6bdf37bb47bf93fc11925620f0a455934e5904013a1eea1d1217a630c6` |
 | `resultats/c_sig_valgrind.json` | `0bc530416f6d361f1e523c8f22d70982e4ddaa1c6f2d67f88f9edb43357837b3` |
-| `resultats/c_temps.json` | `f3bcb458af9caef8fed1ef27854de75b20217b29d7c7ea528835683da5f23bb8` |
-| `resultats/c_vole_temps.json` | `120f0fa35ba37e15be3d75dd067da015d33492a788cea7d3559912c072af226d` |
+| `resultats/c_temps.json` | `919c7c23e512d21711f36b5d2b9187822b1873edb3ad182149d7b2ea68ec0874` |
+| `resultats/c_vole_temps.json` | `cd57fe2ea649a6656b0605da4e8d4c183a8641e89b1abea4c38a1f228e40a5f5` |
 | `resultats/c_vole_valgrind.json` | `3b933f5c95f881d81af0b2ecf92840adab33a566c6d69384ceb62e499003ebb3` |
 | `resultats/compression_sig.json` | `feee314a3c2e1aec4d1bfd5adb84f8a737c1de0e224c436a0b93e176e38c6bf8` |
 | `resultats/erreurs_api.json` | `32c31a6b348394f33eab114e9fcde4b6a6dacbb3cc4eb8cee93c8d6068158a72` |
 | `resultats/fonctionnel.json` | `26e250e706d58117dc42046a6e88098905a624106189f7c98c8d3e30d7f5b954` |
 | `resultats/h1p_fourier.json` | `0dec37c4f7dcb819f05149ec119af45fccbbedef48ac9bc748174f4d55e3c7a0` |
 | `resultats/isd_comparaison.json` | `cbf2bd2e5de2cb5385abbe0bb2e1dc3c455f20e90738816e16b6a5f66f104d4e` |
-| `resultats/isd_parametres.json` | `490b9676b82999277dfa7b1a9fb91b6869a133973ee71d2c024bd0c2822719cd` |
+| `resultats/isd_parametres.json` | `c303d6fae5743adb01ce5e26acfe07d6d1fa9f7035c6b0cf1a082a0cdabdf742` |
 | `resultats/isd_reel.json` | `ff79972f5125fd007c12cc27e1155d424384db95478ea00c87fce73a44e7f339` |
-| `resultats/kem.json` | `3f367e7ac09e56f8387cebbc9c9af92e94aed7d7f5d7c1a2c8b73fe2f2a88e6c` |
-| `resultats/kem_distributions.json` | `6810198f28a58ee23ce2faec79b2c6a269bee68954208ab243d298d949523db5` |
-| `resultats/kem_lemme3.json` | `1e9d48d22ae4fa3ec075a9dfd690e2649f73ba69689a7913d95cc14c136f2996` |
-| `resultats/kem_rejet.json` | `a96162e293c92c4ffe8ea1612e4a8b5afa6ea188764c288fbbe1f8567a106649` |
-| `resultats/kem_theta.json` | `41b7d574f1d43c7bcb762e3f2296dc4f0f078dbac3f36f84dc97e6cece744386` |
+| `resultats/kem.json` | `6f8fa6d1f5bae58d189752d8e2c0073582df56026dde835feeaad54cd303afc4` |
+| `resultats/kem_distributions.json` | `8742fedb5f2d904ea720b56ff0cd1b6399e96a24bc6d482a5fb8e755ab69de4c` |
+| `resultats/kem_lemme3.json` | `258c6094965b2f4971b09f4cde88638ccb322d6282b9c376cb589ace5c56eb17` |
+| `resultats/kem_rejet.json` | `9d1fe243afc79cbb4dbfc0f91c8a53f26bada9380ad00ed7dab9b9f23db64e57` |
+| `resultats/kem_theta.json` | `26bac377000e02e3de61d49cf57fc756118e482692d4fcff1df2805d91b0d511` |
 | `resultats/revue_c.json` | `4ba04534bbc9821d8b1184407d492669946877f654f9271b024298a5bf78debf` |
-| `resultats/robustesse.json` | `276d6dcdc2ca58da90fedeb43c8adc0bd51669978cdce6f6b5186c1371f4ea2d` |
-| `resultats/sig.json` | `c63e33c7fb4967f45d2c11e25d683f9c7b4b20be1921c8a4f323de1a8d19d80b` |
+| `resultats/robustesse.json` | `a278c2ab57cae674af6ebd0e42fcbf29b8d1aaae718f90bee2f4f20a13421e07` |
+| `resultats/sig.json` | `31fb13accae55ea1665ea2f617c1b9e0db1666a7fc7a89592da4b89ec8af2416` |
 | `resultats/sig_flux.json` | `455390b89e79417ec2bdf7f75b94de95c062883eaf20f07d6f748f6fd2dfe5bb` |
-| `resultats/sig_hvzk.json` | `51a45e80db33f36b3a48b3dfd0099922bb74f0b56d0c668e647ce9990e17c46f` |
+| `resultats/sig_hvzk.json` | `a846ba8e8591f97076296133107ba4b3d45505902ff3081fa5817c2050eecf0f` |
 | `resultats/sig_kz.json` | `f46ab751ab9461b5690f01042698bd4acc185e6563173e3e880c3072b976b3a8` |
-| `resultats/sig_modele.json` | `2852be4ba29bda9431eb0302d99d50bcd001b1c6b7c6d8277006ddf66ae557cc` |
-| `resultats/temps1024.json` | `5997b12e601a57e1a727a703df9d4d5647f708bba311fcca01a4a68f48efdff3` |
+| `resultats/sig_modele.json` | `37a7f7c296af48dc161a927c7062f9933b3ce8431508c207d319d5389e0feb8f` |
+| `resultats/temps1024.json` | `3c1c4eaf0a557be94fc1b3cc3c3f2b8a78ef336291bfc17fead6a0e720f8c519` |
 | `resultats/vole.json` | `3cd4e052a16612b55e6ef3b8ab167bea16e99e3621944d5ab4a5c08f290ac1e4` |
-| `resultats/vole_kz.json` | `f8e741812573f7b3c0142d9f89384dc865894e6c1055e0e2e96f3954c838e220` |
-| `resultats/vole_proto.json` | `51fbe27752a3a34194f411c6c69dbc7c99c923cc2fc717fc9b1c0c77387cf549` |
+| `resultats/vole_kz.json` | `313609643ad888a6b2c7cdfb3da2c4fc52407a70543c35b3d8359cfb219d5f59` |
+| `resultats/vole_proto.json` | `b9ee9d430a8c385754e97fbd7a36eed0d43aeba3986b6af587579ce911ff821c` |
 
 ## Spécification, preuves et rapports
 
 | Fichier | SHA-256 |
 |---|---|
 | `docs/AUDIT_EXTERNE.md` | `15181ffed3a873c321f66b349144a0030f07e45f021e088b030613a554ca0a31` |
-| `docs/AUDIT_REPORT.md` | `1059cb8b233cd2d7eac0fd8562bb501318f276a5a092f11c932339dc6b6051a7` |
+| `docs/AUDIT_REPORT.md` | `1cee9b5b23dc9dfdaff1e588f15d310f94277b1e38f24c484cd53d31e6676450` |
 | `docs/CAMPAIGN_24H.md` | `e2773b4e8aae053d0a6eea15c59050409f1950e9b0f4031b54c939344caa11d4` |
 | `docs/DESIGN_NOTE.md` | `ade0afa112999029530930f6312ffe3df5cd65f9b6a827357326ff7bf560c29e` |
 | `docs/GPU_CRYPTANALYSIS_PLAN.md` | `58ffa7a0da65ec8186eb16f8278d6a7030a1d6f23f6cee58780977489631db7a` |
 | `docs/LEADS.md` | `e2a6ac832fa1890ea3a39e0e1033c6d910574351324b017582bd3c2baac1ee96` |
-| `docs/MIGRATION_V06.md` | `0ad12311dd9e25d42b5952b6275fd32625d31411c2cb710e4f864eb3385522b9` |
-| `docs/PROOFS.md` | `62048d9a372912d1cc201a372a2cfb8fc582967508acc1bb5cd218ddc0c5a852` |
+| `docs/MIGRATION_V06.md` | `44a0acc6dd6853bca6e9cc1bd379d84c37fc508f757ae732ab6108b01a6491ec` |
+| `docs/PROOFS.md` | `77eb7eed62c49bfd48730636a32291229aa1dfd019d4eb6cdbcc9fffa0d32ab7` |
 | `docs/README.md` | `6a5b5e83b0db75cde1e4d785bfd9b0ae647c51cc73dafdd4b8fdab559af152e9` |
 | `docs/REVUE_CODE_DEPOT_C.md` | `9185183f7c008508342eae0f3ce3b19077c6bbe671645584c766337c88c7e2f1` |
 | `docs/SPEC.md` | `59c31577b98164fd118b300db02aaa7614828d7ac1c0fa12fec695113de06f5a` |
