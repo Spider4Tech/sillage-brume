@@ -30,10 +30,10 @@ def run():
     construire()
     rc, e_mem, sortie, trace = valgrind("memoire", fuites=True, exe=OUT)
     m["memoire"] = {"erreurs": e_mem, "sortie": sortie}
-    c["memoire_sans_erreur_ni_fuite"] = rc == 0 and e_mem == 0 and sortie.count("OK") == 2
+    c["memoire_sans_erreur_ni_fuite"] = rc == 0 and e_mem == 0 and sortie.count("OK") == 1    # un seul niveau (Sillage-256) depuis le 18 novembre 2026
     rc2, e_sec, sortie2, trace2 = valgrind("secret", exe=OUT)
     m["secret"] = {"erreurs": e_sec, "sortie": sortie2}
-    c["aucun_branchement_ni_acces_dependant_d_un_secret"] = rc2 == 0 and e_sec == 0 and sortie2.count("secret retrouvé") == 2
+    c["aucun_branchement_ni_acces_dependant_d_un_secret"] = rc2 == 0 and e_sec == 0 and sortie2.count("secret retrouvé") == 1
     if e_mem or e_sec:
         m["trace"] = trace if e_mem else trace2
     rc3, e_tem, _, _ = valgrind("temoin", exe=OUT)

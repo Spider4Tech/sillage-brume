@@ -17,7 +17,8 @@ blanchit pas la première, car elle retire ses valeurs fixes (voir ./scripts/run
   - kem_aa : mêmes données dans les deux classes, biais du banc ;
   - sig_tour : simulation d'un côté de l'hypercube, part fixe contre aléatoire ;
   - sig_sign : signature complète, clé fixe contre clés aléatoires ;
-  - kem256_decaps, kem256_oracle : Sillage-256 (autre taille de feuille de Karatsuba) ;
+  - les opérations kem_ mesurent Sillage-256, seul niveau depuis le 18 novembre 2026 (les anciennes mesures kem256_,
+    devenues identiques, sont retirées) ;
   - sig_sign sur tous les cœurs : les tours de la signature y sont répartis ;
   - conformité (tests/c/sig_ct.c) : corps, évaluation de Lagrange et H'·x_A masqué
     donnent les mêmes valeurs que les chemins directs ;
@@ -66,8 +67,7 @@ def run():
     for op, n in (("permutation", 400000), ("aead", 400000), ("aead_p", 4000), ("kem_oracle", 20000),
                   ("kem_oracle_fo", 20000), ("kem_encaps", 20000), ("kem_aa", 20000),
                   ("permutation_ref", 200000), ("kem_decaps", 10000), ("sig_tour", 20000),
-                  ("sig_tour_ref", 20000), ("sig_sign", 400), ("kem256_decaps", 3000),
-                  ("kem256_oracle", 3000), ("sig_sign@tous", 800)):
+                  ("sig_tour_ref", 20000), ("sig_sign", 400), ("sig_sign@tous", 800)):
         op, _, th = op.partition("@")                 # @tous : tours répartis sur tous les cœurs
         th = os.cpu_count() if th else 1
         cle = op + "_tous_les_coeurs" if th > 1 else op
@@ -86,8 +86,6 @@ def run():
     c["kem_banc_sans_biais"] = abs(m["kem_aa"]["t_welch"]) < SEUIL
     c["sig_signataire_sans_fuite_detectee"] = abs(m["sig_tour"]["t_welch"]) < SEUIL
     c["sig_signature_independante_de_la_cle_secrete"] = abs(m["sig_sign"]["t_welch"]) < SEUIL
-    c["kem256_decaps_independante_de_la_cle_secrete"] = abs(m["kem256_decaps"]["t_welch"]) < SEUIL
-    c["kem256_pas_d_oracle_d_echec_de_decodage"] = abs(m["kem256_oracle"]["t_welch"]) < SEUIL
     c["sig_signature_tous_les_coeurs_independante_de_la_cle"] = abs(m["sig_sign_tous_les_coeurs"]["t_welch"]) < SEUIL
     ok, m["sig_conformite"] = conformite_sig()
     c["sig_chemins_constant_time_conformes"] = ok

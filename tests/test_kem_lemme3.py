@@ -142,9 +142,10 @@ def niveau(lvl: str, essais: int, blocs_lourds: int):
     return c, m
 
 
-def run(e128=24, e256=6, lourds=40):
+def run(e256=12, lourds=20):
     c, m = {}, {}
-    for lvl, e, b in (("Sillage-128", e128, lourds), ("Sillage-256", e256, lourds // 4)):
+    # Sillage-256 seul depuis le 18 novembre 2026 ; essais doublés pour garder la couverture des contrôles de Sillage-128
+    for lvl, e, b in (("Sillage-256", e256, lourds),):
         cc, mm = niveau(lvl, e, b)
         c.update({f"{lvl}_{k}": v for k, v in cc.items()})
         m[lvl] = mm

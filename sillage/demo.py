@@ -40,7 +40,7 @@ def main():
 
     # ------------------------------------------------------------------
     step("1. Établissement de clé — Sillage-KEM (Alice ⇄ Bob)")
-    kem = SillageKEM("Sillage-128")
+    kem = SillageKEM("Sillage-256")
     t0 = time.perf_counter()
     pk_alice, sk_alice = kem.keygen()
     t_kg = time.perf_counter() - t0

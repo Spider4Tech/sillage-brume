@@ -307,8 +307,7 @@ static int degre_reel(int w, int b, int cod, int Dmax)
 int main(void)
 {
     resultat_t r = {.nom = "rsd_attaques"};
-    static const inst_t I[5] = {
-        {"VOLE-128", 19456, 720, 76, 160},
+    static const inst_t I[4] = {   /* VOLE-128 retiré le 18 novembre 2026 */
         {"VOLE-256", 38912, 1432, 152, 316},
         {"SDitH2-L1", 10360, 432, 56, 143},
         {"SDitH2-L3", 18396, 592, 73, 207},
@@ -356,7 +355,7 @@ int main(void)
     static char json[6000];
     size_t lj = (size_t)snprintf(json, sizeof json, "[");
     int garde = 1;
-    for (int q = 0; q < 5; q++) {
+    for (int q = 0; q < 4; q++) {
         const inst_t *x = &I[q];
         double B = (double)x->n / x->w, o[6];
         int dp = 0, dl = 0, bp = 0, be = 0, bl = 0, ab = 0, ad = 0;

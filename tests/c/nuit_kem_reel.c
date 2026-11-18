@@ -286,7 +286,7 @@ static void campagne(int niv, double budget, stats_t *st)
 static void ecrire(resultat_t *res, int niv, const stats_t *st, double duree)
 {
     const params_t *p = &P[niv];
-    const char *lv = niv ? "Sillage-256" : "Sillage-128";
+    const char *lv = "Sillage-256";
     char nom[96];
     int mx = 0;
     for (int i = 0; i < 1024; i++) if (st->hist_max[i]) mx = i;
@@ -341,14 +341,9 @@ int main(int argc, char **argv)
     double budget = argc > 1 ? atof(argv[1]) : 120;
     resultat_t res = {.nom = "nuit_kem_reel", .titre = "Sillage-KEM réel à grande échelle (nuit)"};
     sl_init();
-    static stats_t s128, s256;
+    static stats_t s256;                              /* Sillage-256, seul niveau depuis le 18 novembre 2026 */
     double t = maintenant();
-    campagne(0, 0.7 * budget, &s128);
-    double d128 = maintenant() - t;
-    { resultat_t cp = res; ecrire(&cp, 0, &s128, d128); res_ecrire(&cp); }
-    t = maintenant();
-    campagne(1, 0.3 * budget, &s256);
-    ecrire(&res, 0, &s128, d128);
+    campagne(1, budget, &s256);
     ecrire(&res, 1, &s256, maintenant() - t);
     return res_ecrire(&res);
 }

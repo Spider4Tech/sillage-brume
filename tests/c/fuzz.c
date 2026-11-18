@@ -165,45 +165,47 @@ int main(int argc, char **argv)
     /* KEM et SIG : entrées malformées (sans plantage, rejet ou secret de rejet) */
     long ok_kem = 0, ok_sig = 0, ok_ext = 0, n_ext = 0;
     for (int rs = 0; rs < rep_ks; rs++)
-    for (int niv = 0; niv < 2; niv++) {
-        size_t lpk, lsk, lct, lss;
-        sl_kem_tailles(niv, &lpk, &lsk, &lct, &lss);
-        uint8_t *pk = malloc(lpk), *sk = malloc(lsk), *ct = malloc(lct), ss[64], ss2[64];
-        sl_kem_keygen(niv, pk, sk);
-        for (int r = 0; r < 6; r++) {
-            sl_kem_encaps(niv, pk, ct, ss);
-            sl_kem_decaps(niv, sk, ct, ss2);
-            int bon = !memcmp(ss, ss2, lss);
-            if (r % 2) {                                   /* chiffré altéré ou aléatoire */
-                if (r == 5) remplir(ct, lct); else ct[alea() % lct] ^= 1;
+    for (int niv = 0; niv < 2; niv++) {   /* SIG v0.4 : niveaux 0 et 1 ; KEM : niveau 1 seulement (Sillage-256) */
+        if (niv == 1) {                                    /* Sillage-128 (niveau 0) retiré le 18 novembre 2026 */
+            size_t lpk, lsk, lct, lss;
+            sl_kem_tailles(niv, &lpk, &lsk, &lct, &lss);
+            uint8_t *pk = malloc(lpk), *sk = malloc(lsk), *ct = malloc(lct), ss[64], ss2[64];
+            sl_kem_keygen(niv, pk, sk);
+            for (int r = 0; r < 6; r++) {
+                sl_kem_encaps(niv, pk, ct, ss);
                 sl_kem_decaps(niv, sk, ct, ss2);
-                bon = memcmp(ss, ss2, lss) != 0;
+                int bon = !memcmp(ss, ss2, lss);
+                if (r % 2) {                                   /* chiffré altéré ou aléatoire */
+                    if (r == 5) remplir(ct, lct); else ct[alea() % lct] ^= 1;
+                    sl_kem_decaps(niv, sk, ct, ss2);
+                    bon = memcmp(ss, ss2, lss) != 0;
+                }
+                ok_kem += bon;
             }
-            ok_kem += bon;
+            /* chiffrés extrêmes : jamais le secret honnête */
+            sl_kem_encaps(niv, pk, ct, ss);
+            for (int e = 0; e < 4; e++) {
+                uint8_t *x = malloc(lct);
+                if (e == 0) memset(x, 0, lct);
+                else if (e == 1) memset(x, 0xFF, lct);
+                else { memcpy(x, ct, lct); memset(e == 2 ? x : x + lct / 2, 0, lct / 2); }   /* u ou v nul */
+                sl_kem_decaps(niv, sk, x, ss2);
+                ok_ext += memcmp(ss, ss2, lss) != 0;
+                n_ext++;
+                free(x);
+            }
+            /* clé publique extrême : ne doit ni planter ni lire hors limites */
+            {
+                uint8_t *x = malloc(lpk);
+                memset(x, 0xFF, lpk);
+                sl_kem_encaps(niv, x, ct, ss);
+                memset(x, 0, lpk);
+                sl_kem_encaps(niv, x, ct, ss);
+                ok_ext++; n_ext++;
+                free(x);
+            }
+            free(pk); free(sk); free(ct);
         }
-        /* chiffrés extrêmes : jamais le secret honnête */
-        sl_kem_encaps(niv, pk, ct, ss);
-        for (int e = 0; e < 4; e++) {
-            uint8_t *x = malloc(lct);
-            if (e == 0) memset(x, 0, lct);
-            else if (e == 1) memset(x, 0xFF, lct);
-            else { memcpy(x, ct, lct); memset(e == 2 ? x : x + lct / 2, 0, lct / 2); }   /* u ou v nul */
-            sl_kem_decaps(niv, sk, x, ss2);
-            ok_ext += memcmp(ss, ss2, lss) != 0;
-            n_ext++;
-            free(x);
-        }
-        /* clé publique extrême : ne doit ni planter ni lire hors limites */
-        {
-            uint8_t *x = malloc(lpk);
-            memset(x, 0xFF, lpk);
-            sl_kem_encaps(niv, x, ct, ss);
-            memset(x, 0, lpk);
-            sl_kem_encaps(niv, x, ct, ss);
-            ok_ext++; n_ext++;
-            free(x);
-        }
-        free(pk); free(sk); free(ct);
         size_t spk, ssk, smax, sl = 0;
         sl_sig_tailles(niv, &spk, &ssk, &smax);
         uint8_t *qk = malloc(spk), *qs = malloc(ssk), *sig = malloc(smax), msg[48];
@@ -241,5 +243,5 @@ int main(int argc, char **argv)
            "\"hachage_arbre\": %ld, \"extremes\": %ld}\n",
            it, ok_aead, ok_rej, ok_te, ok_ctx, ok_hash, ok_multi, ok_kem, ok_sig, ok_arbre, ok_ext);
     return !(ok_aead == it && ok_rej == it && ok_te == 2 * it && ok_ctx == it && ok_hash == it &&
-             ok_multi == 4 && ok_p == 2 * it && ok_kem == 12 * rep_ks && ok_sig == 14 * rep_ks && ok_arbre == n_arbre && ok_ext == n_ext);
+             ok_multi == 4 && ok_p == 2 * it && ok_kem == 6 * rep_ks   /* un seul niveau : 6 allers-retours par répétition */ && ok_sig == 14 * rep_ks && ok_arbre == n_arbre && ok_ext == n_ext);
 }

@@ -6,7 +6,7 @@
  * classe fixe utilise autant de copies en mémoire que la classe aléatoire
  * (même empreinte de cache). Test t de Welch après rognage au 90e centile.
  * |t| > 4,5 : fuite probable (seuil de dudect).
- * KEM (préfixe kem256_ : niveau Sillage-256). Répéter un même chiffré est un
+ * KEM : niveau Sillage-256, seul niveau depuis le 18 novembre 2026 (le préfixe kem256_ reste accepté, même mesure). Répéter un même chiffré est un
  * peu plus rapide que varier les chiffrés (≈ 170 cycles sur 2,5 M, campagne du
  * 2026-10-30) ; le chiffré étant public, ce n'est pas une fuite, mais il ne
  * doit pas être confondu avec un secret. Les plans suivants le neutralisent :
@@ -145,8 +145,9 @@ int main(int argc, char **argv)
 {
     const char *op = argc > 1 ? argv[1] : "permutation";
     long n = argc > 2 ? atol(argv[2]) : 200000;
-    int niv = !strncmp(op, "kem256_", 7), kem = niv || !strncmp(op, "kem_", 4);
-    const char *kop = kem ? op + (niv ? 7 : 4) : "";
+    /* un seul niveau depuis le 18 novembre 2026 : kem_ et kem256_ mesurent tous deux Sillage-256 (niveau 1) */
+    int k256 = !strncmp(op, "kem256_", 7), kem = k256 || !strncmp(op, "kem_", 4), niv = 1;
+    const char *kop = kem ? op + (k256 ? 7 : 4) : "";
     int encaps = !strcmp(kop, "encaps"), temoin = !strcmp(kop, "temoin");
     int sig = !strncmp(op, "sig_", 4), sigsign = !strcmp(op, "sig_sign"), sigref = !strcmp(op, "sig_tour_ref");
     int aead_sym = !strcmp(op, "aead_sym"), aa_fixe = !strcmp(op, "aead_aa_fixe"), aa_alea = !strcmp(op, "aead_aa_alea");

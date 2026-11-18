@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Sillage-SIG v0.5 (sillage/c/vole.c) sous Valgrind, par le banc prototypes/vole/vole_proto.c (même source) :
-1. ctgrind : positions secrètes marquées non initialisées, keygen et signature complets des profils VOLE-128 et VOLE-256
+1. ctgrind : positions secrètes marquées non initialisées, keygen et signature complets du profil VOLE-256 (VOLE-128 retiré le 18 novembre 2026)
    (contraintes de paires comprises) : aucun branchement ni accès mémoire dépendant d'un secret ; témoin (branchement sur
    une position) détecté.
 2. memcheck : injection d'échecs (chaque allocation et chaque tirage de l'API, tour à tour) et fuzz du vérifieur sur le
@@ -45,7 +45,7 @@ def run():
         sauver("c_vole_valgrind", out)
         return out
     ct, mem = construire(True), construire(False)
-    for nom, args in (("ct_128", ["--ct", "128"]), ("ct_256", ["--ct", "256"])):
+    for nom, args in (("ct_256", ["--ct", "256"]),):
         rc, e, so, tr = valgrind(ct, args)
         m[nom] = {"erreurs": e, "sortie": so.strip()}
         c[f"{nom}_aucun_branchement_ni_acces_dependant_d_un_secret"] = rc == 0 and e == 0 and "acceptée" in so

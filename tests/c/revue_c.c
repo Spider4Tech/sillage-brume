@@ -29,16 +29,17 @@ int main(void)
 
     /* C-15 et C-14 */
     size_t lpk, lsk, lct, lss;
-    sl_kem_tailles(0, &lpk, &lsk, &lct, &lss);
-    uint8_t *pk = malloc(lpk), *sk = malloc(lsk), *c = malloc(lct), ss[64], mu[16] = {3};
+    sl_kem_tailles(1, &lpk, &lsk, &lct, &lss);        /* niveau 1 = Sillage-256, seul niveau */
+    uint8_t *pk = malloc(lpk), *sk = malloc(lsk), *c = malloc(lct), ss[64], mu[32] = {3};
     size_t nb = (lsk - 64) / 3;
-    int ok = !sl_kem_keygen(0, pk, sk);
-    res_controle(&res, "kem_pk_canonique_acceptee", ok && sl_kem_encaps_det(0, pk, mu, c, ss) == 0);
-    pk[lpk - 1] |= 0x80;                             /* n = 50 021 : 5 bits utiles dans le dernier octet */
-    res_controle(&res, "kem_pk_non_canonique_refusee", sl_kem_encaps_det(0, pk, mu, c, ss) == -3);
-    res_controle(&res, "kem_borne_cle_acceptee", sl_kem_borne(0, sk, sk + nb) <= -128);
+    int ok = !sl_kem_keygen(1, pk, sk);
+    res_controle(&res, "kem_pk_canonique_acceptee", ok && sl_kem_encaps_det(1, pk, mu, c, ss) == 0);
+    pk[lpk - 1] |= 0x80;                             /* n = 170 003 : 3 bits utiles dans le dernier octet */
+    res_controle(&res, "kem_pk_non_canonique_refusee", sl_kem_encaps_det(1, pk, mu, c, ss) == -3);
+    res_controle(&res, "kem_borne_cle_acceptee", sl_kem_borne(1, sk, sk + nb) <= -256);
     memset(sk, 0xFF, nb);
-    res_controle(&res, "kem_borne_hors_domaine_nulle", sl_kem_borne(0, sk, sk + nb) == 0);
+    res_controle(&res, "kem_borne_hors_domaine_nulle", sl_kem_borne(1, sk, sk + nb) == 0);
+    res_controle(&res, "kem_niveau_0_retire_refuse", sl_kem_keygen(0, pk, sk) == -3 && sl_kem_borne(0, sk, sk + nb) == 0);
     free(pk); free(sk); free(c);
     return res_ecrire(&res);
 }

@@ -26,7 +26,7 @@ def artin(n):
 
 def run():
     c, m = {}, {}
-    for lvl, essais in (("Sillage-128", 80), ("Sillage-256", 12)):
+    for lvl, essais in (("Sillage-256", 24),):   # Sillage-128 retiré le 18 novembre 2026
         kem = SillageKEM(lvl)
         p = kem.p
         n, n2, k, D = p["n"], p["n2"], p["k"], p["D"]
@@ -107,10 +107,10 @@ def run():
         m[f"{lvl}_securite"] = est
         c[f"{lvl}_securite_ge_lambda"] = est["classique_bits"] >= p["lam"]
         # v0.4 : le changement de code n'abaisse aucun niveau de la v0.3
-        avant = {"Sillage-128": (137.3, 91.1), "Sillage-256": (264.9, 158.0)}[lvl]
+        avant = {"Sillage-256": (264.9, 158.0)}[lvl]
         c[f"{lvl}_niveaux_v03_conserves"] = est["classique_bits"] >= avant[0] and est["quantique_bits"] >= avant[1]
     try:
-        SillageKEM("Sillage-128", h_mode="tensor")
+        SillageKEM("Sillage-256", h_mode="tensor")
         c["mode_tensor_refuse"] = False
     except ValueError:
         c["mode_tensor_refuse"] = True

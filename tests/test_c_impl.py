@@ -109,7 +109,7 @@ def _brume(c, m):
 
 
 def _kem(c, m):
-    for lvl in ("Sillage-128", "Sillage-256"):
+    for lvl in ("Sillage-256",):          # Sillage-128 retiré le 18 novembre 2026
         kem = SillageKEM(lvl)
         p = kem.p
         n, n2 = p["n"], p["n2"]

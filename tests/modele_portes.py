@@ -113,11 +113,18 @@ def prange_grover(n, k, w, cibles_log2=0.0):
 
 # --- VOLE (sillage/c/vole.c) -----------------------------------------------------------------------------------------------
 def profils_vole():
+    """Profils de la bibliothèque : ceux de la table VOLE_PROFILS de vole.c (les profils gardés pour le prototype seul,
+    VOLE-128 et VOLE-128f depuis le 18 novembre 2026, sont ignorés)."""
     src = open(os.path.join(RACINE, "sillage", "c", "vole.c"), encoding="utf-8").read()
+    table = re.search(r"VOLE_PROFILS\[\d+\] = \{([^}]*)\}", src).group(1)
+    actifs = set(re.findall(r"&(\w+)", table))
     res = {}
     for m in re.finditer(r'static const vp_t \w+ = \{"([^"]+)", (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), \{([\d, ]+)\}, '
                          r'(\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+)\};', src):
         nom = m.group(1)
+        var = re.search(r"static const vp_t (\w+) = \{\"%s\"" % re.escape(nom), src).group(1)
+        if var not in actifs:
+            continue
         lam, n, cod, w, bloc, d = (int(m.group(i)) for i in range(2, 8))
         mu = [int(x) for x in m.group(8).split(",")]
         tau, kap, wpow, topen, B = (int(m.group(i)) for i in range(9, 14))

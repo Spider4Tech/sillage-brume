@@ -9,6 +9,11 @@ are cited (`tests/…`). Every numerical instantiation in this text (Corollaries
 tables of § 2.4, § 5 and § 5 bis) is recomputed from the constants of the code by
 `tests/test_bornes_preuves.py`: if the code or the text changes without the other, the check fails.
 
+**Removed profiles (18 November 2026).** Sillage-128 (KEM) and VOLE-128 / VOLE-128f (signature) were removed from the
+library: in the gate model they reach no NIST category (`NIST_CATEGORIES.md`). Where they still appear below, as columns
+of tables or worked instances, the text is the record of their analysis; the statements are parametric and are unchanged
+for the remaining profiles (Sillage-256, VOLE-256, VOLE-256f).
+
 Notation: `λ` security parameter; `negl` negligible; `wt` Hamming weight;
 `R = F2[z]/(z^n − 1)`; `S_w^n` the set of vectors of weight w.
 

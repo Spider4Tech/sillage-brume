@@ -67,7 +67,7 @@ def run():
         ct, tag = bp.encrypt(bytes(24), msg)
         ok &= bp.decrypt(bytes(24), ct, tag) == msg
     c["aead_parallele_aller_retour"] = ok
-    for lvl, n_ in (("Sillage-128", 40), ("Sillage-256", 6)):
+    for lvl, n_ in (("Sillage-256", 10),):   # Sillage-128 retiré le 18 novembre 2026
         kem = SillageKEM(lvl)
         pk, sk = kem.keygen()
         oks = [kem.decaps(sk, ct) == ss for ct, ss in (kem.encaps(pk) for _ in range(n_))]

@@ -53,11 +53,9 @@ from .sillage_common import (
 # v0.4 : le code à répétition [k·d, k, d] (taux 1/531) devient RM(1,7) dupliqué
 # (taux 1/96 et 1/176) : mêmes w, même preuve, chiffré ÷ 1,8 (PROOFS § 2.3).
 
+# Sillage-128 (n = 50 021, w = 75) est retiré le 18 novembre 2026 : l'ISD classique (2^138,2) le laisse 4,8 bits sous la
+# catégorie NIST 1 (2^143 portes, docs/NIST_CATEGORIES.md). Sillage-256 est le seul niveau.
 PARAMS = {
-    "Sillage-128": dict(
-        n=50021, k=128, D=14, w=75, we=25, lam=128, ss_len=32, theta=0.7,
-        n2=16 * 128 * 14,
-    ),
     "Sillage-256": dict(
         n=170003, k=256, D=28, w=140, we=64, lam=256, ss_len=64, theta=0.7,
         n2=32 * 128 * 28,
@@ -229,7 +227,7 @@ def rm_decode(nv: int, p: dict):
 class SillageKEM:
     """KEM SILLAGE (une instance par jeu de paramètres)."""
 
-    def __init__(self, level: str = "Sillage-128", h_mode: str = "uniform",
+    def __init__(self, level: str = "Sillage-256", h_mode: str = "uniform",
                  cascade: bool = True):
         if level not in PARAMS:
             raise ValueError(f"niveau inconnu : {level}")

@@ -4,9 +4,9 @@
 Contrôles d'intégrité du modèle, pas des objectifs de niveau (les catégories obtenues sont des mesures) :
 1. le circuit de la S-box lu dans brume1024_portable.h a 17 portes (10 non linéaires, 7 XOR) ;
 2. le Keccak quantique du modèle compte moins de portes T qu'Amy et al. (SAC 2016) par itération : il favorise l'attaquant ;
-3. les quatre profils VOLE sont lus dans sillage/c/vole.c, avec m = cod + 12·w (μ = (4, 4, 4, 4)) ;
+3. les profils VOLE de la bibliothèque (table VOLE_PROFILS de sillage/c/vole.c) sont lus, avec m = cod + 12·w ;
 4. la formule de Grover sous MAXDEPTH redonne le seuil NIST 2^170/MAXDEPTH d'AES-128 pour un oracle de g·d = 2^42 ;
-5. des seuils plus bas (JNRV 2020) ne baissent jamais une catégorie ; un profil 256 n'est jamais sous son profil 128."""
+5. des seuils plus bas (JNRV 2020) ne baissent jamais une catégorie ; aucun profil 128 (retirés) n'est évalué."""
 from tests.commun import sauver
 from tests import modele_portes as M
 
@@ -22,7 +22,7 @@ def run():
     m["keccak_t"] = dict(modele=round(t_modele, 2), amy_et_al=round(M.AMY_T_PAR_ITERATION, 2))
 
     pv = M.profils_vole()
-    c["profils_vole_lus"] = sorted(pv) == ["VOLE-128", "VOLE-128f", "VOLE-256", "VOLE-256f"] and all(
+    c["profils_vole_de_la_bibliotheque_lus"] = sorted(pv) == ["VOLE-256", "VOLE-256f"] and all(
         p["m"] == p["cod"] + 12 * p["w"] and p["lam"] in (128, 256) for p in pv.values())
 
     # AES-128 : N = 2^128, oracle g·d = 2^42 (g = 2^25, d = 2^17), régime parallèle pour MD = 2^40 et 2^64
@@ -33,9 +33,8 @@ def run():
     ok_jnrv = all(isinstance(v["categorie"], dict) and v["categorie"]["JNRV 2020"] >= v["categorie"]["NIST 2016"]
                   for v in comp.values())
     c["seuils_jnrv_ne_baissent_aucune_categorie"] = ok_jnrv
-    paires = [("Sillage-128", "Sillage-256"), ("VOLE-128", "VOLE-256"), ("VOLE-128f", "VOLE-256f")]
-    c["profil_256_jamais_sous_le_profil_128"] = all(
-        comp[b]["categorie"][s] >= comp[a]["categorie"][s] for a, b in paires for s in M.QUANTIQUE)
+    # les profils 128 sont retirés de la suite (18 novembre 2026) : ni dans le KEM ni dans la table VOLE de la bibliothèque
+    c["profils_128_absents"] = not ({"Sillage-128", "VOLE-128", "VOLE-128f"} & set(comp))
     m["elements"] = out_m["elements"]
     m["categories"] = {nom: v["categorie"] for nom, v in comp.items()}
     m["bits_manquants"] = {nom: v["bits_manquants"] for nom, v in comp.items()}

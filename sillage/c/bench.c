@@ -171,7 +171,7 @@ int main(int argc, char **argv)
     /* KEM */
     omp_set_num_threads(1);
     printf(" \"kem\": {");
-    for (int niv = 0; niv < 2; niv++) {
+    for (int niv = 1; niv < 2; niv++) {   /* niveau 1 = Sillage-256 (Sillage-128 retiré le 18 novembre 2026) */
         size_t lpk, lsk, lct, lss;
         sl_kem_tailles(niv, &lpk, &lsk, &lct, &lss);
         uint8_t *pk = malloc(lpk), *sk = malloc(lsk), *ct = malloc(lct);
@@ -185,8 +185,8 @@ int main(int argc, char **argv)
         /* clé publique changeante (un serveur qui répond à plusieurs clients) : h et π à recalculer */
         MESURE(tf, sl_kem_encaps(niv, (bascule ^= 1) ? pk2 : pk, ct, ss));
         printf("%s\n  \"%s\": {\"keygen_ms\": %.4f, \"encaps_ms\": %.4f, \"decaps_ms\": %.4f, "
-               "\"encaps_pk_changeante_ms\": %.4f, \"pk\": %zu, \"ct\": %zu, \"ok\": %s}", niv ? "," : "",
-               niv ? "Sillage-256" : "Sillage-128", 1e3 * tk, 1e3 * te, 1e3 * td, 1e3 * tf, lpk, lct, ok ? "true" : "false");
+               "\"encaps_pk_changeante_ms\": %.4f, \"pk\": %zu, \"ct\": %zu, \"ok\": %s}", "",
+               "Sillage-256", 1e3 * tk, 1e3 * te, 1e3 * td, 1e3 * tf, lpk, lct, ok ? "true" : "false");
         free(pk); free(sk); free(ct); free(pk2); free(sk2);
     }
     printf("\n },\n");
@@ -217,9 +217,9 @@ int main(int argc, char **argv)
 
     /* tailles × natures */
     size_t lpk, lsk, lct, lss;
-    sl_kem_tailles(0, &lpk, &lsk, &lct, &lss);
+    sl_kem_tailles(1, &lpk, &lsk, &lct, &lss);
     uint8_t *pk = malloc(lpk), *sk = malloc(lsk), *ckem = malloc(lct);
-    sl_kem_keygen(0, pk, sk);
+    sl_kem_keygen(1, pk, sk);
     printf(" \"tailles\": [");
     int prem = 1;
     for (int nat = 0; nat < 4; nat++)
@@ -234,12 +234,12 @@ int main(int argc, char **argv)
             /* hybride : encapsulation + dérivation de clé + AEAD (comme bench_tailles.py) */
             uint8_t k64[64];
             const uint8_t *parts[1] = {ss};
-            size_t lens[1] = {32};
-            MESURE(th, sl_kem_encaps(0, pk, ckem, ss));
+            size_t lens[1] = {lss};
+            MESURE(th, sl_kem_encaps(1, pk, ckem, ss));
             sl_shake_dom("SILLAGE|brume-key", NULL, 0, parts, lens, 1, k64, 64);
             MESURE(ta, sl_aead_encrypt(0, k64, nonce, (const uint8_t *)"hdr", 3, m, n, c, tag));
-            MESURE(tkd, sl_kem_decaps(0, sk, ckem, ss2));
-            ok &= !memcmp(ss, ss2, 32);
+            MESURE(tkd, sl_kem_decaps(1, sk, ckem, ss2));
+            ok &= !memcmp(ss, ss2, lss);
             MESURE(tad, ok &= sl_aead_decrypt(0, k64, nonce, (const uint8_t *)"hdr", 3, c, n, tag, p) == 0);
             ok &= !memcmp(m, p, n);
             MESURE(tte, sl_te_encrypt(0, cle, nonce, NULL, 0, m, n, c, par, tag, meta));

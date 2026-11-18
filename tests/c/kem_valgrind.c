@@ -77,13 +77,13 @@ static void temoin(void)
     printf("%d\n", (int)(v[1] & 1));
     /* le marquage atteint bien la clé : un branchement sur sk doit être signalé */
     size_t lpk, lsk, lct, lss;
-    sl_kem_tailles(0, &lpk, &lsk, &lct, &lss);
+    sl_kem_tailles(1, &lpk, &lsk, &lct, &lss);
     uint8_t *pk = malloc(lpk), *sk = malloc(lsk);
     phase = 1; appels = 0;
-    sl_kem_keygen(0, pk, sk);
+    sl_kem_keygen(1, pk, sk);
     phase = 0;
     int bits = 0;
-    for (size_t i = 0; i < NB(P[0].n); i++)
+    for (size_t i = 0; i < NB(P[1].n); i++)
         if (sk[i])
             bits++;
     printf("%d\n", bits);
@@ -97,7 +97,7 @@ int main(int argc, char **argv)
         temoin();
         return 0;
     }
-    for (int niv = 0; niv < 2; niv++) {
+    for (int niv = 1; niv < 2; niv++) {   /* niveau 1 = Sillage-256, seul niveau */
         if (!strcmp(m, "secret"))
             secret_(niv);
         else

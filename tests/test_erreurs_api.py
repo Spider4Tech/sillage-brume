@@ -53,14 +53,15 @@ def refus(c):
         ok &= leve(ValueError, br.encrypt, bytes(23), b"m") and leve(ValueError, br.decrypt, bytes(25), b"m", bytes(32))
     c["nonce_de_mauvaise_taille_refuse_partout"] = ok
     c["kem_niveau_ou_mode_inconnu_refuse"] = (leve(ValueError, K.SillageKEM, "Sillage-64")
-                                              and leve(ValueError, K.SillageKEM, "Sillage-128", h_mode="autre"))
+                                              and leve(ValueError, K.SillageKEM, "Sillage-128")   # retiré le 18 nov. 2026
+                                              and leve(ValueError, K.SillageKEM, "Sillage-256", h_mode="autre"))
     c["sig_niveau_inconnu_refuse"] = leve(ValueError, S.SillageSIG, "Sillage-SIG-64")
     c["poids_superieur_a_la_longueur_refuse"] = leve(ValueError, SC.sparse_from_seed, bytes(32), 11, 10)
     c["binomial_hors_domaine_moins_infini"] = SC._lb(10, 11) == SC._lb(10, -1) == float("-inf")
-    t = C.kem_tailles("Sillage-128")
-    c["tampons_c_de_mauvaise_taille_refuses"] = (leve(ValueError, C.kem_encaps, "Sillage-128", bytes(t["pk"] - 1))
-                                                 and leve(ValueError, C.kem_decaps, "Sillage-128", bytes(t["sk"]), bytes(t["ct"] + 1))
-                                                 and leve(ValueError, C.kem_borne, "Sillage-128", bytes(3), bytes(3)))
+    t = C.kem_tailles("Sillage-256")
+    c["tampons_c_de_mauvaise_taille_refuses"] = (leve(ValueError, C.kem_encaps, "Sillage-256", bytes(t["pk"] - 1))
+                                                 and leve(ValueError, C.kem_decaps, "Sillage-256", bytes(t["sk"]), bytes(t["ct"] + 1))
+                                                 and leve(ValueError, C.kem_borne, "Sillage-256", bytes(3), bytes(3)))
     sig = R.SillageSIG("Sillage-SIG-128")
     pk, sk = sig.keygen()
     s = sig.sign(sk, pk, b"m")
@@ -114,7 +115,7 @@ def repli(c, m):
         finally:
             del os.environ["SILLAGE_C_OBLIGATOIRE"]
         R._dispo = False
-        kem = R.SillageKEM("Sillage-128")
+        kem = R.SillageKEM("Sillage-256")
         pk, sk = kem.keygen()
         ct, ss = kem.encaps(pk)
         kem_ref_ok = kem.decaps(sk, ct) == ss
@@ -128,7 +129,7 @@ def repli(c, m):
         est_ref = SC.isd_estimate(2048, 1434, 103)
         c_absent = SC._c_isd() is None
     # interopérabilité avec le C, une fois le C revenu
-    kc = R.SillageKEM("Sillage-128")
+    kc = R.SillageKEM("Sillage-256")
     c["repli_kem_aller_retour_et_lu_par_le_c"] = kem_ref_ok and kc.decaps(sk, ct) == ss
     sc_ = R.SillageSIG("Sillage-SIG-128")
     c["repli_sig_aller_retour_et_lu_par_le_c"] = sig_ref_ok and sc_.verify(spk, b"m", sg)
@@ -155,7 +156,7 @@ def codes_c(c):
     ok = True
     try:
         for nom, appel in (("sl_aead_p_decrypt", lambda: C.aead_p_decrypt("BRUME-1024qp", bytes(64), bytes(24), b"x", bytes(32))),
-                           ("sl_kem_keygen", lambda: C.kem_keygen("Sillage-128")),
+                           ("sl_kem_keygen", lambda: C.kem_keygen("Sillage-256")),
                            ("sl_sig_keygen", lambda: C.sig_keygen("Sillage-SIG-128"))):
             C._lib = _Proxy(C.lib(), nom, -3)
             ok &= leve(OSError, appel)

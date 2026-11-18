@@ -45,9 +45,9 @@ because they lead to different conclusions for the signature.
 
 | Component | Classical | Limiting quantum attack | Category, NIST 2016 | Category, JNRV 2020 | Missing for 5 (NIST 2016) |
 |---|---|---|---|---|---|
-| Sillage-KEM-128 | 2^138.2 (ISD) | none: quantum ISD is dearer than classical ISD at MAXDEPTH 2^40 and 2^64 | **none** (4.8 bits short of 1, classically) | **none** | 133.8 |
-| Sillage-KEM-256 | 2^265.1 (ISD) | same | **3** | **3** | 6.9 (classical) |
-| VOLE-128 / 128f | 2^145.6 | Grover on the final challenge Δ: 2^119.8 at MAXDEPTH 2^40 | **none** (10.2 bits short of 1) | **1** | — |
+| Sillage-KEM-128 (removed) | 2^138.2 (ISD) | none: quantum ISD is dearer than classical ISD at MAXDEPTH 2^40 and 2^64 | **none** (4.8 bits short of 1, classically) | **none** | 133.8 |
+| Sillage-KEM-256 | 2^265.1 (ISD) | none, for the same reason | **3** | **3** | 6.9 (classical) |
+| VOLE-128 / 128f (removed) | 2^145.6 | Grover on the final challenge Δ: 2^119.8 at MAXDEPTH 2^40 | **none** (10.2 bits short of 1) | **1** | — |
 | VOLE-256 / 256f | 2^273.6 | Grover on Δ: 2^247.8 at MAXDEPTH 2^40 | **3** | **5** (2.8-bit margin) | 10.2 |
 | AEAD BRUME-1024q, known attacks (model Q1, σ ≤ 2^64) | 2^336.8 | Grover on the inner part of a state, σ targets: 2^313.4 | **5** | **5** | 0 |
 | AEAD BRUME-1024q, what the Q1 proof guarantees | 2^336.8 | proved bound: 2^157.5 queries to P, so ≥ 2^179.1 gates | **1** | **1** (1.9 bits short of 3) | 78.9 |
@@ -73,14 +73,18 @@ Details for every attack and every MAXDEPTH: `python3 -m tests.modele_portes`, o
   (BHT, CNS) are not counted as cheaper than the classical one, as NIST does for SHA-384 (memory has a cost: Jaques–Schanck
   2019). With free quantum memory, the preimage drops to category 1.
 
-**The suite as a whole** takes the weakest component of each profile:
+**The suite as a whole** takes its weakest component:
 
-| Profile | NIST 2016 | JNRV 2020 | Limited by |
+| Suite | NIST 2016 | JNRV 2020 | Limited by |
 |---|---|---|---|
-| 128 (KEM-128, VOLE-128, BRUME-1024q) | **none** | **none** | classical ISD of the KEM; Δ challenge of VOLE-128 |
-| 256 (KEM-256, VOLE-256, BRUME-1024q) | **3** | **3** | KEM-256 (classical) and hash preimages; VOLE-256 too, with the 2016 thresholds |
+| KEM-256, VOLE-256, BRUME-1024q | **3** | **3** | KEM-256 (classical) and hash preimages; VOLE-256 too, with the 2016 thresholds |
 
-## 4. What category 5 would take (profile 256)
+**Profiles removed on 18 November 2026.** Sillage-128 and VOLE-128 / VOLE-128f reached no category: they were removed from
+the library (the C API refuses their numbers; `docs/SPEC.md`). Their rows above are kept as the record of why. The model no
+longer evaluates them (`tests/modele_portes.py` reads the profiles of the library); the values are those of the run of
+18 November before the removal.
+
+## 4. What category 5 would take
 
 | Component | Change | Effect in the model | Cost |
 |---|---|---|---|
@@ -91,8 +95,6 @@ Details for every attack and every MAXDEPTH: `python3 -m tests.modele_portes`, o
 | AEAD | nothing for the known attacks; a reviewed and tighter Q1 proof for a proved category | — | research |
 
 With the JNRV 2020 thresholds, VOLE-256 is already in category 5, and only the KEM and the hash stand in the way.
-For profile 128, category 1 needs +4.8 bits of classical ISD for the KEM, and, with the 2016 thresholds, wpow 10 → 21
-and seeds of λ + 12 bits for VOLE-128.
 
 ## 5. Limits
 

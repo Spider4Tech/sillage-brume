@@ -63,13 +63,13 @@ The repository is intended to make the constructions inspectable and testable. I
 
 | Component | Construction | Current profiles | Main qualification |
 |---|---|---|---|
-| Sillage-KEM | Quasi-cyclic sparse-noise decoding, RM(1,7) code, FO transform | `Sillage-128`, `Sillage-256` | IND-CCA argument in the ROM, conditional on H1-P/H2-P and the stated correctness bound |
+| Sillage-KEM | Quasi-cyclic sparse-noise decoding, RM(1,7) code, FO transform | `Sillage-256` (`Sillage-128` removed on 18 November 2026) | IND-CCA argument in the ROM, conditional on H1-P/H2-P and the stated correctness bound |
 | BRUME-1024q | 1 024-bit, 32-round permutation over 256 GF(16) nibbles; sponge r = 640, c = 384 | — | C3 ≥ 21 and C4 ≥ 28 certified (≥ 224 active S-boxes over 32 rounds); security of the full permutation is not proved |
 | Sequential AEAD | Full-state keyed duplex over BRUME-1024q (key 64 B, nonce 24 B, tag 32 B) | `BRUME-1024q` | Ideal-permutation proof (repaired DMV17 Theorem 1) and Q1 proof, ours, not reviewed; unique nonces |
 | Parallel AEAD | Leaves of 8 KiB, two fork calls, 64-byte chaining values, root | `BRUME-1024qp` | Separate construction and ciphertext format; separate proof and tests |
 | TE mode | 7 parity bytes per 64-byte block, one byte corrected per block, then the AEAD tag | over `BRUME-1024q` | Exact reduction to the AEAD (Proposition TE) |
 | Hash | Default digest: sponge up to 8 KiB, one-level tree above (64-byte output); XOF | Variable output length, 64 B by default | Generic sponge bound 2^192 classical; quantum collision/preimage proved at ≈ 2^123.8 queries (ours, not reviewed) |
-| Sillage-SIG v0.5 | VOLE-in-the-Head over regular syndrome decoding (C only) | `VOLE-128`, `VOLE-256`, `VOLE-128f`, `VOLE-256f` | EUF-CMA/SUF-CMA in the ROM reduced to binary SD (Lemma 17.2); QROM sketch within ≈ 2 bits of Grover; not reviewed |
+| Sillage-SIG v0.5 | VOLE-in-the-Head over regular syndrome decoding (C only) | `VOLE-256`, `VOLE-256f` (`VOLE-128`, `VOLE-128f` removed on 18 November 2026) | EUF-CMA/SUF-CMA in the ROM reduced to binary SD (Lemma 17.2); QROM sketch within ≈ 2 bits of Grover; not reviewed |
 | Sillage-SIG v0.4 (reference) | MPC-in-the-Head over binary syndrome decoding | `Sillage-SIG-128`, `Sillage-SIG-256` | Kept unchanged as a reference; superseded by v0.5 |
 
 The profile suffixes `128` and `256` are parameter labels. They must not be read as a blanket claim of 128-bit or 256-bit post-quantum security. The KEM and signature sections give the actual estimates and limitations. **v0.6.0 changes every symmetric format.** BRUME-1024q replaces BRUME-512: every AEAD, TE, hash and XOF output, the tag length (32 bytes) and the default digest length (64 bytes) change; there is a single AEAD profile. v0.5 ciphertexts, hashes and KATs are no longer valid. The KEM and signature outputs are unchanged.
@@ -159,7 +159,7 @@ from sillage import (
 )
 
 # Key encapsulation
-kem = SillageKEM("Sillage-128")
+kem = SillageKEM("Sillage-256")
 pk, sk = kem.keygen()
 ct_kem, shared_secret = kem.encaps(pk)
 assert kem.decaps(sk, ct_kem) == shared_secret
@@ -189,7 +189,7 @@ h = brume1024_hash(b"message")
 stream = brume1024_xof(b"seed", 200)
 
 # Digital signatures (v0.5: VOLE-in-the-Head)
-sig = SillageVOLE("VOLE-128")
+sig = SillageVOLE("VOLE-256")
 pk_sig, sk_sig = sig.keygen()
 signature = sig.sign(sk_sig, plaintext)
 assert sig.verify(pk_sig, plaintext, signature)
@@ -237,24 +237,27 @@ The PKE is wrapped in a Fujisaki–Okamoto transform with implicit rejection. De
 
 The v0.4 code uses RM(1,7) repeated `D` times and a public pseudo-random spreading of the positions. A block of `128·D` bits carries one byte of the shared secret. Decoding uses a Walsh transform.
 
-Correctness is analysed with a Chernoff bound that does not assume independent error bits. Key generation evaluates the bound for each candidate key and rejects keys whose certified failure bound exceeds `2⁻λ`. The measured key rejection rates are about 7.0% (Sillage-128) and 6.1% (Sillage-256) on 32 768 and 8 192 keys (`tests/c/kem_rejet.c`); θ = 0.7 sits at the minimum of these rates (`tests/test_kem_theta.py`). The median bounds are substantially below the acceptance thresholds; see [`docs/PROOFS.md`](docs/PROOFS.md), §2.3.
+Correctness is analysed with a Chernoff bound that does not assume independent error bits. Key generation evaluates the bound for each candidate key and rejects keys whose certified failure bound exceeds `2⁻λ`. The measured key rejection rate is about 6.1% (Sillage-256) on 8 192 keys (`tests/c/kem_rejet.c`); θ = 0.7 sits at the minimum of these rates (`tests/test_kem_theta.py`). The median bounds are substantially below the acceptance thresholds; see [`docs/PROOFS.md`](docs/PROOFS.md), §2.3.
 
 ### Parameters
 
-The values below are from the v0.4.0 parameter set and its committed documentation.
+The values below are from the v0.4.0 parameter set. Since 18 November 2026, **Sillage-256 is the only level**:
+Sillage-128 (`n` = 50,021, `w` = 75) was removed because its classical ISD cost (2^138.2) is 4.8 bits under the
+2^143 gates of NIST category 1 ([`docs/NIST_CATEGORIES.md`](docs/NIST_CATEGORIES.md)). The level keeps its number in the
+C API (1), so its domains and known answers are unchanged; level 0 is refused.
 
-| Parameter | Sillage-128 | Sillage-256 |
-|---|---:|---:|
-| `n` | 50,021 | 170,003 |
-| Secret/error weight `w` | 75 | 140 |
-| RM repetition parameter `D` | 14 | 28 |
-| Public key | 6,285 bytes | 21,283 bytes |
-| Encapsulation ciphertext | 9,837 bytes | 35,587 bytes |
-| Shared secret | 32 bytes | 64 bytes |
-| Classical ISD work-factor estimate | 138.2 bits | 265.1 bits |
-| Prange–Grover estimate | 91.7 bits | 158.4 bits |
-| Median certified decapsulation-failure bound | ≈ `2⁻¹⁴⁶` | ≈ `2⁻²⁸⁹` |
-| Key acceptance threshold | `2⁻¹²⁸` | `2⁻²⁵⁶` |
+| Parameter | Sillage-256 |
+|---|---:|
+| `n` | 170,003 |
+| Secret/error weight `w` | 140 |
+| RM repetition parameter `D` | 28 |
+| Public key | 21,283 bytes |
+| Encapsulation ciphertext | 35,587 bytes |
+| Shared secret | 64 bytes |
+| Classical ISD work-factor estimate | 265.1 bits |
+| Prange–Grover estimate | 158.4 bits |
+| Median certified decapsulation-failure bound | ≈ `2⁻²⁸⁹` |
+| Key acceptance threshold | `2⁻²⁵⁶` |
 
 The classical estimates use the concrete ISD estimators documented in the repository. They are computational estimates, not reductions proving that every attack must take that many operations. The quantum figures shown are Prange–Grover estimates without a depth constraint; they are below the profile labels. A separate quantum-walk estimate with free QRAM is lower still. **Sillage-KEM does not claim 128-bit or 256-bit post-quantum security.**
 
@@ -369,10 +372,13 @@ SPEC § 4 bis, with a normative annex for the constraint system; the code is `si
 
 | Profile | `(n, k, w)` | τ, κ | Public key | Secret key | Signature | Sign, 12 threads |
 |---|---|---|---:|---:|---:|---:|
-| `VOLE-128` | `(19 456, 18 736, 76)` | 11, 11 | 106 B | 182 B | 4 235 B | 2.9–5.1 ms |
 | `VOLE-256` | `(38 912, 37 480, 152)` | 21, 12 | 211 B | 363 B | 16 122 B | 20–29 ms |
-| `VOLE-128f` | same as VOLE-128 | 16, 8 | 106 B | 182 B | 5 193 B | 1.45 ms |
 | `VOLE-256f` | same as VOLE-256 | 32, 8 | 211 B | 363 B | 20 467 B | 5.4 ms |
+
+`VOLE-128` and `VOLE-128f` were removed from the library on 18 November 2026: they reach no NIST category in the gate model
+([`docs/NIST_CATEGORIES.md`](docs/NIST_CATEGORIES.md)). The remaining profiles keep their numbers in the C API (1 and 3),
+so their known answers are unchanged; 0 and 2 are refused. The research prototype (`prototypes/vole/vole_proto.c`) still
+studies the 128-bit parameters, and the proofs below still state them.
 
 What is established, and how (PROOFS § 3 bis):
 - **Assumption.** Lemma 17.2 is an exact reduction from binary SD (H3) to regular SD, with no uniqueness heuristic: the
@@ -485,7 +491,7 @@ The tests of BRUME-512 (v0.5) are archived in `tests/historique_v05/` and no lon
 
 ### Latest committed test summary
 
-The committed [`resultats/SYNTHESE.md`](resultats/SYNTHESE.md) reports the v0.6 run of 18 November 2026: **627 of 627 controls passed, 45 tests**, 40 minutes.
+The committed [`resultats/SYNTHESE.md`](resultats/SYNTHESE.md) reports the v0.6 run of 18 November 2026, after the removal of the 128-bit KEM and VOLE profiles: **570 of 570 controls passed, 46 tests**, 42 minutes.
 
 Two findings of the v0.6 runs were fixed before this one ([`docs/AUDIT_REPORT.md`](docs/AUDIT_REPORT.md), changes of 2026-11-17). The dudect test flagged the portable BRUME-1024q kernel (|t| up to 22) when GCC 13.3 inlined it into the timing harness on a Zen 3 machine; the signal followed the code layout (not the frequency, not the alignment of the state; ctgrind clean), and disappears on every layout tried once the kernel is not inlined (`noinline`, outputs unchanged). Its cause was then identified as a Speculative Store Bypass: inlined, the kernel shared one stack slot between the round-constant pointer and a secret intermediate, and a speculative reload of the pointer used the secret as an address (proved by turning the bypass off with SSBD: 12 of 12 runs clean against 12 of 12 flagged). A static check of the library for this pattern, `test_c_gadget_ssb`, now runs in the battery and in the CI. A control of the rebound study tool depended on the solver's wall-clock time; it now uses the solver's deterministic time. This is a snapshot of one run on one machine; passing it does not prove the hardness assumptions or the security of the full permutation.
 
@@ -510,9 +516,9 @@ guarantees.
 | Multi-message AEAD, 16 KiB messages, 12 threads | 523 MB/s (674 MB/s with a common key) |
 | TE, 1 MiB: encryption / correction | 29.8 / 48.7 ms |
 
-KEM and signature timings are unchanged from v0.5 (the code did not change): Sillage-128 key generation 5.2 ms,
-encapsulation 0.19 ms, decapsulation 0.31 ms; Sillage-SIG-128 signing 34.9 ms on one core, 5.5 ms on 12 threads. The
-full tables, including Sillage-256, SIG-256 and the C/Python factors, are in [`resultats/BENCH_C.md`](resultats/BENCH_C.md).
+KEM and signature timings are unchanged from v0.5 (the code did not change): Sillage-256 key generation 27 ms,
+encapsulation 1.18 ms, decapsulation 1.84 ms; Sillage-SIG-128 (v0.4, reference) signing 34.9 ms on one core, 5.5 ms on
+12 threads. The full tables, with the C/Python factors, are in [`resultats/BENCH_C.md`](resultats/BENCH_C.md).
 Against BRUME-512 (v0.5, same machine): the AEAD at 1 MiB goes from about 83 to 101 MiB/s, the tree hash on 12 threads
 from 793 to 873 MB/s, at a larger capacity (384 bits instead of 256). Known gap: multi-message batches with a common key
 (`sl_aead_*_multi_ctx`) do not yet use the batch kernels for short messages (177 MB/s against 265 MB/s at 64 bytes).
@@ -547,7 +553,7 @@ The status of each claim matters. The repository distinguishes exact structural 
 ### AEAD and hashing
 
 - The sequential AEAD, the parallel AEAD and TE are proved in the ideal-permutation model, nonce-respecting, without release of unverified plaintext (PROOFS § 4.3–4.6). The classical proof rests on our repaired form of DMV17 Theorem 1. Model Q1 (quantum queries to the permutation) is proved by us at about 127 bits for σ ≤ 2^64; superposition queries to the mode (Q2) are not claimed beyond two partial results. **None of these proofs has been reviewed by a third party.**
-- NIST categories, from a gate model of the attacks ([`docs/NIST_CATEGORIES.md`](docs/NIST_CATEGORIES.md), ours, not reviewed): profile 256 in category 3 (KEM-256 and hash preimages; VOLE-256 reaches 5 only with the revised JNRV 2020 thresholds), profile 128 in none (Sillage-128 is 4.8 bits under category 1 classically); the AEAD is in category 5 against the known attacks.
+- NIST categories, from a gate model of the attacks ([`docs/NIST_CATEGORIES.md`](docs/NIST_CATEGORIES.md), ours, not reviewed): the suite is in category 3 (KEM-256 and hash preimages; VOLE-256 reaches 5 only with the revised JNRV 2020 thresholds); the AEAD is in category 5 against the known attacks. The 128-bit KEM and VOLE profiles, which reached no category, were removed on 18 November 2026.
 - The hash's 128-bit quantum level for collisions rests on the generic attack cost (BHT on c = 384); our adaptation of Carolan–Majenz proves about 2^123.8 queries (preprint, ours, not reviewed). Indifferentiability is proved only at about 2^42.7.
 - The TE parity data is not authenticated. Only the AEAD tag protects against adversarial modification.
 

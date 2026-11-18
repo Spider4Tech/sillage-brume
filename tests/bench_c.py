@@ -42,7 +42,7 @@ def chrono(f, rep):
 
 def python_kem_sig():
     out = {}
-    for lvl in ("Sillage-128", "Sillage-256"):
+    for lvl in ("Sillage-256",):          # Sillage-128 retiré le 18 novembre 2026
         kem = SillageKEM(lvl)
         pk, sk = kem.keygen()
         ct, _ = kem.encaps(pk)
@@ -146,7 +146,7 @@ def main():
             md.append(f"| {l['nature']} | {_ms(l['aead_chiffrement_ms'])} | {_mio_s(grand, l['aead_chiffrement_ms'])} | "
                       f"{_ms(l['hachage_ms'])} | {'OK' if l['ok'] else 'ÉCHEC'} |")
     l0 = next(l for l in c["tailles"] if l["taille"] == 0)
-    md += ["", f"Coût fixe du schéma hybride (Sillage-128 + BRUME-1024q) : encapsulation ≈ {_ms(l0['kem_encaps_ms'])}, "
+    md += ["", f"Coût fixe du schéma hybride (Sillage-256 + BRUME-1024q) : encapsulation ≈ {_ms(l0['kem_encaps_ms'])}, "
                f"décapsulation (ré-encapsulation FO comprise) ≈ {_ms(l0['kem_decaps_ms'])}.",
            "", "BRUME-1024q (permutation, AEAD, hachage), KEM et SIG (côté signataire) : **constant-time** "
                "(vérifié par dudect, `tests/test_c_temps.py` et `tests/c/temps1024.c`, et par ctgrind). "

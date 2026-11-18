@@ -7,7 +7,7 @@
  *    tirages. Si le rang vaut n + n2 − 1, la parité de u est le SEUL
  *    invariant linéaire de la distribution de H2-P : aucun distingueur
  *    linéaire autre que celui que H2-P prend déjà en compte.
- * 2. Tailles réelles (Sillage-128 et Sillage-256, implémentation C) :
+ * 2. Taille réelle (Sillage-256, seul niveau depuis le 18 novembre 2026, implémentation C) :
  *    - invariants de parité : s(1) = u(1) = β(h) pour toutes les clés et
  *      tous les chiffrés, parité de v équilibrée ;
  *    - biais par position de u et de v (N chiffrés d'une même clé) : |z|
@@ -108,7 +108,7 @@ static void reel(resultat_t *res, int niv, int N, int cles)
     sl_kem_tailles(niv, &lpk, &lsk, &lct, &lss);
     uint8_t *pk = malloc(lpk), *sk = malloc(lsk), *ct = malloc(lct), ss[64];
     char nom[96];
-    const char *lv = niv ? "Sillage-256" : "Sillage-128";
+    const char *lv = "Sillage-256";
     /* invariants sur plusieurs clés */
     int ok_s = 1, ok_u = 1, vimp = 0, ntot = 0;
     uint32_t *csu = calloc(p->n, 4);
@@ -209,7 +209,6 @@ int main(void)
     strcat(buf, "}");
     res_mesure(&res, "rang_differences_u_v_par_n_n2_mesure_attendu", "%s", buf);
     res_controle(&res, "parite_de_u_seul_invariant_lineaire_de_H2P", ok);
-    reel(&res, 0, 4000, 600);
     reel(&res, 1, 1000, 150);
     return res_ecrire(&res);
 }

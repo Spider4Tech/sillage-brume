@@ -784,3 +784,19 @@ unrealisable path; the tool reported it honestly as not realisable. The control 
 time (one worker, fixed seed: the same result on every run); `b1024_etudes` was rerun alone, 4/4. Final summary:
 **616/616** (`resultats/SYNTHESE.md`). Tests that ran before a header guard was added to `brume1024_tables.h` during the
 first run (outputs unchanged) were rerun on the final sources and pass.
+
+## Changes of 2026-11-18 (128-bit profiles removed)
+
+The gate model of the attacks (`NIST_CATEGORIES.md`) placed Sillage-128 and VOLE-128 / VOLE-128f in no NIST category:
+the classical ISD cost of Sillage-128 is 2^138.2 against the 2^143 gates of category 1, and Grover on the final challenge
+Δ of VOLE-128 costs 2^119.8 at MAXDEPTH 2^40 against 2^130. By the author's decision they were removed from the library.
+- **C API.** The remaining profiles keep their numbers (KEM level 1; VOLE profiles 1 and 3), so their encodings, domains and
+  known answers are unchanged. KEM level 0 and VOLE profiles 0 and 2 are refused (−3 and −1, sizes 0); `tests/c/revue_c.c`
+  and `tests/test_vole.py` check it. The VOLE-128 parameters stay in `vole.c` for the research prototype only
+  (`prototypes/vole/vole_proto.c`, which studies them), outside the public table.
+- **Python.** `SillageKEM` and `SillageVOLE` default to Sillage-256 and VOLE-256; the 128-bit names are refused.
+- **Tests.** Every check that ran on Sillage-128 now runs on Sillage-256 (dudect: the `kem_` measurements are Sillage-256,
+  the duplicated `kem256_` ones are dropped; Lemma 3: trials doubled to keep the coverage); the 128-bit rows of
+  `h1p_fourier`, `kem_distributions`, `rsd_attaques`, the night campaign and the benchmarks are dropped.
+- **Documents.** README, SPEC (§§ 3.1 and 4 bis.1, known answers), `NIST_CATEGORIES.md`; `PROOFS.md` keeps the 128-bit
+  instances as the record of their analysis, with a note. The SIG v0.4 reference (`Sillage-SIG-128/256`) is unchanged.

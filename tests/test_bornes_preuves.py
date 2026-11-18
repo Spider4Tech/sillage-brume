@@ -102,9 +102,10 @@ def permutation(c, m):
 
 
 def kem(c, m):
-    taille_publiee = {"Sillage-128": (6285, 9837), "Sillage-256": (21283, 35587)}
-    niveau_publie = {"Sillage-128": (138.2, 91.7), "Sillage-256": (265.1, 158.4)}
-    params_publies = {"Sillage-128": (50021, 75, 14, 28672), "Sillage-256": (170003, 140, 28, 114688)}
+    # Sillage-256 seul depuis le 18 novembre 2026 (Sillage-128 retiré, docs/NIST_CATEGORIES.md)
+    taille_publiee = {"Sillage-256": (21283, 35587)}
+    niveau_publie = {"Sillage-256": (265.1, 158.4)}
+    params_publies = {"Sillage-256": (170003, 140, 28, 114688)}
     ok_t = ok_n = ok_p = ok_th2 = ok_24 = True
     tab24 = {}
     for lvl, p in PARAMS.items():
@@ -166,10 +167,9 @@ def sig(c, m):
 def quantique(c, m):
     """§ 5 bis. log2 du nombre q de requêtes auquel chaque terme atteint 1. Les niveaux b d'entrée sont arrondis à 0,1 bit
     par l'estimateur, et les valeurs publiées à 0,1 bit : tolérance 0,1 bit sur les valeurs qui en dérivent."""
-    hhm = {"Sillage-128": dict(cor=62.5, M=61, pg_q=59.8, pg_40=69.7, walk_q=43.2),
-           "Sillage-256": dict(cor=126.5, M=125, pg_q=104.3, pg_40=136.4, walk_q=84.7)}
-    bhh = {"Sillage-128": dict(cpa=60.5, M=123, cor=62.5, rej=126), "Sillage-256": dict(cpa=105.0, M=251, cor=126.5, rej=126)}
-    gam = {"Sillage-128": (807, -551), "Sillage-256": (1631, -1119)}
+    hhm = {"Sillage-256": dict(cor=126.5, M=125, pg_q=104.3, pg_40=136.4, walk_q=84.7)}
+    bhh = {"Sillage-256": dict(cpa=105.0, M=251, cor=126.5, rej=126)}
+    gam = {"Sillage-256": (1631, -1119)}
     ok_h = ok_b = ok_g = True
     mes = {}
     for lvl, p in PARAMS.items():

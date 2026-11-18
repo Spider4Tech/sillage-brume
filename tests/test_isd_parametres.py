@@ -25,9 +25,9 @@ def taux_depassement(n, k, D, w, we, theta, seuil, essais=12):
 
 
 # Niveaux classiques de la v0.3 (PROOFS § 5) : w et we sont les plus petites valeurs qui ne descendent pas en dessous.
-NIVEAUX_V03 = {"Sillage-128": 137.3, "Sillage-256": 264.9}
+NIVEAUX_V03 = {"Sillage-256": 264.9}   # Sillage-128 retiré le 18 novembre 2026
 # Appels de sl_creux (sillage/c/kem.c, sig.c) : (poids, longueur).
-TIRAGES_CREUX = {"kem128_w": (75, 50021), "kem128_we": (25, 28672), "kem256_w": (140, 170003),
+TIRAGES_CREUX = {"kem256_w": (140, 170003),
                  "kem256_we": (64, 114688), "sig128_w": (103, 2048), "sig256_w": (206, 4096)}
 
 
@@ -105,7 +105,6 @@ def run():
     for lvl, (nn, kk, ww) in dict(
             SIG128=(SIG_PARAMS["Sillage-SIG-128"]["n"], SIG_PARAMS["Sillage-SIG-128"]["k"], SIG_PARAMS["Sillage-SIG-128"]["w"]),
             SIG256=(SIG_PARAMS["Sillage-SIG-256"]["n"], SIG_PARAMS["Sillage-SIG-256"]["k"], SIG_PARAMS["Sillage-SIG-256"]["w"]),
-            KEM128=(2 * PARAMS["Sillage-128"]["n"], PARAMS["Sillage-128"]["n"], 2 * PARAMS["Sillage-128"]["w"]),
             KEM256=(2 * PARAMS["Sillage-256"]["n"], PARAMS["Sillage-256"]["n"], 2 * PARAMS["Sillage-256"]["w"])).items():
         b, d = _bjmm(nn, kk, ww), _dumer(nn, kk, ww)
         grille[lvl] = dict(bjmm=round(b[0], 1), p=b[1], eps=b[2], l=b[3], dumer=round(d[0], 1), dumer_p=d[1], dumer_l=d[2])

@@ -182,7 +182,7 @@ static double marge_h2p(double n, double w, double n2, double we)
 int main(void)
 {
     resultat_t res = {.nom = "h1p_fourier", .titre = "Spectre de Fourier exact de H1-P et H2-P"};
-    res_controle(&res, "n_50021_et_170003_premiers_d_artin", artin(50021) && artin(170003));
+    res_controle(&res, "n_170003_premier_d_artin", artin(170003));   /* Sillage-256, seul niveau depuis le 18 novembre 2026 */
     res_controle(&res, "temoin_n_50023_non_artin", !artin(50023) && !artin(50017));
 
     int ok1 = 1;
@@ -216,13 +216,10 @@ int main(void)
     res_controle(&res, "h2p_chaque_coefficient_egale_la_formule_et_seule_la_parite_de_u_est_invariante", ok2);
     res_controle(&res, "h2p_temoin_s_nul_un_second_invariant", temoin);
 
-    double m1[2] = {marge_h1p(50021, 75), marge_h1p(170003, 140)};
-    double m2[2] = {marge_h2p(50021, 75, 28672, 25), marge_h2p(170003, 140, 114688, 64)};
+    double m1 = marge_h1p(170003, 140), m2 = marge_h2p(170003, 140, 114688, 64);
     res_mesure(&res, "distingueur_lineaire_log2_cout_sur_avantage",
-               "{\"Sillage-128\": {\"H1P\": %.1f, \"H2P_trois_blocs\": %.1f}, \"Sillage-256\": {\"H1P\": %.1f, \"H2P_trois_blocs\": %.1f}}",
-               m1[0], m2[0], m1[1], m2[1]);
-    fprintf(stderr, "distingueur linéaire (heuristique) : Sillage-128 H1P %.1f, H2P %.1f ; Sillage-256 H1P %.1f, H2P %.1f bits\n",
-            m1[0], m2[0], m1[1], m2[1]);
-    res_controle(&res, "distingueur_lineaire_estime_au_dessus_du_niveau", fmin(m1[0], m2[0]) >= 128 && fmin(m1[1], m2[1]) >= 256);
+               "{\"Sillage-256\": {\"H1P\": %.1f, \"H2P_trois_blocs\": %.1f}}", m1, m2);
+    fprintf(stderr, "distingueur linéaire (heuristique) : Sillage-256 H1P %.1f, H2P %.1f bits\n", m1, m2);
+    res_controle(&res, "distingueur_lineaire_estime_au_dessus_du_niveau", fmin(m1, m2) >= 256);
     return res_ecrire(&res);
 }

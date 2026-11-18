@@ -1,6 +1,6 @@
 # Empreintes SHA-256 — SILLAGE v0.6
 
-Batterie : 627/627 contrôles, 45 tests.
+Batterie : 570/570 contrôles, 46 tests.
 Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 
 ## KAT
@@ -17,11 +17,11 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 | Fichier | SHA-256 |
 |---|---|
 | `sillage/__init__.py` | `9b5567a31b316028f5e3d651113693fbf4b21c0e25d57f54a267c3d5d6b5ea09` |
-| `sillage/demo.py` | `c440c6a3e2e495dcdd631c628cd188a9a7c4ff49d54478a4455ba0e46338afce` |
-| `sillage/rapide.py` | `f704a689faab7e6e2c2bee4ad3ed719ad63c7699e78874f7e9ce104806a06dc8` |
-| `sillage/sillage_c.py` | `0983e3c806523c050f39624034167b794524368b65e6eb7fab3a797250c1e813` |
+| `sillage/demo.py` | `4322eca96c45acc7b6f2313defecf265b8c28438b16b4f904be366bcecb7b4ca` |
+| `sillage/rapide.py` | `367c5fb9e64c83d05b1f4b6e6e5607f295b9581d6a945aa9cdcf605b7a3920e9` |
+| `sillage/sillage_c.py` | `89d0126fcd0da0e37023472eb849d321a43222dc59e02a22122677f0c063c48e` |
 | `sillage/sillage_common.py` | `e5dd1340fe088def8e9caea363ff4bfb9c8bc3589222b9eafd4a4763658baa59` |
-| `sillage/sillage_kem.py` | `5ca543efd599051938b762ab902b685560b20ea9d219dd9746b43cb7cc2bccaf` |
+| `sillage/sillage_kem.py` | `d18d415fda72c855518df0f4a21613bd78896ae5242b5a1ec1eed2c0d8e4b212` |
 | `sillage/sillage_sig.py` | `c3a66765be93150ce88242b20b56ad28d533cfbee794ef0e20dc983e2e4db112` |
 
 ## Sources C et en-têtes générés
@@ -29,7 +29,7 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 | Fichier | SHA-256 |
 |---|---|
 | `sillage/c/Makefile` | `3989972893b8287de6a458eb227ed35a355fc87534f09394ea86e86cbf1ad987` |
-| `sillage/c/bench.c` | `7f03bc8d0cb5ced8e0857ae6c8739a52643501c3263dbcd45c476f93f12f2069` |
+| `sillage/c/bench.c` | `d699c52852f13658fd0a294c9f012a51baea23f5156805e29de68c5c92c04039` |
 | `sillage/c/brume1024.c` | `dd5861eee3ab6bc2e3f08ef1f7367c1eee5cd40e3dddede3e28d28d03ac004be` |
 | `sillage/c/brume1024_bs.h` | `9d04e6e4d707144d16ccb7a463af9f840a9ace0966256c5ac169daea7db45a30` |
 | `sillage/c/brume1024_lot.h` | `d169caa6b3f191cf8407bead92a6c830cbaf1aed54aa4d699c0e9de80f6f1f80` |
@@ -37,10 +37,10 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 | `sillage/c/brume1024_tables.h` | `ce89885c6626affbfdad4f2a07de9dd5385f3ec2835d1d329326912fe0a09c4a` |
 | `sillage/c/commun.c` | `6494c3479457aaa65b8ecfc40465ddc09e566ec99909d06c5b891099aff36909` |
 | `sillage/c/isd.c` | `b2885305a022218073c77181275d1d9cae3c327abe3025c4f0da0452d59eed50` |
-| `sillage/c/kem.c` | `02af924eda3838923bcc2e3608648f9c8a872a5869425fede59d39cc98499f4a` |
+| `sillage/c/kem.c` | `762e6de7246d24e89e87ead1394a85c58939cf29117d5163b64911a07889021c` |
 | `sillage/c/sig.c` | `071f9d2449d6dc6e7d416e122f48b0f2957710fa9e880d7c7662ccfb11e66e70` |
-| `sillage/c/sillage.h` | `9fb7bdb707069c08a6b53ce5fc0863d92673949ef2f44fc9eaadc551cc41d7e2` |
-| `sillage/c/vole.c` | `88c2586dd60d3d89909dc590ea05da8e2445b8a5a5659babc9560ba652c85614` |
+| `sillage/c/sillage.h` | `3aea319d0adaa96ffe30f6abaf58898bcb0af029603da4c024c0a3c0d2510f6b` |
+| `sillage/c/vole.c` | `af00126af36d1259e9cc3d122ee5295c0d743f0d32c43d72a719272d8ab41a4a` |
 
 ## Tests
 
@@ -48,73 +48,75 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 |---|---|
 | `tests/__init__.py` | `bc7d93e2923d07458b29793d8272372e5f66fd8cdbb31688205f6a17cb9b126d` |
 | `tests/b1024_outils.py` | `35012eeb40d422dbc7c9cee08651808bba6e692ebb9821d314a65d1028323d17` |
-| `tests/bench_c.py` | `2cf46f5e432628e58e9149d7f804cf746cc98863e1fefb9f78d2273d26e98cf9` |
+| `tests/bench_c.py` | `c8d581a040b0907781e1cda6b8a15eeb9f8b4891c01ce8c483b1d5b506b6b895` |
 | `tests/c/Makefile` | `b1ecccd5fab9c0f7539fb04bfb68b9e5de45f841ba88346eb6e2be5fe6344b8f` |
 | `tests/c/brume1024.c` | `abcfa562aec6955c0ef5eb151c13d243344e4d02a47ee0569481577b42f0319f` |
 | `tests/c/brume1024_api.c` | `f7b78c13130b94c753cb12021d5f2014eb7088e9dd5f9a84754f5f8e9c44e1db` |
-| `tests/c/compression_kem.c` | `768bd0e181c7db82feb087a6354e90d7a62c11075153e5bf760efb306f0ba201` |
+| `tests/c/compression_kem.c` | `8b88a38f25f671d15c27284b29cecc43c3bad1c4a222c7bafc4a99d6dc2590bf` |
 | `tests/c/compression_sig.c` | `b97477e549d98c8262bcc702539ebb72cf9a97472241369a50d1aaadd7eef0e4` |
 | `tests/c/ct1024.c` | `9d46ae566c48f045a0420ac7e50948c28a5cdefccf13abc76edae5300e411cfb` |
-| `tests/c/fuzz.c` | `9dfc591890b729e853703560da4c5e4182fb4a86b44a8f0938bcd2c670ed0550` |
+| `tests/c/fuzz.c` | `af231d13a2b7782b2aad6c8724148dc12a44593b1780a5b849a68c22f69ef32c` |
 | `tests/c/garde.c` | `50930a275b518b36a5a63edf1f4c48aeb5c56ab98335f4eec9891908a282dee7` |
 | `tests/c/garde_test.c` | `a250f2e8d513bb4e53b59d3446cde4f0c1a93ac508bd74b23061deaf4acdd323` |
-| `tests/c/h1p_fourier.c` | `6f40edad0b61aa8e2350fd5df77814f4d4acb47c13a42fb828f2f762e283a52b` |
+| `tests/c/h1p_fourier.c` | `841f91de92dbf40d1e9607d642f51fec27be341552b87c0ea4274875eab7cfc2` |
 | `tests/c/isd_comparaison.c` | `8a6933df5d2267711887c0ea59fd0be2946d6708d28c03bbc0a2a5aea75609fb` |
 | `tests/c/isd_reel.c` | `1b1c6853cbded1d0b1c86ee38c33208a4f6ddeb9b900946436529d84fd729f12` |
 | `tests/c/kat_b1024.h` | `28d0923165ba7b5d251279b2dd9ed2bae18e4853d716a6f75def4d48f37732cb` |
-| `tests/c/kem_distributions.c` | `ccd75e0606fdafcfd86e89032e4eb49fda6e76e07f6a321ff06d1bf6e5ec432b` |
-| `tests/c/kem_rejet.c` | `095a5718b149e03d99139453a50d2d8625e531e7206de111cf8a98756e4db170` |
-| `tests/c/kem_valgrind.c` | `4000bfb3352ac1b94ff3fd336eb71142adcec13675a50b7da9dbb93bc945deba` |
+| `tests/c/kem_distributions.c` | `21ef8a4b680eae27a2ec4960c38813352d722e2d27b444f5bb01d5746dfba0e7` |
+| `tests/c/kem_rejet.c` | `5c6e6921061db48f5c4d1c368d5b766b0efc3bf9682f79fdcee537cc25e0a53d` |
+| `tests/c/kem_valgrind.c` | `849eb6452a9bc97aa591134eec0aefe3daa78880d6166de5eae5a0afbfd0fda9` |
 | `tests/c/noyau.c` | `4b6e7584b0f1fba466c11a9a034cda790167556d6e4c4ef3a6463526c1d263d4` |
 | `tests/c/nuit_isd.c` | `c9cfe21532e0490e2db42a4d3a374c24299a9ffd8ee2347e209f12b9fe1479e9` |
-| `tests/c/nuit_kem_reel.c` | `19f0f62098944fce2b301ccbc26a9abe3087c4e9446e28f579b3e164e105aa24` |
+| `tests/c/nuit_kem_reel.c` | `f4dee6d67bc2c3277fa8aae49b3489d53d4d808312c685a0385f891d071e22ef` |
 | `tests/c/resultat.h` | `65186d1ad0cf9aa1e9b191277d2f73fffbfc58ef00120f841901bd0cf735d2b1` |
-| `tests/c/revue_c.c` | `f285a467bb7c66c71e2b6be0f06e0f7cebc5eb061baeadf5e45d239cd9d821cc` |
-| `tests/c/rsd_attaques.c` | `25c48171966923668a2bbdbada1851acad930100ed08b20fe2a522525fb46351` |
+| `tests/c/revue_c.c` | `9b352c662cb94d091ec5e47f01a06690518a078a6080f3f2113ae9ae20f68a97` |
+| `tests/c/rsd_attaques.c` | `f7e85bdca1a651e6e3ae579c8666c65432aaac7ad1788b25871c92a7fcb0aa49` |
 | `tests/c/sig_ct.c` | `17a9a1dde668cd44f84ebeb05da74c96e176c916110d79f39deb655d09e92920` |
 | `tests/c/sig_flux.c` | `b2f36ca2694e12b11b7800b59350d08b71f0d2f2257e5d34b7e3e4105aeac697` |
 | `tests/c/sig_kz.c` | `dfa8cc225159292c25abd10cac39b4235f15aa68a579e5c3408f9dff5d043bf2` |
 | `tests/c/sig_kz_commun.h` | `a35a29224c2983318d442d2aa378d06a3caa6c97dd330c7b83d70c3135daf25e` |
 | `tests/c/sig_valgrind.c` | `834f634ed3f1b0c5321fd693b345632f7970855b32a97b88c7fd1d0984d188d3` |
-| `tests/c/temps.c` | `b470a1e2c67044cb7705da020e928cd314be45e097d255cd990a0dc69087abcd` |
+| `tests/c/temps.c` | `834ce3e8ac2c8f4f3c4fb96c6c0205d0c356f9d111c370a329a240a92de6a859` |
 | `tests/c/temps1024.c` | `780223848ff677d3292c69dbb4a6d6ed3051eb05d49992aa4a61453d19095c27` |
 | `tests/c/trace_pc.c` | `97300089809ac8bb53d3fc3f183a4c7eff4a069e9737d9aecf58b683383f0741` |
 | `tests/commun.py` | `4c42c8e3bb8ff345006777c6ffa1fe08a8cc78ec45181be2d5c044f3edef968e` |
 | `tests/couverture.py` | `817ad7c0cb8689f1cd90d346bc7469da0680dd5941e448d75cda263a6bb67aa4` |
 | `tests/empreintes.py` | `afe5affe6567042d7d6441b02df06f065a70d306f2c2a3bbeb259c07a263a2da` |
 | `tests/gadget_ssb.py` | `5d6728f91e44568d5076d8a5d925efb115418fcaddc86a1b13c4ad153ab81fe4` |
+| `tests/modele_portes.py` | `e08d69017e1938b8488c7c8fa43abea3fabd5775197cb8c5e4c3832a96be0c1e` |
 | `tests/noyau_c.py` | `bbab194f6687532783bb3e1a7149a3cbb5c3a70aceab656c810b2435abe7ca66` |
-| `tests/run_all.py` | `eb40156c367cda10f2082c094d238ae74da5615bb5995f89ff3b9709b1fc6b88` |
-| `tests/test_api_c.py` | `3e1e97a752ce95e5b7636e45874d26e0b25aafe93f94a968a2c8ff9260f9399e` |
+| `tests/run_all.py` | `28150ab16dce1dc61a9c95094155a9647defc5205253366dbdb0cd6b38f38f15` |
+| `tests/test_api_c.py` | `fb0bd14e1ae794d2e81f176e6e3380c414ccc98c33a60cd5a2ddbb2e102231df` |
 | `tests/test_b1024_certificats.py` | `6670b125eb8aec9af6395918bf9c360ef947e99b3249a55d640575e6f550d69d` |
 | `tests/test_b1024_etudes.py` | `2744c8c228823203a7814d0c3609a23156771cf3947ebe3e5880c7f283546829` |
 | `tests/test_b1024_preuves.py` | `a774a1437a1e68714faf2ff409df099cafdf680e24b3ef9518f23dd1d5159eb9` |
 | `tests/test_b1024_seconde_implementation.py` | `78816be90990147cc5a9f1645f86169d9b6b8813186e8e7b258a1dd111465602` |
 | `tests/test_b1024_statistiques.py` | `dea5251440698887e0c95b3c407579c0a6f06dfe0b8644c8da3e3eb9b28ef1fe` |
 | `tests/test_b1024_structure.py` | `015b898f57d60e474d55721660df3f9d9860fb2dbb5eb13ac80d1e765ba08482` |
-| `tests/test_bornes_preuves.py` | `04ed4b93b36cb8a7ba323b1bd8dff1a2df8e57c0746fce7045a45b43cc31cfb9` |
+| `tests/test_bornes_preuves.py` | `e6986bd72d7358823cbb5760057838aeac924af9005d3577e5ac8aab7a9e89f0` |
 | `tests/test_c_brume1024_valgrind.py` | `35d2f402da39dbaa3cf61a5bb69a0007a8edc1284ccc74e08a10f2b6d6edffcb` |
 | `tests/test_c_fuzz.py` | `4fd95935c0f7be173c6b4defa8597a8b33f926f9cc325e2061b649be6c75c352` |
 | `tests/test_c_gadget_ssb.py` | `9370a80bf2ef8403bfe9ebaa10d0a2d2b245f86ae6cb51844121a343e37716ea` |
-| `tests/test_c_impl.py` | `f9129131785886b6c163c7a0c17fd65c4b5676b613bdfbc0ec6b5dd68436789d` |
-| `tests/test_c_kem_bruit.py` | `886ae7c06a634728bb73136ea20157d4a6255033d791fed0dadfd083eb26711b` |
-| `tests/test_c_kem_valgrind.py` | `13e1e0757b40f9e78d6ee29a8c178ab195ec9d0c38ddc2a3d9572fcf5fcf6ed8` |
-| `tests/test_c_limites.py` | `9098029446741e4cca82fc34ba16c7375cfc91a6a8bdbcba918250553fcff71c` |
+| `tests/test_c_impl.py` | `383761c88ba59ff692eb1dae1e0765c4f2ee08a3de69137a4b8696dcb150444f` |
+| `tests/test_c_kem_bruit.py` | `5c9515ff8cf3cc7bff49167c1a80b34e15f5b87c25927c94e80e1c9fc5449472` |
+| `tests/test_c_kem_valgrind.py` | `b9a07c42862732d89a1a376b7162e989fdd439be879bb12b672d4304a24e9fd0` |
+| `tests/test_c_limites.py` | `d26b04b97ec7f1b55a479a2dee1e71f54589df84534438de859855d3f7eea48d` |
 | `tests/test_c_sig_valgrind.py` | `1e52bfe6e42f8e3d4afe9de79137d11ba72065b94cafb9f27025c5c26bf27b63` |
-| `tests/test_c_temps.py` | `6730a7e00de8b5df30f5914e04dbafdef95735d6ed75b67f2908d4733c56d937` |
+| `tests/test_c_temps.py` | `5bceb630708af45edf109352a85ce59e416516773cd8dbf3c7ae91f7e912df2b` |
 | `tests/test_c_vole_temps.py` | `5fe2a1c7cd51a6f696cdb46bf60f4e81ff0cdb9fe73438184909dcac653af937` |
-| `tests/test_c_vole_valgrind.py` | `96d6fb20fd578fcac6145696ee297bf75fc760f133a88054a7b5188b3bf06ed7` |
-| `tests/test_erreurs_api.py` | `711959fbe5b33c54d6768c14bf79d5d33d5cea9001c0fe1c0897c3db7113a8b8` |
-| `tests/test_fonctionnel.py` | `3c4258998b45f75375bb11dac0c91167d6a3442722f272a0221038f6327f7928` |
-| `tests/test_isd_parametres.py` | `c0589cdff1c51418f9d4a7f226566fd07aacf45b9e023d3d44881980cdd5d8f3` |
-| `tests/test_kem.py` | `ee187d8c7c12f59a4f92fe237374b178497bc28ce770de30106427e3d77a4402` |
-| `tests/test_kem_lemme3.py` | `280bb6618c924a247e5eac9d9c7fa46ca880bcefadb7f52343ff6379e9f6fb8e` |
+| `tests/test_c_vole_valgrind.py` | `d638cbfa2a11cfaa19684c26f8ecb2f1a1bd2829a0f95abc095c446561be1a3f` |
+| `tests/test_erreurs_api.py` | `109eacee7bd73304fa9ebf12b38e4e9c57558594e1670a8233346386835e782c` |
+| `tests/test_fonctionnel.py` | `7dbec2bed40a1647d336578ae964867199fe6fbb8176e491b1486cb68a4604ea` |
+| `tests/test_isd_parametres.py` | `8c7c8b187193968d5e2c3b25f34bf3c8ae705f25564e6c1ff5d2f586d7e9fad8` |
+| `tests/test_kem.py` | `50e14c8fbf49156b98c275ee219cd99d85228ee843167f250b59dd935b1077f4` |
+| `tests/test_kem_lemme3.py` | `5b8d4ef4b5bdadf19ee37cbe6c22985178a10ff04695161f430ec3ffe61319e8` |
 | `tests/test_kem_theta.py` | `6007068e6a16a8c0a0c2fdbc934d3949458d66293bb22c69fc3a84374e5e0ebd` |
+| `tests/test_modele_portes.py` | `427c13ffa9d798a92a595dbfa82f2e314d2376a34530cf6a862fb5cf9e5b55ab` |
 | `tests/test_robustesse.py` | `0fe645dd92c798eebc860237b4c10446e1c78af3e78ada27892c698791a1164e` |
 | `tests/test_sig.py` | `53231c7da1e69fa5557f84f49923f59fa64a48264c6a365d5326b087d527e12c` |
 | `tests/test_sig_hvzk.py` | `5755b92d4abe4d237c2edc1301d5385230e3c750778e8366c5ae8d7530acfbff` |
 | `tests/test_sig_modele.py` | `db283b3a25e019fcc5a78bded7761efe1c8be6b3b86ff452c31f6272b8154880` |
-| `tests/test_vole.py` | `65908ba8c5b82dabbba4ba3377c15919b32393755af63d8691a6faca57090006` |
+| `tests/test_vole.py` | `51f4412275ac07db10ff8023d295de94764161cd9fe596d198b9e75b4edd6502` |
 | `tests/test_vole_kz.py` | `e0e832d24ebfec12fc254120ef45c3a6605a7a97e3e0bed1e0bad312cf81c4f8` |
 | `tests/verifier_controles.py` | `abf7fabd005005810a579417fb8ae8c5996337d6c800ff697840023396337367` |
 
@@ -196,68 +198,70 @@ Python 3.12.3, gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0.
 
 | Fichier | SHA-256 |
 |---|---|
-| `resultats/SYNTHESE.md` | `1208f80642202516be03d62accaa5255fff83c8087ccda1f8fd9bbca2ff1d158` |
-| `resultats/api_c.json` | `afc46d6be37c2fe7c7d62e18fb2daecf450a77dec3a7a51400921e6d4ab11383` |
+| `resultats/SYNTHESE.md` | `552ecb168b7640da0e302a2fec7916f812d471ee1614665c6f59b1aad67521b1` |
+| `resultats/api_c.json` | `4990661e9feb1eb141b18c48d8988e408219c412c1c562808d0d3be42652ec86` |
 | `resultats/b1024_certificats.json` | `d9fef4bf1cb83ee0d806ba580d8fa1093f37c5d35e5d1fe4e71e8cf58571be82` |
-| `resultats/b1024_etudes.json` | `73067816531e1979759e8af2dcb5496d5cc28008bbe15f4d094b58df5140ce18` |
-| `resultats/b1024_preuves.json` | `b1fdbd43a5fe6014778e6852cb5349e36250143d00621c3d6013f867b640ea7d` |
-| `resultats/b1024_seconde_implementation.json` | `f12626143583aa319729911cd553fd19adc27f6049fce71dc8fdaebddb8dda31` |
+| `resultats/b1024_etudes.json` | `cfec82d1169d1204fb770fbb5ef62e9cec71a461be8fdfa8ad5817f3134d2efc` |
+| `resultats/b1024_preuves.json` | `57fdcd8d76ac1dc7684a4f0f06da199b065fd153d52d73d411dc087dd5896872` |
+| `resultats/b1024_seconde_implementation.json` | `18d850d588f501f97c07d7b6f3e4a9877d5674713bf74ce85aabd3c63fc36b1d` |
 | `resultats/b1024_statistiques.json` | `0b877baf567a22fbae1bc5d892a861d6e1718e31c7bc55af52441c24b77988ac` |
-| `resultats/b1024_structure.json` | `918bcbc2b3948393d5ad827e14be73c1662ec49dd0882498c60d1bf4159dbece` |
-| `resultats/bornes_preuves.json` | `e310918b21cd343fe8858bccc793b1379baa41a7cb2a4e0d36998de5931f1717` |
-| `resultats/brume1024.json` | `186a96736162b04bffe9e8045524ba9712c202bb32c19b5ae67f1b145310f4d5` |
+| `resultats/b1024_structure.json` | `3f2086293dec575b05d39783e7ec97703f2c14a6599fdcb14663d359c1a8f9a6` |
+| `resultats/bornes_preuves.json` | `fcb79cd3dccf59d0a925c970b2b7fd25531712bdb4e5a9665e3d8905f1340331` |
+| `resultats/brume1024.json` | `84f652f7f33f87f2a75904d12fca5f68c627de275529a9847437f818b6942b9e` |
 | `resultats/brume1024_api.json` | `10f78e61f61d6600d54bd9c7bbb174a6def2c6aa58a335e501abe4952fc1d40b` |
 | `resultats/brume1024_api_portable.json` | `73c38fdf67f44e0969ce44e9817d10cdb3a8fbedb68ccf3474a5cb790a808c8a` |
 | `resultats/c_brume1024_valgrind.json` | `ed900e06ed5ea84771c22488011d532edc4632fdb24c58a414a5cae320b3c098` |
-| `resultats/c_fuzz.json` | `b7cc01078bb7a5fa767c413d0fa5607d2f7da72df4b35b39845d1914a391c1f8` |
+| `resultats/c_fuzz.json` | `9f9e8082d3c789099b61b90aa37a7be04909923f27a52fbab9f442e0333da578` |
 | `resultats/c_gadget_ssb.json` | `536973da1fcf2df5949421d77117525945faa1d82beffa06e369f76b3d293b71` |
-| `resultats/c_impl.json` | `e0193d3c136b369e290690ecbbec5c39e75fa74ef930e1c09072074ef1354318` |
-| `resultats/c_kem_bruit.json` | `9ee827ebf4099aab8848a7cd6b73529f0443a93801593297a80c04ae01eee0f2` |
-| `resultats/c_kem_valgrind.json` | `b9ec1bc5a3fd0c71bf23539ebf54afb120c26a4207456ab7e3718301fa07cb0f` |
-| `resultats/c_limites.json` | `c0f313ca11732972196aa2ada97710f9d8f6c79d1cdb0e337f2b6b6966ebf808` |
+| `resultats/c_impl.json` | `bc17b791257c1c153a81273e672fe48caf9022231f16399596266c092f45d44f` |
+| `resultats/c_kem_bruit.json` | `204c920ac90e1f145756804902b495be3976d29ea4aceece7e18966871f71642` |
+| `resultats/c_kem_valgrind.json` | `3c172333384109966e2568d2395d2c39a1933eb56ec33e5d773086fa42032371` |
+| `resultats/c_limites.json` | `ca964c6bdf37bb47bf93fc11925620f0a455934e5904013a1eea1d1217a630c6` |
 | `resultats/c_sig_valgrind.json` | `0bc530416f6d361f1e523c8f22d70982e4ddaa1c6f2d67f88f9edb43357837b3` |
-| `resultats/c_temps.json` | `de3b45021c1f668d31c7c50bd8b97dd92522a534ddb38b0f19060351d2976bcc` |
-| `resultats/c_vole_temps.json` | `c35917f7d27b7b4e0ccda26d018e98151b42eb320315eb114f88df98e46412f4` |
-| `resultats/c_vole_valgrind.json` | `3b933f5c95f881d81af0b2ecf92840adab33a566c6d69384ceb62e499003ebb3` |
+| `resultats/c_temps.json` | `b38c24fc2dfec36ee4ce8893cb4ee63c7d1065ff907251db7f3d4539882eadac` |
+| `resultats/c_vole_temps.json` | `d741acde97766afe4a6edc185fdb3562780bbd8e4fe9f400f4a30cffc2e86bf6` |
+| `resultats/c_vole_valgrind.json` | `3bc56e663002ab3faedde029a2e60933f6e93a567670469366e5766fe3947294` |
 | `resultats/compression_sig.json` | `feee314a3c2e1aec4d1bfd5adb84f8a737c1de0e224c436a0b93e176e38c6bf8` |
 | `resultats/erreurs_api.json` | `32c31a6b348394f33eab114e9fcde4b6a6dacbb3cc4eb8cee93c8d6068158a72` |
-| `resultats/fonctionnel.json` | `26e250e706d58117dc42046a6e88098905a624106189f7c98c8d3e30d7f5b954` |
-| `resultats/h1p_fourier.json` | `0dec37c4f7dcb819f05149ec119af45fccbbedef48ac9bc748174f4d55e3c7a0` |
+| `resultats/fonctionnel.json` | `aa57f3c85eca039043210d70902570604e9cd217572fd1dd1b4ed45e70bc159a` |
+| `resultats/h1p_fourier.json` | `9205cd20d6e60200b6539b4469608547ff1235f9af1c7f824f591f0436b58aa2` |
 | `resultats/isd_comparaison.json` | `cbf2bd2e5de2cb5385abbe0bb2e1dc3c455f20e90738816e16b6a5f66f104d4e` |
-| `resultats/isd_parametres.json` | `b8ab7ee1f47b48851042d99bf6dc139444edfdcaade7c62ca5f9f1bf6dd68157` |
+| `resultats/isd_parametres.json` | `6cbfc58dc41e39c0372701b1e9de7b97fbd522d0ff3f6602066f7ba25746c83a` |
 | `resultats/isd_reel.json` | `ff79972f5125fd007c12cc27e1155d424384db95478ea00c87fce73a44e7f339` |
-| `resultats/kem.json` | `7bbdb680f1e53511fffb21e5d561d32d78d7a860511837795bd46b2dcc0dbca6` |
-| `resultats/kem_distributions.json` | `7c17ebcfb612a8b283c2f929286d82ed883cc04bdca36a6e2559265624508992` |
-| `resultats/kem_lemme3.json` | `03d0d1f6eead26a0e2ed94c3068caf3e45b7922d438095277b0adbe7784ae69a` |
-| `resultats/kem_rejet.json` | `b8c658c61e3bc4b6f5ca9796d4959eb25b6463a31c485c0280d0ce25270aff1c` |
-| `resultats/kem_theta.json` | `99f396ef4942c4d2754f299a740890161c65a92947dd9b320d37bf18fd8ab877` |
-| `resultats/revue_c.json` | `4ba04534bbc9821d8b1184407d492669946877f654f9271b024298a5bf78debf` |
-| `resultats/robustesse.json` | `da1773d9045e121fdb51b242773cb14ecef7b78b62092db9fc3322a49a4807d3` |
-| `resultats/sig.json` | `31fb13accae55ea1665ea2f617c1b9e0db1666a7fc7a89592da4b89ec8af2416` |
+| `resultats/kem.json` | `012a2785d59457f13c38d1c52a82862d5224bd366ff48495bf4172d01e58bd01` |
+| `resultats/kem_distributions.json` | `544e36b939fb870a20cacc1994d4a554b8ef1a4be8213e60003a4572e3cea1a5` |
+| `resultats/kem_lemme3.json` | `b48e270ee0e14394dcbe893ad9b66e232e2e62651a21b252942c0c2693f61103` |
+| `resultats/kem_rejet.json` | `d3c961363722300d1e4c275307997d7b681144bd27bd030237080fedccfe5086` |
+| `resultats/kem_theta.json` | `e6bae78b8027657768d0a113bd5a11de2fc375ca6ecf813208d980c59cf45270` |
+| `resultats/modele_portes.json` | `bad171645659aec66117fbf71463ff7acff1b91da7fd27fd71fc3923eb9a0628` |
+| `resultats/revue_c.json` | `a6e861a040338593f1f8e599d7c272627aed502ac34cada3401e1add13e3903a` |
+| `resultats/robustesse.json` | `dfab83d486554675c964cd27d21ea9d5c95698e26a913d7bf329c0793bc7a45f` |
+| `resultats/sig.json` | `afef773f6d9f3e8b17d1245096300c6f6f4ecaf4ca74117e9a9777852f58f53a` |
 | `resultats/sig_flux.json` | `aa81d832374d60ba5e3e0076e607caea6198bfe5c1bcf312c7557844c7a32176` |
-| `resultats/sig_hvzk.json` | `4c90496070c0e082e5aa6ee15e71166f4c5d7f5a0893ed7a4c8e4756514b6cb7` |
+| `resultats/sig_hvzk.json` | `0a2b4f8f80891e825ee1f81d5d69a7a811f3de3a69d843701daf6a2f434fc876` |
 | `resultats/sig_kz.json` | `f46ab751ab9461b5690f01042698bd4acc185e6563173e3e880c3072b976b3a8` |
-| `resultats/sig_modele.json` | `9ff2c2cddf1e15484da70cc008c76d5d940e5534b110fb1dbd13ca3c2300b9dc` |
-| `resultats/temps1024.json` | `2b2dcaf4ed0342cda90891aa2f6622e047abd0b78967c5d5a008a6c051ecd26c` |
-| `resultats/vole.json` | `3cd4e052a16612b55e6ef3b8ab167bea16e99e3621944d5ab4a5c08f290ac1e4` |
-| `resultats/vole_kz.json` | `069b09ef322e08901354e3d97ed88e243116738386288448656bccc14efa137e` |
-| `resultats/vole_proto.json` | `205c0b3183731264c413b33d37b7a3354db75f0784279667b844e36c418ecf8d` |
+| `resultats/sig_modele.json` | `3c93dc8fb6ced5d5e2c152a52969fc4dbd968f4c1f81132ace90d67ef0946f40` |
+| `resultats/temps1024.json` | `3f79ec5e9fa8866aa39115f7b7cc6c9d58b5e8741f375400fc18525dcff61994` |
+| `resultats/vole.json` | `41fe808be658714ca97152ff1ef27f5e2280cb696a2b4f1ef99f29eb5cb9dfa3` |
+| `resultats/vole_kz.json` | `176db71bd18bfbc2d9248f7396c5b641be2d6dfeefec3cbd18f503610b9a39d9` |
+| `resultats/vole_proto.json` | `c06306f0de9ba39624120ac0337ab8aa3976326bde8b03b6dfb35e0d4bdc8935` |
 
 ## Spécification, preuves et rapports
 
 | Fichier | SHA-256 |
 |---|---|
 | `docs/AUDIT_EXTERNE.md` | `15181ffed3a873c321f66b349144a0030f07e45f021e088b030613a554ca0a31` |
-| `docs/AUDIT_REPORT.md` | `80b3257eded6ecbf0c1eef8c97bd72e204b38a7375048aca60302ccaa593616a` |
+| `docs/AUDIT_REPORT.md` | `c74512a68e6e78d18d9d548ce8bf65ae21c37f3829dba1268537204e785845eb` |
 | `docs/CAMPAIGN_24H.md` | `e2773b4e8aae053d0a6eea15c59050409f1950e9b0f4031b54c939344caa11d4` |
 | `docs/DESIGN_NOTE.md` | `ade0afa112999029530930f6312ffe3df5cd65f9b6a827357326ff7bf560c29e` |
 | `docs/GPU_CRYPTANALYSIS_PLAN.md` | `58ffa7a0da65ec8186eb16f8278d6a7030a1d6f23f6cee58780977489631db7a` |
 | `docs/LEADS.md` | `e2a6ac832fa1890ea3a39e0e1033c6d910574351324b017582bd3c2baac1ee96` |
 | `docs/MIGRATION_V06.md` | `44a0acc6dd6853bca6e9cc1bd379d84c37fc508f757ae732ab6108b01a6491ec` |
-| `docs/PROOFS.md` | `77eb7eed62c49bfd48730636a32291229aa1dfd019d4eb6cdbcc9fffa0d32ab7` |
-| `docs/README.md` | `6a5b5e83b0db75cde1e4d785bfd9b0ae647c51cc73dafdd4b8fdab559af152e9` |
+| `docs/NIST_CATEGORIES.md` | `ecc5a52db2b2596a582d76f6077fb4def35cb8f4331e3204187beb3a752ebec2` |
+| `docs/PROOFS.md` | `0e6bf826859a862d942bacdbbf89a217f0d97c5f54a285e75334c1f3abd34739` |
+| `docs/README.md` | `ce85b9771cb28d2924191caea0a2c46d092441fb4712dfce9c245c1a2a8436bf` |
 | `docs/REVUE_CODE_DEPOT_C.md` | `9185183f7c008508342eae0f3ce3b19077c6bbe671645584c766337c88c7e2f1` |
-| `docs/SPEC.md` | `59c31577b98164fd118b300db02aaa7614828d7ac1c0fa12fec695113de06f5a` |
+| `docs/SPEC.md` | `6266a37fb419949da74567239954d1355fc15da476e081dfb6b3c2338e9bf55f` |
 | `docs/VOLE_CODE_REVIEW.md` | `6ac1e10eb0acb9392a80dcf50820734b20555713997b7f948ab76c59e4df4e1b` |
 | `docs/brume1024/AEAD_SECURITY.md` | `5014af09dacb9ffad3eb29e7414af1097bbc6caeb535cb6630c45354f98f1bd6` |
 | `docs/brume1024/ALGEBRIQUE.md` | `46b21249b45430295a5e429d11e79a9cd531208111546d2301004ee794ad1f2b` |

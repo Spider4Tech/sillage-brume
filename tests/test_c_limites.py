@@ -61,12 +61,12 @@ def essai(nom, f, m, k):
     shim.shim_armer(0, -1)
     return ok, n, r
 ops = {
-    "kem_keygen": lambda: C.kem_keygen("Sillage-128"),
+    "kem_keygen": lambda: C.kem_keygen("Sillage-256"),
     "sig_keygen": lambda: C.sig_keygen("Sillage-SIG-128"),
 }
-pk, sk = C.kem_keygen("Sillage-128")
+pk, sk = C.kem_keygen("Sillage-256")
 spk, ssk = C.sig_keygen("Sillage-SIG-128")
-ops["kem_encaps"] = lambda: C.kem_encaps("Sillage-128", pk)
+ops["kem_encaps"] = lambda: C.kem_encaps("Sillage-256", pk)
 ops["sig_sign"] = lambda: C.sig_sign("Sillage-SIG-128", ssk, spk, b"m")
 for nom, f in ops.items():
     ok, n, _ = essai(nom, f, 0, -1)          # nombre d'appels à getrandom d'une exécution saine
@@ -86,9 +86,9 @@ for nom, f in ops.items():
     ok_part, _, r2 = essai(nom, f, 3, 0)
     res[nom] = dict(echecs_leves=echecs, eintr_ok=ok_intr, partiel_ok=ok_part)
 # valeurs rendues sous EINTR et lecture partielle : utilisables
-shim.shim_armer(2, 0); pk2, sk2 = C.kem_keygen("Sillage-128"); shim.shim_armer(3, 0)
-ct, ss = C.kem_encaps("Sillage-128", pk2); shim.shim_armer(0, -1)
-res["kem_valide_sous_eintr_et_partiel"] = C.kem_decaps("Sillage-128", sk2, ct) == ss
+shim.shim_armer(2, 0); pk2, sk2 = C.kem_keygen("Sillage-256"); shim.shim_armer(3, 0)
+ct, ss = C.kem_encaps("Sillage-256", pk2); shim.shim_armer(0, -1)
+res["kem_valide_sous_eintr_et_partiel"] = C.kem_decaps("Sillage-256", sk2, ct) == ss
 shim.shim_armer(3, 0); s = C.sig_sign("Sillage-SIG-128", ssk, spk, b"m"); shim.shim_armer(0, -1)
 res["sig_valide_sous_lecture_partielle"] = C.sig_verify("Sillage-SIG-128", spk, b"m", s)
 print(json.dumps(res))

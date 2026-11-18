@@ -157,7 +157,7 @@ int main(void)
     static char json[20000];
     size_t lj = 0;
     lj += (size_t)snprintf(json + lj, sizeof json - lj, "[");
-    for (int niv = 0; niv < 2; niv++) {
+    for (int niv = 1; niv < 2; niv++) {   /* Sillage-128 (niveau 0) retiré le 18 novembre 2026 */
         const uint32_t lam = P[niv].lam, nref = (uint32_t)REF[niv].nref, wref = (uint32_t)REF[niv].wref, Dref = (uint32_t)REF[niv].Dref;
         double med, rej;
         secu_t s;

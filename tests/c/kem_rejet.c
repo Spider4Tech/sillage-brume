@@ -1,7 +1,8 @@
 /* Sillage-KEM : le rejet des clés se voit-il dans la clé publique ? (plan GPU, attaque C4 ; PROOFS § 1, H1-P sur les
  * clés acceptées).
  *
- * sl_kem_keygen tire (x, y) de poids w et recommence tant que la borne δ prouvée dépasse 2^-λ (7,1 % et 5,9 % des tirages).
+ * sl_kem_keygen tire (x, y) de poids w et recommence tant que la borne δ prouvée dépasse 2^-λ (5,9 % des tirages pour
+ * Sillage-256, seul niveau depuis le 18 novembre 2026).
  * Le rejet dépend du secret seul ; la clé publique est s = x·h ⊕ y (h dérivé de σ_h, public). Si une statistique de s
  * séparait les clés acceptées des clés rejetées, la distribution des clés publiques réelles serait reconnaissable, et le
  * rejet fuirait de l'information sur (x, y). Le Lemme 0 règle le cas linéaire (la parité de s est le seul invariant
@@ -138,10 +139,9 @@ static void campagne(int niveau, long K, resultat_t *res, int *ok_global)
 
 int main(int argc, char **argv)
 {
-    long K0 = argc > 1 ? atol(argv[1]) : 32768, K1 = argc > 2 ? atol(argv[2]) : 8192;
+    long K1 = argc > 1 ? atol(argv[1]) : 8192;          /* Sillage-256, seul niveau depuis le 18 novembre 2026 */
     resultat_t res = {.nom = "kem_rejet", .titre = "Sillage-KEM : le rejet des clés ne se voit pas dans la clé publique"};
     int ok = 1;
-    campagne(0, K0, &res, &ok);
     campagne(1, K1, &res, &ok);
     return res_ecrire(&res);
 }

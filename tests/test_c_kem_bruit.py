@@ -19,7 +19,7 @@ from tests.commun import sauver
 from sillage.sillage_kem import SillageKEM, rm_decode, borne_echec_log2, histogrammes
 from sillage.sillage_common import ring_mul
 
-ESSAIS = {"Sillage-128": (C.taille(23), 100), "Sillage-256": (C.taille(20), 16)}
+ESSAIS = {"Sillage-256": (C.taille(20), 16)}   # Sillage-128 retiré le 18 novembre 2026
 
 
 def positions(v, n):

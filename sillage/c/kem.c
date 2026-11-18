@@ -20,10 +20,13 @@
 #include "sillage.h"
 
 typedef struct { uint32_t n, k, D, w, we, lam, ss, n2; double theta; } params_t;
+/* Niveau 1 = Sillage-256, seul niveau depuis le 18 novembre 2026 : Sillage-128 (ancien niveau 0, n = 50 021, w = 75) est
+ * retiré, car il n'atteint pas la catégorie NIST 1 (ISD classique 2^138,2 contre 2^143, docs/NIST_CATEGORIES.md). Le numéro
+ * du niveau restant ne change pas (mêmes domaines, mêmes KAT) ; le niveau 0 est refusé. */
 static const params_t P[2] = {
-    {50021, 128, 14, 75, 25, 128, 32, 16 * 128 * 14, 0.7},
-    {170003, 256, 28, 140, 64, 256, 64, 32 * 128 * 28, 0.7},
+    [1] = {170003, 256, 28, 140, 64, 256, 64, 32 * 128 * 28, 0.7},
 };
+#define NIVEAU_INVALIDE(n) ((n) != 1)
 
 #define NB(x) (((x) + 7) / 8)
 #define NW(x) (((x) + 63) / 64)
@@ -426,7 +429,7 @@ static double borne(int niveau, const uint64_t *x, const uint64_t *y)
 
 double sl_kem_borne(int niveau, const uint8_t *xb, const uint8_t *yb)
 {
-    if (niveau < 0 || niveau > 1)
+    if (NIVEAU_INVALIDE(niveau))
         return 0;                                    /* 0 = aucune garantie (borne triviale) */
     const params_t *p = &P[niveau];
     uint64_t *x = nouveau(p->n), *y = nouveau(p->n);
@@ -470,7 +473,7 @@ static void derives(int niveau, const uint8_t sigma[32], const uint64_t **h, con
 
 void sl_kem_tailles(int niveau, size_t *pk, size_t *sk, size_t *ct, size_t *ss)
 {
-    if (niveau < 0 || niveau > 1) {
+    if (NIVEAU_INVALIDE(niveau)) {
         *pk = *sk = *ct = *ss = 0;
         return;
     }
@@ -539,7 +542,7 @@ static void secret(int niveau, const uint8_t *mu, const uint8_t *ct, uint8_t *ss
 
 int sl_kem_encaps_det(int niveau, const uint8_t *pk, const uint8_t *mu, uint8_t *ct, uint8_t *ss)
 {
-    if (niveau < 0 || niveau > 1)
+    if (NIVEAU_INVALIDE(niveau))
         return -3;
     const params_t *p = &P[niveau];
     size_t lpk = 32 + NB(p->n);
@@ -567,7 +570,7 @@ int sl_kem_encaps_det(int niveau, const uint8_t *pk, const uint8_t *mu, uint8_t 
 int sl_kem_encaps(int niveau, const uint8_t *pk, uint8_t *ct, uint8_t *ss)
 {
     uint8_t mu[32];
-    if (niveau < 0 || niveau > 1 || sl_alea(mu, P[niveau].k / 8))
+    if (NIVEAU_INVALIDE(niveau) || sl_alea(mu, P[niveau].k / 8))
         return -3;
     int rc = sl_kem_encaps_det(niveau, pk, mu, ct, ss);
     sl_effacer(mu, sizeof mu);
@@ -576,7 +579,7 @@ int sl_kem_encaps(int niveau, const uint8_t *pk, uint8_t *ct, uint8_t *ss)
 
 int sl_kem_keygen(int niveau, uint8_t *pk, uint8_t *sk)
 {
-    if (niveau < 0 || niveau > 1)
+    if (NIVEAU_INVALIDE(niveau))
         return -3;
     const params_t *p = &P[niveau];
     uint8_t sigma_h[32], sigma_rej[32], graine[32];
@@ -622,7 +625,7 @@ int sl_kem_keygen(int niveau, uint8_t *pk, uint8_t *sk)
 
 int sl_kem_decaps(int niveau, const uint8_t *sk, const uint8_t *ct, uint8_t *ss)
 {
-    if (niveau < 0 || niveau > 1)
+    if (NIVEAU_INVALIDE(niveau))
         return -3;
     const params_t *p = &P[niveau];
     size_t nb = NB(p->n), nb2 = NB(p->n2), ctlen = nb + nb2;

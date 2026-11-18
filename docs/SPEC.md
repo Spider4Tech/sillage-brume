@@ -95,10 +95,13 @@ The 23 vectors of `brume1024/SPEC.md` § 4 (`brume1024/kat_b1024.txt`) are the f
 
 | | n | k (μ bits) | w | w_e | D | n₂ = (k/8)·128·D | λ | ss bytes | θ |
 |---|---|---|---|---|---|---|---|---|---|
-| Sillage-128 | 50 021 | 128 | 75 | 25 | 14 | 28 672 | 128 | 32 | 0.7 |
-| Sillage-256 | 170 003 | 256 | 140 | 64 | 28 | 114 688 | 256 | 64 | 0.7 |
+| Sillage-256 (level 1) | 170 003 | 256 | 140 | 64 | 28 | 114 688 | 256 | 64 | 0.7 |
 
-Sizes (bytes): `pk = 32 + ⌈n/8⌉`, `sk = 3·⌈n/8⌉ + 64`, `ct = ⌈n/8⌉ + ⌈n₂/8⌉`: 6 285 / 18 823 / 9 837 for Sillage-128 and 21 283 / 63 817 / 35 587 for Sillage-256.
+Sizes (bytes): `pk = 32 + ⌈n/8⌉`, `sk = 3·⌈n/8⌉ + 64`, `ct = ⌈n/8⌉ + ⌈n₂/8⌉`: 21 283 / 63 817 / 35 587.
+
+Sillage-256 is the only level since 18 November 2026. Sillage-128 (level 0: n = 50 021, w = 75, w_e = 25, D = 14) was
+removed: its classical ISD cost is 4.8 bits under NIST category 1 (`docs/NIST_CATEGORIES.md`). Level 1 keeps its number,
+so its encodings and known answers are unchanged; level 0 is refused (return code −3, sizes 0).
 
 ### 3.2 Derived public objects
 
@@ -206,10 +209,12 @@ constraint polynomials (step 5) is the one of `contraintes_poly` / `contraintes_
 
 | Profile | id | λ | n | r = n − k | w | block b = Π μ | μ | d | τ | κ (N = 2^κ) | wpow | T_open | B | pk | sk | signature |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| VOLE-128 | 0 | 128 | 19 456 | 720 | 76 | 256 | (4,4,4,4) | 4 | 11 | 11 | 10 | 107 | 16 | 106 | 182 | 4 235 |
 | VOLE-256 | 1 | 256 | 38 912 | 1 432 | 152 | 256 | (4,4,4,4) | 4 | 21 | 12 | 7 | 216 | 16 | 211 | 363 | 16 122 |
-| VOLE-128f | 2 | 128 | 19 456 | 720 | 76 | 256 | (4,4,4,4) | 4 | 16 | 8 | 3 | 101 | 16 | 106 | 182 | 5 193 |
 | VOLE-256f | 3 | 256 | 38 912 | 1 432 | 152 | 256 | (4,4,4,4) | 4 | 32 | 8 | 3 | 207 | 16 | 211 | 363 | 20 467 |
+
+VOLE-128 (id 0) and VOLE-128f (id 2) were removed on 18 November 2026: they reach no NIST category
+(`docs/NIST_CATEGORIES.md`). The remaining ids are unchanged; 0 and 2 are refused. Their parameters (λ = 128, n = 19 456,
+r = 720, w = 76) remain in `prototypes/vole/vole_proto.c` for research only.
 
 `r = ⌈log₂ C(n, w)⌉` rounded up to a multiple of 8 (Lemma 17.2). Field `GF(2^128) = F₂[x]/(x^128 + x^7 + x^2 + x + 1)`,
 `GF(2^256) = F₂[x]/(x^256 + x^10 + x^5 + x^2 + 1)`; a byte string of λ/8 bytes is an element, bit i (little-endian within and across
@@ -285,8 +290,7 @@ rejects unless `h3` is equal. Finally, it checks `M(Δ) + Σ_j γ_j F_j(q) = Σ_
 `tests/test_vole.py` and `prototypes/vole/vole_proto.c --kat`. The deterministic randomness is
 `SHAKE256("SILLAGE-VOLE|kat" ‖ LE32(counter))`, starting from counter 0, for keygen and then the salt. The message is `"kat"`.
 The answer is the first 16 bytes of `SHAKE256(enc(pk) ‖ σ)`:
-VOLE-128 `8fabe81d59149d399137b2ee2726026a`, VOLE-256 `4de2f87cc8e8f3a7c8d62f6cf0aa536f`, VOLE-128f
-`80bb49defc6b099c30746594c8a225cb`, VOLE-256f `677048f63679d5518fc4f5813821cc73`. They are identical on x86-64 and ARM64, with 1 and 12
+VOLE-256 `4de2f87cc8e8f3a7c8d62f6cf0aa536f`, VOLE-256f `677048f63679d5518fc4f5813821cc73`. They are identical on x86-64 and ARM64, with 1 and 12
 threads.
 
 ### 4 bis.7 Normative annex: the constraint system

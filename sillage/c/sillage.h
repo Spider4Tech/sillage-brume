@@ -111,7 +111,7 @@ int sl_aead_decrypt_multi_ctx(const sl_aead_cle_t *c, size_t n, const uint8_t *n
                               const uint8_t *const *aads, const size_t *aadlens, const uint8_t *const *cts,
                               const size_t *lens, const uint8_t *tags, uint8_t *const *pts, int *codes);
 
-/* ---- Sillage-KEM (niveau 0 = Sillage-128, 1 = Sillage-256) ---- */
+/* ---- Sillage-KEM (niveau 1 = Sillage-256 ; le niveau 0, Sillage-128, est retiré le 18 novembre 2026 et refusé) ---- */
 void sl_kem_tailles(int niveau, size_t *pk, size_t *sk, size_t *ct, size_t *ss);
 int sl_kem_keygen(int niveau, uint8_t *pk, uint8_t *sk);
 int sl_kem_encaps(int niveau, const uint8_t *pk, uint8_t *ct, uint8_t *ss);
@@ -130,8 +130,8 @@ int sl_sig_sign_sel(int niveau, const uint8_t *sk, const uint8_t *pk, const uint
 int sl_sig_verify(int niveau, const uint8_t *pk, const uint8_t *msg, size_t len,
                   const uint8_t *sig, size_t siglen);
 
-/* Sillage-SIG v0.5 : VOLE-in-the-Head sur SD régulier (vole.c, PROOFS § 3 bis, SPEC § 4 bis). Profils : 0 VOLE-128,
- * 1 VOLE-256, 2 VOLE-128f, 3 VOLE-256f. pk = graine de H (λ bits) ‖ y ; sk = pk ‖ positions (un octet par bloc) ;
+/* Sillage-SIG v0.5 : VOLE-in-the-Head sur SD régulier (vole.c, PROOFS § 3 bis, SPEC § 4 bis). Profils : 1 VOLE-256,
+ * 3 VOLE-256f (0 VOLE-128 et 2 VOLE-128f retirés le 18 novembre 2026, refusés). pk = graine de H (λ bits) ‖ y ; sk = pk ‖ positions (un octet par bloc) ;
  * signature de longueur fixe. Retour 0 (succès) ou −1 (profil invalide, mémoire ou aléa indisponibles : signature remise
  * à zéro). sl_vole_verify : 1 acceptée, 0 rejetée, −1 mémoire indisponible. sl_vole_kat : aléa déterministe (tests, KAT). */
 void sl_vole_tailles(int profil, size_t *pk, size_t *sk, size_t *sig);

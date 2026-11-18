@@ -5,8 +5,10 @@
  * bloc = Π μ_t, Lemme 17.1). Polynômes p_j(X) = w_j X + V_j, évalués par le vérifieur en Δ. Contraintes homogénéisées de degré d,
  * mêlées par γ : leur terme en X^d est nul si le témoin est valide. α = coefficients de degré < d de ce polynôme masqué.
  * Graines de λ + 8 bits, sel de 32 octets, grinding minimal du Théorème 17, codimension ⌈log2 C(n, w)⌉ (Lemme 17.2).
- * API (sillage.h) : sl_vole_tailles, sl_vole_keygen, sl_vole_sign, sl_vole_sign_sel, sl_vole_verify ; profils 0 à 3 :
- * VOLE-128, VOLE-256, VOLE-128f, VOLE-256f. Erreurs de mémoire et d'aléa propagées, jamais de signature partielle.
+ * API (sillage.h) : sl_vole_tailles, sl_vole_keygen, sl_vole_sign, sl_vole_sign_sel, sl_vole_verify ; profils 1 (VOLE-256)
+ * et 3 (VOLE-256f). Les profils 0 (VOLE-128) et 2 (VOLE-128f) sont retirés de la bibliothèque le 18 novembre 2026 : ils
+ * n'atteignent aucune catégorie NIST (docs/NIST_CATEGORIES.md) ; leurs paramètres restent ici pour le prototype de recherche
+ * (prototypes/vole/vole_proto.c), qui les étudie. Erreurs de mémoire et d'aléa propagées, jamais de signature partielle.
  * Le paramètre interne « attaque » des fonctions statiques ne sert qu'au prototype ; l'API passe toujours 0.
  */
 #include <math.h>
@@ -63,15 +65,17 @@ static int alea_api(void *o, size_t n)
     return sl_alea(o, n) ? -1 : 0;
 }
 
+/* paramètres gardés pour le prototype seulement (VOLE-128, VOLE-128f) */
+#define PROTO_SEUL_VP __attribute__((unused))
 /* gbits : modèle réduit seulement, γ tiré dans un sous-groupe additif de 2^gbits éléments (attaque sur γ exécutable) */
 typedef struct { const char *nom; int lam, n, cod, w, bloc, d, mu[DMAX], tau, kap, wpow, topen, B, gbits, rapide; } vp_t;   /* rapide : profils f */
 
 /* n, cod, w, μ : vole_params (blocs exacts, codimension ⌈log2 C(n, w)⌉ de la réduction exacte, Lemme 17.2) ; τ, κ, T_open : SDitH v2.0, table 4 ;
  * wpow : plus petit grinding qui atteint λ au Théorème 17 (contrôle *_wpow_minimal) */
-static const vp_t PR128 = {"VOLE-128", 128, 19456, 720, 76, 256, 4, {4, 4, 4, 4}, 11, 11, 10, 107, 16, 0, 0};
+PROTO_SEUL_VP static const vp_t PR128 = {"VOLE-128", 128, 19456, 720, 76, 256, 4, {4, 4, 4, 4}, 11, 11, 10, 107, 16, 0, 0};
 static const vp_t PR256 = {"VOLE-256", 256, 38912, 1432, 152, 256, 4, {4, 4, 4, 4}, 21, 12, 7, 216, 16, 0, 0};
 /* variantes rapides : N = 2^8 comme SDitH2-fast (T_open de SDitH), 5 à 10 fois moins de feuilles, signature plus grande */
-static const vp_t PR128F = {"VOLE-128f", 128, 19456, 720, 76, 256, 4, {4, 4, 4, 4}, 16, 8, 3, 101, 16, 0, 1};
+PROTO_SEUL_VP static const vp_t PR128F = {"VOLE-128f", 128, 19456, 720, 76, 256, 4, {4, 4, 4, 4}, 16, 8, 3, 101, 16, 0, 1};
 static const vp_t PR256F = {"VOLE-256f", 256, 38912, 1432, 152, 256, 4, {4, 4, 4, 4}, 32, 8, 3, 207, 16, 0, 1};
 
 typedef struct {
@@ -1115,11 +1119,12 @@ PROTO_SEUL static int verifier(const ctx_t *c, const vpk_t *pk, const hcache_t *
 
 
 /* ================================================================ API publique (sillage.h) */
-static const vp_t *const VOLE_PROFILS[4] = {&PR128, &PR256, &PR128F, &PR256F};
+/* numéros des profils inchangés (mêmes domaines, mêmes KAT) ; 0 et 2 (VOLE-128, VOLE-128f) retirés, donc refusés */
+static const vp_t *const VOLE_PROFILS[4] = {NULL, &PR256, NULL, &PR256F};
 
 static int vole_ctx(int profil, ctx_t *c)
 {
-    return profil < 0 || profil > 3 ? -1 : ctx_init(c, VOLE_PROFILS[profil]);
+    return profil < 0 || profil > 3 || !VOLE_PROFILS[profil] ? -1 : ctx_init(c, VOLE_PROFILS[profil]);
 }
 
 void sl_vole_tailles(int profil, size_t *pk, size_t *sk, size_t *sig)

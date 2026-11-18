@@ -257,7 +257,8 @@ def te_decrypt(profil, cle, nonce, ct, par, tag, meta, aad=b""):
 
 
 # ------------------------------------------------------------------ KEM
-NIVEAUX_KEM = {"Sillage-128": 0, "Sillage-256": 1}
+# niveau 1 seulement : Sillage-128 (niveau 0) est retiré le 18 novembre 2026 (docs/NIST_CATEGORIES.md)
+NIVEAUX_KEM = {"Sillage-256": 1}
 
 
 def kem_tailles(niveau):
@@ -286,7 +287,7 @@ def kem_encaps(niveau, pk, mu=None):
     if mu is None:
         _ok(lib().sl_kem_encaps(NIVEAUX_KEM[niveau], pk, ct, ss))
     else:
-        _taille(mu, {"Sillage-128": 16, "Sillage-256": 32}[niveau], "mu")   # k / 8 octets
+        _taille(mu, {"Sillage-256": 32}[niveau], "mu")   # k / 8 octets
         _ok(lib().sl_kem_encaps_det(NIVEAUX_KEM[niveau], pk, mu, ct, ss))
     return ct.raw[:t["ct"]], ss.raw[:t["ss"]]
 
@@ -345,7 +346,8 @@ def sig_verify(niveau, pk, msg, sig) -> bool:
 
 
 # ------------------------------------------------------------------ SIG v0.5 : VOLE-in-the-Head (sillage/c/vole.c)
-PROFILS_VOLE = {"VOLE-128": 0, "VOLE-256": 1, "VOLE-128f": 2, "VOLE-256f": 3}
+# numéros inchangés ; VOLE-128 (0) et VOLE-128f (2) retirés le 18 novembre 2026 (docs/NIST_CATEGORIES.md)
+PROFILS_VOLE = {"VOLE-256": 1, "VOLE-256f": 3}
 
 
 def vole_tailles(profil):

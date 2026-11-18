@@ -21,7 +21,8 @@ from tests.commun import RACINE, sauver
 from sillage import sillage_c as C
 from sillage import SillageVOLE
 
-ATTENDU = {"VOLE-128": (106, 182, 4235), "VOLE-256": (211, 363, 16122), "VOLE-128f": (106, 182, 5193), "VOLE-256f": (211, 363, 20467)}
+# VOLE-128 et VOLE-128f retirés de la bibliothèque le 18 novembre 2026 (aucune catégorie NIST) ; le prototype les garde
+ATTENDU = {"VOLE-256": (211, 363, 16122), "VOLE-256f": (211, 363, 20467)}
 ORDRE_KAT = ["VOLE-128", "VOLE-256", None, "VOLE-128f", "VOLE-256f"]      # ordre de vole_kat.h (None : modèle réduit)
 
 
@@ -53,9 +54,9 @@ def run():
         e = empreinte(profil)
         m["empreintes"][profil] = e
         ok_k &= e == kat[profil]
-    c["tailles_des_quatre_profils"] = ok_t
-    c["kat_egaux_au_prototype_quatre_profils"] = ok_k
-    for profil in ("VOLE-128", "VOLE-128f", "VOLE-256f", "VOLE-256"):
+    c["tailles_des_deux_profils"] = ok_t
+    c["kat_egaux_au_prototype_deux_profils"] = ok_k
+    for profil in ("VOLE-256f", "VOLE-256"):
         S = SillageVOLE(profil)
         pk, sk = S.keygen()
         msg = b"message de test v0.5"
@@ -87,8 +88,15 @@ def run():
         c["profil_inconnu_refuse"] = True
     c["profil_c_invalide_refuse"] = (C.lib().sl_vole_keygen(7, C._buf(512), C._buf(512)) == -1
                                      and C.lib().sl_vole_verify(-1, C._buf(512), b"", C._sz(0), C._buf(8), C._sz(8)) == 0)
+    # profils retirés (0 : VOLE-128, 2 : VOLE-128f) : refusés par l'API C et absents de l'API Python
+    t = [C.ctypes.c_size_t() for _ in range(3)]
+    C.lib().sl_vole_tailles(0, *[C.ctypes.byref(x) for x in t])
+    c["profils_128_retires_refuses"] = (all(x.value == 0 for x in t)
+                                        and C.lib().sl_vole_keygen(0, C._buf(512), C._buf(512)) == -1
+                                        and C.lib().sl_vole_keygen(2, C._buf(512), C._buf(512)) == -1
+                                        and "VOLE-128" not in C.PROFILS_VOLE and "VOLE-128f" not in C.PROFILS_VOLE)
     try:
-        C.vole_sign("VOLE-128", b"\0" * 10, b"m")
+        C.vole_sign("VOLE-256", b"\0" * 10, b"m")
         c["sk_de_mauvaise_taille_refusee"] = False
     except ValueError:
         c["sk_de_mauvaise_taille_refusee"] = True

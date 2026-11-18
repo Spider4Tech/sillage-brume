@@ -99,11 +99,12 @@ class SillageSIG(_SIG):
 
 class SillageVOLE:
     """Sillage-SIG v0.5 : VOLE-in-the-Head sur SD régulier (sillage/c/vole.c ; C seulement, sans référence Python ;
-    sécurité : PROOFS § 3 bis ; format : SPEC § 4 bis). Profils : VOLE-128, VOLE-256 (courts), VOLE-128f, VOLE-256f (rapides).
+    sécurité : PROOFS § 3 bis ; format : SPEC § 4 bis). Profils : VOLE-256 (court) et VOLE-256f (rapide) ;
+    VOLE-128 et VOLE-128f sont retirés le 18 novembre 2026 (aucune catégorie NIST, docs/NIST_CATEGORIES.md).
     pk = graine de H ‖ y ; sk = pk ‖ positions ; signature de longueur fixe."""
     PROFILS = tuple(C.PROFILS_VOLE)
 
-    def __init__(self, profil: str = "VOLE-128"):
+    def __init__(self, profil: str = "VOLE-256"):
         if profil not in C.PROFILS_VOLE:
             raise ValueError(f"profil inconnu : {profil} (attendu : {', '.join(C.PROFILS_VOLE)})")
         if not disponible():

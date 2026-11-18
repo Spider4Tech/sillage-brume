@@ -94,12 +94,12 @@ def brume(c):
     c["xof_identique_aux_liaisons"] = sillage.brume1024_xof(m, 300) == C.xof(m, 300)
 
 
-def borne(c, m, sk128):
-    """Clé ordinaire, et vecteurs groupés : c > 15 sur un hyperplan, borne nulle des deux côtés."""
-    R = RefK("Sillage-128")
+def borne(c, m, sk):
+    """Clé ordinaire, et vecteurs groupés : c > 15 sur un hyperplan, borne nulle des deux côtés (Sillage-256, seul niveau)."""
+    R = RefK("Sillage-256")
     p, nb = R.p, (R.p["n"] + 7) // 8
-    x, y = sk128[0], sk128[1]
-    ecarts = [abs(C.kem_borne("Sillage-128", a.to_bytes(nb, "little"), b.to_bytes(nb, "little"))
+    x, y = sk[0], sk[1]
+    ecarts = [abs(C.kem_borne("Sillage-256", a.to_bytes(nb, "little"), b.to_bytes(nb, "little"))
                   - borne_echec_log2(a, b, p))
               for a, b in ((x, y), ((1 << 40) - 1 | x, y), (x, ((1 << 15) - 1) << 1000 | y), (((1 << 64) - 1) << 40000, y))]
     m["borne_ecarts"] = ecarts
@@ -128,7 +128,7 @@ def concurrence(c):
     """Threads Python (le GIL est relâché pendant les appels C) sur des clés différentes :
     les caches du C sont par thread."""
     def travail(i):
-        K, S = sillage.SillageKEM("Sillage-128"), sillage.SillageSIG("Sillage-SIG-128")
+        K, S = sillage.SillageKEM("Sillage-256"), sillage.SillageSIG("Sillage-SIG-128")
         ok = True
         for _ in range(6):
             pk, sk = K.keygen()
@@ -144,8 +144,7 @@ def concurrence(c):
 def run():
     c, m = {}, {}
     concurrence(c)
-    sk = kem(c, "Sillage-128")
-    kem(c, "Sillage-256")
+    sk = kem(c, "Sillage-256")          # Sillage-128 retiré le 18 novembre 2026
     sig(c, "Sillage-SIG-128")
     sig(c, "Sillage-SIG-256")
     brume(c)
